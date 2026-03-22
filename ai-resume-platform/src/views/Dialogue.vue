@@ -1,93 +1,63 @@
 <template>
-  <div class="dialogue">
-    <!-- 水墨背景 -->
-    <div class="ink-bg" :style="{ backgroundImage: 'url(' + currentBgImage + ')' }"></div>
+  <div class="dialogue-page">
+    <div class="scene-bg" :style="{ backgroundImage: 'url(' + currentBgImage + ')' }"></div>
+    <div class="scene-mask"></div>
+    <div class="paper-edge left"></div>
+    <div class="paper-edge right"></div>
 
-    <!-- 卷轴装饰 -->
-    <div class="scroll-left"></div>
-    <div class="scroll-right"></div>
-
-    <!-- 窗棂效果 -->
-    <div class="window-frame">
-      <div class="window-grid"></div>
-    </div>
-
-    <!-- 顶部操作区 -->
     <div class="top-actions">
-      <button class="skip-btn" @click.stop="skipToStory">
-        <span class="skip-icon">⏭</span>
-        跳过对话
-      </button>
+      <button class="skip-btn" @click.stop="skipToStory">跳过</button>
     </div>
 
-    <!-- NPC 区域 -->
-    <div class="npc-container">
-      <div class="painting-frame">
-        <div class="painting-mount">
-          <img :src="npcImage" class="npc-portrait" />
-          <div class="painting-seal"></div>
-        </div>
-        <div class="npc-name">
-          <span class="name-left">「</span>
-          {{ npcName }}
-          <span class="name-right">」</span>
-        </div>
-        <div class="npc-poem" v-if="npcPoem">{{ npcPoem }}</div>
+    <div class="character-stage">
+      <div class="traveler-figure" :class="{ active: currentRole === 'traveler', dim: currentRole !== 'traveler' }">
+        <div class="traveler-shadow"></div>
+        <img :src="travelerImage" class="traveler-img" alt="旅人" />
+      </div>
+
+      <div class="npc-figure" :class="{ active: currentRole === 'npc', dim: currentRole !== 'npc' }">
+        <div class="npc-glow"></div>
+        <img :src="npcImage" class="npc-img" :alt="currentSpeakerName" />
       </div>
     </div>
 
-    <!-- 对话框 -->
-    <div class="dialog-wrapper">
-      <div class="dialog-decoration top-left"></div>
-      <div class="dialog-decoration top-right"></div>
-      <div class="dialog-box" @click="next">
-        <div class="dialog-inner">
-          <div class="dialog-quote">「</div>
-          <div class="dialog-text">{{ currentText }}</div>
-          <div class="dialog-quote right">」</div>
+    <div class="dialogue-board" @click="next">
+      <div class="name-plate" :class="currentRole">{{ currentSpeakerName }}</div>
+
+      <div class="dialogue-inner">
+        <div class="speaker-tip">
+          <span class="tip-dot"></span>
+          <span>{{ currentRole === 'traveler' ? '你正在发问' : '对方正在回应' }}</span>
         </div>
-        <div class="next-hint" v-if="!isLastLine">
-          <span class="hint-icon">✧</span> 轻触续读 <span class="hint-icon">✧</span>
-        </div>
-        <div class="next-hint story-hint" v-else>
-          <span class="hint-icon">📖</span> 入卷听故事 <span class="hint-icon">📖</span>
+        <div class="dialogue-text">{{ currentText }}</div>
+      </div>
+
+      <div class="dialogue-footer">
+        <div class="poem-line" v-if="currentRole === 'npc' && npcPoem">{{ npcPoem }}</div>
+        <div class="poem-line" v-else>轻触继续对话</div>
+        <div class="continue-mark">
+          <span v-if="!isLastLine">»</span>
+          <span v-else>➜</span>
         </div>
       </div>
-      <div class="dialog-decoration bottom-left"></div>
-      <div class="dialog-decoration bottom-right"></div>
     </div>
 
-    <!-- 游客提示 -->
-    <div v-if="isDemo && showDemoTip" class="invitation-mask">
-      <div class="invitation-scroll">
-        <div class="scroll-header">
-          <span class="scroll-ornament">✧</span>
-          <span class="scroll-title">邀君入卷</span>
-          <span class="scroll-ornament">✧</span>
-        </div>
-        <div class="scroll-content">
-          <p class="invitation-text">客官且慢</p>
-          <p class="invitation-desc">
-            登录后方可解锁完整剧情<br />
-            并留下您的游历印记
-          </p>
+    <transition name="fade-soft">
+      <div v-if="isDemo && showDemoTip" class="invitation-mask">
+        <div class="invitation-panel">
+          <div class="invitation-title">客官且慢</div>
+          <div class="invitation-desc">
+            登录后可解锁完整剧情，
+            <br />
+            并留下你的游历印记。
+          </div>
           <div class="invitation-actions">
-            <button class="btn-login" @click="goLogin">
-              <span class="btn-icon">🏮</span>
-              登 录
-            </button>
-            <button class="btn-continue" @click="closeTip">
-              <span class="btn-icon">🍃</span>
-              且行且赏
-            </button>
+            <button class="panel-btn primary" @click="goLogin">前往登录</button>
+            <button class="panel-btn" @click="closeTip">继续试看</button>
           </div>
         </div>
-        <div class="scroll-footer"></div>
       </div>
-    </div>
-
-    <!-- 背景装饰 -->
-    <div class="sound-wave"></div>
+    </transition>
   </div>
 </template>
 
@@ -95,7 +65,8 @@
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
-import defaultAvatar from "@/assets/imgs/red-soldier.png";
+import defaultAvatar from "@/assets/imgs/red-soldier1.png";
+import defaultAvatarA from "@/assets/imgs/red-soldier.png";
 import lushanBg from "@/assets/imgs/lushan.jpg";
 import jinggangshanBg from "@/assets/imgs/jinggangshan.jpg";
 import wuyuanBg from "@/assets/imgs/wuyuan.jpg";
@@ -103,12 +74,16 @@ import wuyuanBg from "@/assets/imgs/wuyuan.jpg";
 const route = useRoute();
 const router = useRouter();
 
-// 是否游客模式
 const isDemo = route.query.demo === "true";
 const scenicId = Number(route.query.id) || 1;
 const showDemoTip = ref(true);
 
-// NPC 配置
+const travelerNames = {
+  1: "扶光",
+  2: "行川",
+  3: "阿禾"
+};
+
 const npcConfig = {
   1: {
     name: "云游货郎",
@@ -127,7 +102,6 @@ const npcConfig = {
   }
 };
 
-// 背景图
 const bgImages = {
   1: lushanBg,
   2: jinggangshanBg,
@@ -135,51 +109,58 @@ const bgImages = {
 };
 
 const currentBgImage = bgImages[scenicId] || lushanBg;
-
+const travelerName = travelerNames[scenicId] || "扶光";
 const npcName = npcConfig[scenicId]?.name || "云游货郎";
 const npcImage = npcConfig[scenicId]?.image || defaultAvatar;
+const travelerImage = defaultAvatarA;
 const npcPoem = npcConfig[scenicId]?.poem || "";
 
-// 对话内容
 const dialogues = {
   1: [
-    "客官远道而来，可曾听闻「匡庐奇秀甲天下」之说？",
-    "此山云雾缭绕，飞瀑如练。太白居士曾叹『飞流直下三千尺，疑是银河落九天』。",
-    "不知客官可愿听在下讲讲这庐山的千古传说？"
+    { role: "traveler", speaker: travelerName, text: "这山间云气这样重，我总觉得它像藏着很多故事。" },
+    { role: "npc", speaker: npcName, text: "客官好眼力。此处正是庐山，自古便有匡庐奇秀甲天下之誉。" },
+    { role: "traveler", speaker: travelerName, text: "我好像听过李白写过这里，是不是和瀑布有关？" },
+    { role: "npc", speaker: npcName, text: "正是。太白曾见飞瀑悬空，一时诗兴大发，写下飞流直下三千尺的名句。" },
+    { role: "traveler", speaker: travelerName, text: "原来如此。那庐山除了风景，还有别的值得听一听吗？" },
+    { role: "npc", speaker: npcName, text: "自然有。若你愿意，接下来我便带你慢慢看这山水背后的旧闻与人文。" }
   ],
   2: [
-    "少侠请留步！老夫看您气宇不凡，定是有缘之人。",
-    "此山名曰井冈，曾是星火燎原之地。每一寸土地，都藏着英雄往事。",
-    "可愿听老朽为您道来这段峥嵘岁月？"
+    { role: "traveler", speaker: travelerName, text: "这里的山路很深，和我想象中的景点不太一样。" },
+    { role: "npc", speaker: npcName, text: "井冈山本就不只是风景。群峰之间，也藏着一段不能忘却的历史。" },
+    { role: "traveler", speaker: travelerName, text: "所以大家才总说，它是中国革命的重要地方？" },
+    { role: "npc", speaker: npcName, text: "不错。这里被誉为中国革命的摇篮，许多故事都从这片山岭间开始。" },
+    { role: "traveler", speaker: travelerName, text: "我想听听，这里的山为什么会和信念联系在一起。" },
+    { role: "npc", speaker: npcName, text: "那便继续往下看吧，我慢慢讲给你听。" }
   ],
   3: [
-    "客官来得正是时候！再过半月，这漫山遍野的油菜花便开了。",
-    "白墙黛瓦间，黄花如海。徽州人家，诗书传世，好一幅江南水墨。",
-    "客官可想听听这婺源的故事？"
+    { role: "traveler", speaker: travelerName, text: "这里看起来像画里一样，真的是现实中的村子吗？" },
+    { role: "npc", speaker: npcName, text: "自然是。这里是婺源，白墙黛瓦、山水田园，最擅长把四季都过成画卷。" },
+    { role: "traveler", speaker: travelerName, text: "那春天是不是最热闹的时候？" },
+    { role: "npc", speaker: npcName, text: "正是。油菜花一开，村落、梯田与晨雾相映，远远看去便像金色云海。" },
+    { role: "traveler", speaker: travelerName, text: "难怪那么多人想来这里。除了景色，还有什么特别之处？" },
+    { role: "npc", speaker: npcName, text: "旧村、民俗、烟火气，都是婺源最耐人寻味的地方。走吧，我带你细看。" }
   ]
 };
 
 const dialogue = dialogues[scenicId] || dialogues[1];
 const index = ref(0);
-const currentText = ref(dialogue[0]);
 
+const currentItem = computed(() => dialogue[index.value]);
+const currentText = computed(() => currentItem.value.text);
+const currentRole = computed(() => currentItem.value.role);
+const currentSpeakerName = computed(() => currentItem.value.speaker);
 const isLastLine = computed(() => index.value === dialogue.length - 1);
 
-// 下一句
 const next = () => {
-  if (isDemo && index.value === 1 && showDemoTip.value) {
-    return;
-  }
+  if (isDemo && index.value === 2 && showDemoTip.value) return;
 
   if (index.value < dialogue.length - 1) {
     index.value++;
-    currentText.value = dialogue[index.value];
   } else {
     goStoryPage();
   }
 };
 
-// 统一跳转到故事页
 const goStoryPage = () => {
   router.push({
     path: "/story",
@@ -190,7 +171,6 @@ const goStoryPage = () => {
   });
 };
 
-// 新增：跳过按钮直接进入故事页
 const skipToStory = () => {
   goStoryPage();
 };
@@ -199,7 +179,6 @@ const closeTip = () => {
   showDemoTip.value = false;
   if (index.value < dialogue.length - 1) {
     index.value++;
-    currentText.value = dialogue[index.value];
   }
 };
 
@@ -222,540 +201,428 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.dialogue {
+.dialogue-page {
+  position: relative;
   width: 100%;
   height: 100vh;
-  position: relative;
   overflow: hidden;
+  background: #ede2ce;
 }
 
-/* 水墨背景 */
-.ink-bg {
+.scene-bg {
   position: absolute;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  z-index: 0;
+  transform: scale(1.03);
 }
 
-.ink-bg::before {
-  content: '';
+.scene-mask {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(30, 24, 18, 0.4) 0%,
-    rgba(44, 36, 24, 0.35) 100%
-  );
-  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255, 248, 236, 0.12) 0%, rgba(36, 25, 12, 0.1) 100%),
+    radial-gradient(circle at 50% 30%, rgba(255, 250, 239, 0.12) 0%, transparent 42%),
+    linear-gradient(0deg, rgba(38, 26, 12, 0.18) 0%, rgba(38, 26, 12, 0) 35%);
 }
 
-.ink-bg::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    ellipse at 30% 40%,
-    rgba(0, 0, 0, 0.2) 0%,
-    transparent 60%
-  );
-  pointer-events: none;
-}
-
-/* 卷轴左右装饰 */
-.scroll-left,
-.scroll-right {
+.paper-edge {
   position: absolute;
   top: 0;
-  width: 80px;
+  width: 54px;
   height: 100%;
-  pointer-events: none;
   z-index: 1;
+  pointer-events: none;
 }
 
-.scroll-left {
+.paper-edge.left {
   left: 0;
-  background: linear-gradient(
-    90deg,
-    rgba(100, 75, 45, 0.3) 0%,
-    rgba(100, 75, 45, 0.15) 30%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg, rgba(150, 119, 76, 0.18), transparent);
 }
 
-.scroll-right {
+.paper-edge.right {
   right: 0;
-  background: linear-gradient(
-    270deg,
-    rgba(100, 75, 45, 0.3) 0%,
-    rgba(100, 75, 45, 0.15) 30%,
-    transparent 100%
-  );
+  background: linear-gradient(270deg, rgba(150, 119, 76, 0.18), transparent);
 }
 
-/* 窗棂效果 */
-.window-frame {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.window-grid {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  right: 20px;
-  bottom: 20px;
-  border: 1px solid rgba(200, 170, 120, 0.4);
-  box-shadow:
-    inset 0 0 30px rgba(0, 0, 0, 0.2),
-    0 0 0 1px rgba(200, 170, 120, 0.3);
-}
-
-/* 顶部跳过按钮 */
 .top-actions {
   position: absolute;
-  top: 26px;
-  right: 26px;
-  z-index: 5;
+  top: 24px;
+  right: 24px;
+  z-index: 6;
 }
 
 .skip-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
-  border: 1px solid rgba(201, 170, 95, 0.8);
+  border: 1px solid rgba(121, 77, 39, 0.35);
+  background: rgba(255, 248, 235, 0.72);
+  color: #7b4f2e;
   border-radius: 999px;
-  background: rgba(30, 24, 18, 0.78);
-  backdrop-filter: blur(8px);
-  color: #ecdba8;
+  padding: 8px 18px;
   font-size: 14px;
-  font-family: "STKaiti", "华文楷书", "KaiTi", serif;
-  letter-spacing: 2px;
+  font-family: "STKaiti", "KaiTi", serif;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(6px);
 }
 
-.skip-btn:hover {
-  transform: translateY(-2px);
-  background: rgba(40, 30, 20, 0.9);
-  border-color: #e0c48c;
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.32);
-}
-
-.skip-icon {
-  font-size: 14px;
-}
-
-/* NPC 区域 */
-.npc-container {
+.character-stage {
   position: absolute;
-  right: 8%;
-  bottom: 25%;
+  inset: 0;
   z-index: 2;
-  animation: floatSlow 4s ease-in-out infinite;
-}
-
-.painting-frame {
-  position: relative;
-  background: rgba(245, 237, 224, 0.92);
-  backdrop-filter: blur(4px);
-  padding: 12px 12px 20px 12px;
-  border-radius: 4px;
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  transform: rotate(2deg);
-}
-
-.painting-mount {
-  position: relative;
-  background: #fff9ef;
-  padding: 8px;
-  border: 1px solid #d4b87a;
-}
-
-.npc-portrait {
-  width: 160px;
-  height: auto;
-  display: block;
-  filter: sepia(0.2) contrast(1.05);
-  transition: all 0.3s;
-}
-
-.painting-seal {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(200, 100, 80, 0.6), rgba(160, 70, 50, 0.4));
-  opacity: 0.6;
-}
-
-.npc-name {
-  text-align: center;
-  margin-top: 12px;
-  font-size: 16px;
-  color: #b87c4a;
-  font-family: "STKaiti", "华文楷书", "KaiTi", serif;
-  letter-spacing: 4px;
-}
-
-.name-left,
-.name-right {
-  color: #c9aa5f;
-  font-size: 14px;
-}
-
-.npc-poem {
-  text-align: center;
-  font-size: 11px;
-  color: #9b8a6b;
-  margin-top: 8px;
-  font-style: italic;
-  letter-spacing: 1px;
-}
-
-/* 对话框区域 */
-.dialog-wrapper {
-  position: absolute;
-  bottom: 8%;
-  left: 5%;
-  right: 5%;
-  z-index: 3;
-}
-
-.dialog-decoration {
-  position: absolute;
-  width: 30px;
-  height: 30px;
-  opacity: 0.5;
   pointer-events: none;
 }
 
-.top-left {
-  top: -10px;
-  left: -10px;
-  border-top: 2px solid #c9aa5f;
-  border-left: 2px solid #c9aa5f;
-  width: 40px;
-  height: 40px;
+.traveler-figure,
+.npc-figure {
+  transition: all 0.28s ease;
 }
 
-.top-right {
-  top: -10px;
-  right: -10px;
-  border-top: 2px solid #c9aa5f;
-  border-right: 2px solid #c9aa5f;
-  width: 40px;
-  height: 40px;
+.traveler-figure {
+  position: absolute;
+  left: 7%;
+  bottom: 15%;
+  width: min(29vw, 420px);
+  opacity: 0.95;
 }
 
-.bottom-left {
-  bottom: -10px;
-  left: -10px;
-  border-bottom: 2px solid #c9aa5f;
-  border-left: 2px solid #c9aa5f;
-  width: 40px;
-  height: 40px;
+.traveler-shadow {
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: 10px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(41, 29, 14, 0.2);
+  filter: blur(10px);
 }
 
-.bottom-right {
-  bottom: -10px;
-  right: -10px;
-  border-bottom: 2px solid #c9aa5f;
-  border-right: 2px solid #c9aa5f;
-  width: 40px;
-  height: 40px;
+.traveler-img {
+  width: 100%;
+  display: block;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.18));
 }
 
-.dialog-box {
-  background: rgba(30, 24, 18, 0.88);
-  backdrop-filter: blur(12px);
-  border-radius: 20px;
-  padding: 24px 28px;
-  cursor: pointer;
-  border: 1px solid rgba(200, 170, 100, 0.5);
-  box-shadow:
-    0 8px 25px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  transition: all 0.3s;
+.npc-figure {
+  position: absolute;
+  right: 5%;
+  bottom: 18%;
+  width: min(29vw, 420px);
 }
 
-.dialog-box:hover {
-  background: rgba(35, 28, 20, 0.94);
-  border-color: rgba(200, 170, 100, 0.8);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+.npc-glow {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: 18px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(56, 36, 17, 0.22);
+  filter: blur(12px);
 }
 
-.dialog-inner {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
+.npc-img {
+  position: relative;
+  width: 100%;
+  display: block;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.18));
 }
 
-.dialog-quote {
-  font-size: 32px;
-  color: #c9aa5f;
-  font-family: "STKaiti", serif;
-  line-height: 1;
-  opacity: 0.6;
-}
-
-.dialog-quote.right {
-  align-self: flex-end;
-}
-
-.dialog-text {
-  flex: 1;
-  font-size: 18px;
-  line-height: 1.7;
-  color: #f0e6d8;
-  font-family: "STKaiti", "华文楷书", "KaiTi", serif;
-  letter-spacing: 1px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-
-.next-hint {
-  text-align: center;
-  margin-top: 16px;
-  font-size: 12px;
-  color: #c9aa5f;
-  letter-spacing: 2px;
-  opacity: 0.7;
-  transition: opacity 0.3s;
-}
-
-.dialog-box:hover .next-hint {
+.traveler-figure.active,
+.npc-figure.active {
   opacity: 1;
+  transform: scale(1.04);
 }
 
-.hint-icon {
-  margin: 0 8px;
-  font-size: 10px;
+.traveler-figure.dim,
+.npc-figure.dim {
+  opacity: 0.45;
+  transform: scale(0.98);
 }
 
-.story-hint {
-  color: #e8c468;
+.traveler-figure.dim .traveler-img,
+.npc-figure.dim .npc-img {
+  filter: brightness(0.62) saturate(0.72);
 }
 
-/* 游客提示 */
+.dialogue-board {
+  position: absolute;
+  left: 50%;
+  bottom: 4%;
+  transform: translateX(-50%);
+  width: min(1220px, calc(100% - 90px));
+  min-height: 188px;
+  z-index: 5;
+  cursor: pointer;
+  background: linear-gradient(180deg, rgba(247, 239, 223, 0.97) 0%, rgba(241, 232, 214, 0.98) 100%);
+  border: 3px solid #7f5735;
+  border-radius: 28px;
+  box-shadow: 0 20px 40px rgba(57, 35, 16, 0.18);
+  padding: 34px 42px 24px;
+}
+
+.dialogue-board::before {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgba(127, 87, 53, 0.18);
+  border-radius: 18px;
+  pointer-events: none;
+}
+
+.name-plate {
+  position: absolute;
+  top: -20px;
+  min-width: 170px;
+  text-align: center;
+  padding: 10px 28px;
+  border-radius: 18px;
+  color: #fff6e8;
+  font-size: 28px;
+  line-height: 1;
+  font-family: "STKaiti", "KaiTi", serif;
+  font-weight: 700;
+  box-shadow: 0 8px 18px rgba(109, 58, 31, 0.25);
+  transition: all 0.25s ease;
+}
+
+.name-plate.traveler {
+  left: 18%;
+  transform: translateX(-50%);
+  background: #9b5a36;
+}
+
+.name-plate.npc {
+  left: 80%;
+  transform: translateX(-50%);
+  background: #a85f38;
+}
+
+.dialogue-inner {
+  position: relative;
+  z-index: 1;
+}
+
+.speaker-tip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: #9a774e;
+  font-size: 13px;
+}
+
+.tip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #c28a4e;
+}
+
+.dialogue-text {
+  min-height: 90px;
+  padding-top: 4px;
+  font-size: clamp(24px, 2vw, 34px);
+  line-height: 1.85;
+  color: #3d2816;
+  font-family: "STKaiti", "KaiTi", serif;
+  letter-spacing: 1px;
+}
+
+.dialogue-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.poem-line {
+  color: #9c7a52;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+.continue-mark {
+  color: #d88a3b;
+  font-size: 36px;
+  line-height: 1;
+  animation: pulseArrow 1.2s ease-in-out infinite;
+}
+
+@keyframes pulseArrow {
+  0%, 100% { transform: translateX(0); opacity: 0.75; }
+  50% { transform: translateX(6px); opacity: 1; }
+}
+
 .invitation-mask {
   position: fixed;
   inset: 0;
-  background: rgba(20, 16, 12, 0.85);
+  background: rgba(28, 18, 9, 0.52);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
-  animation: fadeIn 0.4s ease;
+  z-index: 20;
 }
 
-.invitation-scroll {
-  width: 320px;
-  background: #fef7e8;
-  border-radius: 8px 8px 16px 16px;
-  box-shadow:
-    0 20px 40px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 240, 0.8);
-  overflow: hidden;
-  animation: slideUp 0.4s ease;
-}
-
-.scroll-header {
-  background: linear-gradient(135deg, #ecdba8, #e0cf9c);
-  padding: 16px;
+.invitation-panel {
+  width: min(360px, calc(100% - 32px));
+  background: linear-gradient(180deg, #fbf2df 0%, #f4e7cb 100%);
+  border: 2px solid #8c603c;
+  border-radius: 22px;
+  padding: 28px 24px 22px;
   text-align: center;
-  border-bottom: 1px solid #c9aa5f;
+  box-shadow: 0 18px 36px rgba(40, 24, 11, 0.22);
 }
 
-.scroll-title {
-  font-size: 20px;
-  color: #5d3a1a;
-  font-family: "STKaiti", serif;
-  letter-spacing: 6px;
-  margin: 0 12px;
-}
-
-.scroll-ornament {
-  color: #b87c4a;
-  font-size: 14px;
-}
-
-.scroll-content {
-  padding: 28px 24px;
-  text-align: center;
-}
-
-.invitation-text {
-  font-size: 20px;
-  color: #6b4a2a;
-  font-family: "STKaiti", serif;
-  margin-bottom: 16px;
-  letter-spacing: 2px;
+.invitation-title {
+  font-size: 28px;
+  color: #6d4524;
+  font-family: "STKaiti", "KaiTi", serif;
 }
 
 .invitation-desc {
-  font-size: 14px;
-  color: #9b7a5a;
-  line-height: 1.8;
-  margin-bottom: 28px;
+  margin-top: 14px;
+  color: #856441;
+  line-height: 1.9;
+  font-size: 15px;
 }
 
 .invitation-actions {
   display: flex;
-  gap: 16px;
   justify-content: center;
+  gap: 12px;
+  margin-top: 22px;
+  flex-wrap: wrap;
 }
 
-.btn-login,
-.btn-continue {
-  padding: 10px 24px;
-  border: none;
-  border-radius: 40px;
-  font-size: 14px;
+.panel-btn {
+  border-radius: 999px;
+  padding: 10px 20px;
+  border: 1px solid rgba(140, 96, 60, 0.28);
+  background: rgba(255, 248, 234, 0.92);
+  color: #7c5634;
   cursor: pointer;
-  transition: all 0.3s;
-  font-family: "STKaiti", serif;
-  letter-spacing: 2px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  font-family: "STKaiti", "KaiTi", serif;
 }
 
-.btn-login {
-  background: linear-gradient(135deg, #d4b87a, #c9aa5f);
-  color: #2c2418;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+.panel-btn.primary {
+  border: none;
+  background: linear-gradient(135deg, #b48a55, #8b643c);
+  color: #fff8ef;
 }
 
-.btn-login:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
-  background: linear-gradient(135deg, #e0c48c, #d4b87a);
+.fade-soft-enter-active,
+.fade-soft-leave-active {
+  transition: all 0.25s ease;
 }
 
-.btn-continue {
-  background: transparent;
-  border: 1px solid #c9aa5f;
-  color: #b87c4a;
+.fade-soft-enter-from,
+.fade-soft-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
 }
 
-.btn-continue:hover {
-  background: rgba(200, 170, 100, 0.1);
-  transform: translateY(-2px);
-}
-
-.btn-icon {
-  font-size: 14px;
-}
-
-.scroll-footer {
-  height: 8px;
-  background: linear-gradient(180deg, #ecdba8, #d4bc84);
-}
-
-/* 背景装饰 */
-.sound-wave {
-  position: absolute;
-  bottom: 20px;
-  left: 20px;
-  width: 60px;
-  height: 30px;
-  pointer-events: none;
-  z-index: 2;
-  opacity: 0.3;
-  background: repeating-linear-gradient(
-    90deg,
-    transparent,
-    transparent 3px,
-    rgba(140, 100, 60, 0.3) 3px,
-    rgba(140, 100, 60, 0.3) 5px
-  );
-  border-radius: 4px;
-}
-
-/* 动画 */
-@keyframes floatSlow {
-  0%, 100% {
-    transform: translateY(0) rotate(2deg);
+@media (max-width: 900px) {
+  .traveler-figure {
+   width: min(38vw, 270px);
+    left: 5%;
+    bottom: 18%;
   }
-  50% {
-    transform: translateY(-8px) rotate(1deg);
+
+  .npc-figure {
+    width: min(38vw, 270px);
+    right: 5%;
+    bottom: 18%;
+  }
+
+  .dialogue-board {
+    width: calc(100% - 28px);
+    padding: 28px 22px 20px;
+    bottom: 10px;
+    min-height: 156px;
+  }
+
+  .name-plate {
+    min-width: 126px;
+    font-size: 22px;
+    padding: 8px 20px;
+  }
+
+  .name-plate.traveler {
+    left: 22%;
+  }
+
+  .name-plate.npc {
+    left: 80%;
+  }
+
+  .dialogue-text {
+    font-size: 20px;
+    min-height: 72px;
   }
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(40px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* 响应式 */
 @media (max-width: 600px) {
   .top-actions {
     top: 14px;
-    left: 14px;
+    right: 14px;
   }
 
   .skip-btn {
-    padding: 8px 14px;
     font-size: 12px;
-    letter-spacing: 1px;
+    padding: 7px 14px;
   }
 
-  .npc-container {
-    right: 5%;
-    bottom: 28%;
+  .traveler-figure {
+    left: 2%;
+    bottom: 24%;
+    width: 178px;
   }
 
-  .npc-portrait {
-    width: 120px;
+  .npc-figure {
+    right: 0;
+    bottom: 22%;
+    width: 178px;
   }
 
-  .dialog-text {
-    font-size: 15px;
+  .dialogue-board {
+    width: calc(100% - 16px);
+    border-radius: 20px;
+    border-width: 2px;
+    padding: 22px 14px 16px;
+    bottom: 8px;
+    min-height: 144px;
   }
 
-  .dialog-box {
-    padding: 18px 20px;
-  }
-
-  .dialog-quote {
-    font-size: 24px;
-  }
-
-  .invitation-scroll {
-    width: 280px;
-  }
-
-  .invitation-text {
+  .name-plate {
+    top: -16px;
     font-size: 18px;
+    min-width: 96px;
+    padding: 7px 14px;
+    border-radius: 14px;
   }
 
-  .window-grid {
-    top: 10px;
-    left: 10px;
-    right: 10px;
-    bottom: 10px;
+  .name-plate.traveler {
+    left: 20%;
+  }
+
+  .name-plate.npc {
+    left: 80%;
+  }
+
+  .dialogue-text {
+    font-size: 17px;
+    line-height: 1.8;
+  }
+
+  .speaker-tip,
+  .poem-line {
+    display: none;
+  }
+
+  .continue-mark {
+    font-size: 30px;
   }
 }
 </style>

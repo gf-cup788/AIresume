@@ -1,140 +1,155 @@
 <template>
-  <div class="user">
-    <!-- 水墨背景 -->
-    <div class="ink-bg"></div>
-    
-    <!-- 竹叶装饰 -->
+  <div class="user-page">
+    <div class="bg-layer"></div>
+    <div class="ink ink-1"></div>
+    <div class="ink ink-2"></div>
     <div class="bamboo bamboo-1"></div>
     <div class="bamboo bamboo-2"></div>
-    
-    <div class="container">
-      <!-- 返回首页按钮 -->
-      <button class="back-home" @click="goHome">
-        <span class="back-icon">←</span>
-        <span>归去来兮</span>
-      </button>
-      
-      <!-- 卷轴式头部 -->
-      <div class="scroll-header">
-        <div class="scroll-top">
-          <span class="scroll-ring"></span>
-          <span class="scroll-ring"></span>
-        </div>
-        
-        <div class="profile-section">
-          <div class="avatar-frame">
-            <img :src="user.avatar || defaultAvatar" class="avatar" @error="handleAvatarError" />
-            <div class="avatar-glow"></div>
-          </div>
-          
-          <div class="user-info">
-            <div class="name-wrapper">
-              <span class="name-prefix">· 君 ·</span>
-              <h2 class="user-name">{{ user.name || "青衫客" }}</h2>
-              <span class="name-suffix">· 子 ·</span>
-            </div>
-            <p class="user-title">游历四方 · 寻梦江南</p>
-            <div class="user-badge">
-              <span class="badge-icon">🏮</span>
-              <span>{{ checkins.length }} 处留痕</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="scroll-bottom"></div>
-      </div>
-      
-      <!-- 打卡记录 - 诗签风格 -->
-      <div class="section">
-        <div class="section-title">
-          <span class="title-icon">✧</span>
-          <h3>游历留痕</h3>
-          <span class="title-icon">✧</span>
-        </div>
-        <div class="title-divider"></div>
-        
-        <div v-if="checkins.length === 0" class="empty-poem">
-          <div class="poem-card">
-            <p class="poem-line">未曾踏足山水间</p>
-            <p class="poem-line">且待君行觅风光</p>
-            <p class="poem-desc">点击地图上的景点，开启你的旅程</p>
-            <button class="poem-btn" @click="goHome">去游历 →</button>
-          </div>
-        </div>
-        
-        <div class="poem-grid" v-else>
-          <div v-for="(item, index) in checkins" :key="item.id" class="poem-card-item" :style="{ animationDelay: index * 0.05 + 's' }">
-            <div class="card-inner">
-              <div class="card-icon">📍</div>
-              <div class="card-name">{{ item.name }}</div>
-              <div class="card-date" v-if="item.date">{{ item.date }}</div>
-              <div class="card-seal">
-                <span class="seal-mark">印</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- 评论记录 - 笺纸风格 -->
-      <div class="section">
-        <div class="section-title">
-          <span class="title-icon">✧</span>
-          <h3>笔墨留香</h3>
-          <span class="title-icon">✧</span>
-        </div>
-        <div class="title-divider"></div>
-        
-        <div v-if="myComments.length === 0" class="empty-poem">
-          <div class="poem-card">
-            <p class="poem-line">尚未留下只言片语</p>
-            <p class="poem-line">待君归来题诗壁</p>
-            <p class="poem-desc">在景点详情页留下你的感悟</p>
-            <button class="poem-btn" @click="goHome">去游览 →</button>
-          </div>
-        </div>
-        
-        <div class="comment-list" v-else>
-          <div v-for="item in myComments" :key="item.id" class="comment-scroll">
-            <div class="comment-paper" @click="goToScene(item.sceneId)">
-              <div class="paper-fold"></div>
-              <div class="comment-header">
-                <span class="comment-scene">🏯 {{ item.sceneName }}</span>
-                <span class="comment-tag">#{{ item.tag }}</span>
-              </div>
-              <p class="comment-content">{{ item.content }}</p>
-              <div class="comment-footer">
-                <span class="comment-date">{{ item.date }}</span>
-                <span class="comment-quote">—— 录于斯景</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- 操作按钮 - 印章风格 -->
-      <div class="actions">
-        <button class="seal-btn explore-btn" @click="goHome">
-          <span class="btn-text">继续游历</span>
-          <span class="btn-seal">✿</span>
+
+    <div class="page-wrap">
+      <header class="top-line">
+        <button class="nav-btn" @click="goHome">
+          <span>←</span>
+          <span>返回首页</span>
         </button>
-        <button class="seal-btn logout-btn" @click="logout">
-          <span class="btn-text">辞别归去</span>
-          <span class="btn-seal">❁</span>
-        </button>
-      </div>
+        <button class="nav-btn danger" @click="logout">退出登录</button>
+      </header>
+
+      <main class="scroll-layout">
+        <!-- 左侧：人物卷轴 -->
+        <aside class="profile-column">
+          <div class="profile-scroll">
+            <div class="profile-head">
+              <div class="avatar-shell">
+                <img :src="user.avatar || defaultAvatar" class="avatar" @error="handleAvatarError" />
+                <span class="seal">游</span>
+              </div>
+
+              <div class="name-block">
+                <div class="minor-text">Jiangxi Travel Notes</div>
+                <h1 class="user-name">{{ user.name || '青衫客' }}</h1>
+                <p class="sub-line">山水有迹，笔墨留痕</p>
+              </div>
+            </div>
+
+            <div class="intro-block">
+              <p>
+                此处记录你的江西游历足迹。每一次景点打卡、每一段评论感受，都会被收进这一页山水长卷之中。
+              </p>
+            </div>
+
+            <div class="data-lines">
+              <div class="data-line">
+                <span class="line-label">累计打卡</span>
+                <span class="line-value emphasis">{{ checkins.length }} 处</span>
+              </div>
+              <div class="data-line">
+                <span class="line-label">留下评论</span>
+                <span class="line-value">{{ myComments.length }} 条</span>
+              </div>
+              <div class="data-line">
+                <span class="line-label">最近状态</span>
+                <span class="line-value">{{ latestSceneText }}</span>
+              </div>
+            </div>
+
+            <div class="quick-actions">
+              <button class="ink-btn primary" @click="goHome">继续游历</button>
+              <button class="ink-btn" @click="goHome">查看景点</button>
+            </div>
+
+            <div class="mini-section">
+              <div class="section-caption">最近打卡</div>
+              <div v-if="recentCheckins.length" class="vertical-list compact">
+                <div v-for="item in recentCheckins" :key="item.id" class="vertical-item">
+                  <span class="item-name">{{ item.name }}</span>
+                  <span class="item-date">{{ item.date }}</span>
+                </div>
+              </div>
+              <div v-else class="empty-inline">暂未留下打卡记录</div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- 右侧：正文排版，不走卡片风 -->
+        <section class="content-column">
+          <section class="content-block">
+            <div class="block-head">
+              <div>
+                <div class="block-en">CHECK-IN ARCHIVE</div>
+                <h2>游历留痕</h2>
+              </div>
+              <div class="block-meta">共 {{ checkins.length }} 处</div>
+            </div>
+
+            <div v-if="checkins.length === 0" class="empty-area">
+              <div class="empty-title">未曾踏足山水间</div>
+              <p>你还没有打卡记录，先去首页看看江西景点吧。</p>
+              <button class="ink-btn primary" @click="goHome">去游历</button>
+            </div>
+
+            <div v-else class="record-list scenic-list">
+              <div v-for="(item, index) in checkins" :key="item.id" class="record-row">
+                <div class="record-index">{{ String(index + 1).padStart(2, '0') }}</div>
+                <div class="record-main">
+                  <div class="record-title-row">
+                    <h3>{{ item.name }}</h3>
+                    <span class="record-tag">已打卡</span>
+                  </div>
+                  <div class="record-sub">记录日期：{{ item.date }}</div>
+                </div>
+                <div class="record-seal">印</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="content-block comments-block">
+            <div class="block-head">
+              <div>
+                <div class="block-en">COMMENT MANUSCRIPT</div>
+                <h2>笔墨留香</h2>
+              </div>
+              <div class="block-meta">共 {{ myComments.length }} 条</div>
+            </div>
+
+            <div v-if="myComments.length === 0" class="empty-area slim">
+              <div class="empty-title">尚未留下只言片语</div>
+              <p>去景点详情页写下你的感受吧。</p>
+              <button class="ink-btn" @click="goHome">去游览</button>
+            </div>
+
+            <div v-else class="record-list comment-list">
+              <article
+                v-for="item in myComments"
+                :key="item.id"
+                class="comment-entry"
+                @click="goToScene(item.sceneId)"
+              >
+                <div class="comment-topline">
+                  <span class="scene-name">{{ item.sceneName }}</span>
+                  <span class="comment-date">{{ item.date }}</span>
+                </div>
+                <p class="comment-content">{{ item.content }}</p>
+                <div class="comment-bottomline">
+                  <span class="comment-tag">#{{ item.tag }}</span>
+                  <span class="comment-link">查看景点 →</span>
+                </div>
+              </article>
+            </div>
+          </section>
+        </section>
+      </main>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onBeforeMount } from 'vue'
+import { ref, reactive, onMounted, onBeforeMount, computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const defaultAvatar = new URL('@/assets/imgs/red-soldier.png', import.meta.url).href
 
-// 响应式数据
 const user = reactive({
   avatar: '',
   name: ''
@@ -142,17 +157,23 @@ const user = reactive({
 const checkins = ref([])
 const myComments = ref([])
 
-// 加载用户的所有评论
+const recentCheckins = computed(() => checkins.value.slice(0, 4))
+const latestSceneText = computed(() => {
+  if (checkins.value.length > 0) return `最近到过 ${checkins.value[0].name}`
+  if (myComments.value.length > 0) return `最近评论了 ${myComments.value[0].sceneName}`
+  return '尚在启程途中'
+})
+
 const loadUserComments = () => {
   const allComments = []
   const scenicMap = {
-    1: { name: "庐山", id: 1 },
-    2: { name: "井冈山", id: 2 },
-    3: { name: "婺源", id: 3 }
+    1: { name: '庐山', id: 1 },
+    2: { name: '井冈山', id: 2 },
+    3: { name: '婺源', id: 3 }
   }
-  
+
   Object.values(scenicMap).forEach(scene => {
-    const comments = JSON.parse(localStorage.getItem(`comments_${scene.id}`) || "[]")
+    const comments = JSON.parse(localStorage.getItem(`comments_${scene.id}`) || '[]')
     const userComments = comments.filter(c => c.user === user.name)
     userComments.forEach(c => {
       allComments.push({
@@ -162,18 +183,15 @@ const loadUserComments = () => {
       })
     })
   })
-  
-  // 按时间倒序
+
   allComments.sort((a, b) => b.id - a.id)
   myComments.value = allComments
 }
 
-// 返回首页
 const goHome = () => {
   router.push('/')
 }
 
-// 跳转到景点详情
 const goToScene = (sceneId) => {
   if (sceneId) {
     router.push({
@@ -183,46 +201,41 @@ const goToScene = (sceneId) => {
   }
 }
 
-// 退出登录
 const logout = () => {
-  if (confirm("君欲辞别？")) {
-    localStorage.removeItem("user")
+  if (confirm('确定退出登录吗？')) {
+    localStorage.removeItem('user')
     router.push('/')
   }
 }
 
-// 头像加载失败处理
 const handleAvatarError = (e) => {
   e.target.src = defaultAvatar
 }
 
-// 初始化数据
 const initData = () => {
-  const userStr = localStorage.getItem("user")
-  
+  const userStr = localStorage.getItem('user')
   if (!userStr) {
     router.replace('/login')
     return
   }
-  
+
   const userData = JSON.parse(userStr)
   user.avatar = userData.avatar || defaultAvatar
   user.name = userData.name
-  
-  // 获取打卡数据，添加日期显示
-  const rawCheckins = JSON.parse(localStorage.getItem("checkins") || "[]")
-  checkins.value = rawCheckins.map(item => ({
-    ...item,
-    date: item.date || new Date().toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })
-  }))
-  
-  // 加载评论
+
+  const rawCheckins = JSON.parse(localStorage.getItem('checkins') || '[]')
+  checkins.value = rawCheckins
+    .map(item => ({
+      ...item,
+      date: item.date || new Date().toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })
+    }))
+    .sort((a, b) => b.id - a.id)
+
   loadUserComments()
 }
 
 onBeforeMount(() => {
-  // 在组件挂载前检查登录状态
-  const userStr = localStorage.getItem("user")
+  const userStr = localStorage.getItem('user')
   if (!userStr) {
     router.replace('/login')
   }
@@ -234,564 +247,506 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.user {
+.user-page {
   position: relative;
   min-height: 100vh;
-  background: #f5ede0;
+  background: #f4ecdf;
+  color: #4f3b26;
   overflow-x: hidden;
 }
 
-/* 水墨背景 */
-.ink-bg {
+.bg-layer {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: 
-    radial-gradient(circle at 20% 30%, rgba(200, 180, 140, 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 80% 70%, rgba(160, 130, 90, 0.06) 0%, transparent 50%),
-    repeating-linear-gradient(45deg, rgba(180, 150, 110, 0.02) 0px, rgba(180, 150, 110, 0.02) 2px, transparent 2px, transparent 8px);
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(174, 142, 95, 0.1) 0%, transparent 28%),
+    radial-gradient(circle at 84% 72%, rgba(135, 108, 70, 0.08) 0%, transparent 30%),
+    linear-gradient(180deg, rgba(255, 251, 244, 0.45) 0%, rgba(244, 236, 223, 0.96) 100%);
   z-index: 0;
 }
 
-/* 竹叶装饰 */
+.ink {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(30px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ink-1 {
+  width: 240px;
+  height: 240px;
+  left: -50px;
+  top: 120px;
+  background: rgba(112, 88, 59, 0.08);
+}
+
+.ink-2 {
+  width: 300px;
+  height: 300px;
+  right: -70px;
+  bottom: 60px;
+  background: rgba(180, 144, 91, 0.08);
+}
+
 .bamboo {
   position: fixed;
-  width: 80px;
-  height: 200px;
-  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 200"><path fill="rgba(100,120,80,0.15)" d="M50,10 L55,40 L52,45 L48,45 L45,40 L50,10 Z M48,45 L52,45 L55,80 L52,85 L48,85 L45,80 L48,45 Z M48,85 L52,85 L55,120 L52,125 L48,125 L45,120 L48,85 Z M48,125 L52,125 L55,160 L52,165 L48,165 L45,160 L48,125 Z"/></svg>') repeat-y;
+  width: 78px;
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 200"><path fill="rgba(95,120,80,0.14)" d="M50,10 L55,40 L52,45 L48,45 L45,40 L50,10 Z M48,45 L52,45 L55,80 L52,85 L48,85 L45,80 L48,45 Z M48,85 L52,85 L55,120 L52,125 L48,125 L45,120 L48,85 Z M48,125 L52,125 L55,160 L52,165 L48,165 L45,160 L48,125 Z"/></svg>') repeat-y;
   background-size: 100% auto;
   pointer-events: none;
   z-index: 0;
 }
 
 .bamboo-1 {
-  left: 20px;
-  top: 100px;
-  height: 400px;
-  opacity: 0.4;
+  left: 16px;
+  top: 120px;
+  height: 380px;
+  opacity: 0.34;
   transform: rotate(-5deg);
 }
 
 .bamboo-2 {
-  right: 20px;
-  bottom: 100px;
-  height: 350px;
-  opacity: 0.4;
-  transform: rotate(5deg) scaleX(-1);
+  right: 16px;
+  bottom: 80px;
+  height: 330px;
+  opacity: 0.34;
+  transform: rotate(6deg) scaleX(-1);
 }
 
-.container {
+.page-wrap {
   position: relative;
   z-index: 1;
-  max-width: 700px;
+  width: min(1200px, calc(100% - 44px));
   margin: 0 auto;
-  padding: 20px 24px 60px;
+  padding: 22px 0 52px;
 }
 
-/* 返回首页按钮 */
-.back-home {
+.top-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.nav-btn,
+.ink-btn {
+  transition: all 0.25s ease;
+}
+
+.nav-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: rgba(200, 180, 140, 0.2);
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(200, 170, 110, 0.5);
-  border-radius: 40px;
-  padding: 8px 18px;
-  margin-bottom: 20px;
-  font-size: 14px;
-  color: #8b6b42;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(176, 143, 97, 0.42);
+  background: rgba(249, 242, 230, 0.7);
+  color: #86653c;
   cursor: pointer;
-  transition: all 0.3s;
-  font-family: "STKaiti", serif;
 }
 
-.back-home:hover {
-  background: rgba(200, 180, 140, 0.4);
-  transform: translateX(-4px);
+.nav-btn.danger {
+  color: #8e3a31;
+  border-color: rgba(154, 57, 46, 0.24);
+  background: rgba(154, 57, 46, 0.06);
 }
 
-.back-icon {
-  font-size: 16px;
+.nav-btn:hover,
+.ink-btn:hover,
+.comment-entry:hover {
+  transform: translateY(-2px);
 }
 
-/* 卷轴头部 */
-.scroll-header {
-  background: #fffef7;
-  border-radius: 24px 24px 8px 8px;
-  margin-bottom: 32px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255,255,255,0.8);
-  border: 1px solid #e8e0d0;
+.scroll-layout {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 34px;
+  align-items: start;
+}
+
+.profile-column {
+  position: sticky;
+  top: 18px;
+}
+
+.profile-scroll {
   position: relative;
-  overflow: hidden;
+  padding: 28px 24px 26px;
+  background: linear-gradient(180deg, rgba(255, 251, 244, 0.78) 0%, rgba(245, 235, 219, 0.94) 100%);
+  border-left: 2px solid rgba(176, 143, 97, 0.34);
+  border-right: 2px solid rgba(176, 143, 97, 0.18);
+  box-shadow: 0 18px 38px rgba(117, 92, 58, 0.08);
 }
 
-.scroll-header::before {
+.profile-scroll::before,
+.profile-scroll::after {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 40px;
-  background: linear-gradient(135deg, #f5eddd 0%, #fff8ea 100%);
-  border-bottom: 1px solid #e0d4bc;
+  left: 14px;
+  right: 14px;
+  height: 14px;
+  background: linear-gradient(180deg, rgba(201, 170, 122, 0.34), rgba(173, 138, 89, 0.18));
+  border-radius: 999px;
 }
 
-.scroll-top {
-  display: flex;
-  justify-content: center;
-  gap: 60px;
-  padding: 12px 0 8px;
-  position: relative;
+.profile-scroll::before {
+  top: -7px;
 }
 
-.scroll-ring {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #c9aa5f;
-  box-shadow: 0 0 0 2px #f5e6c8, 0 0 0 4px #b88d4a;
+.profile-scroll::after {
+  bottom: -7px;
 }
 
-.profile-section {
-  padding: 32px 24px 28px;
+.profile-head {
   text-align: center;
-  position: relative;
 }
 
-.avatar-frame {
+.avatar-shell {
   position: relative;
-  display: inline-block;
-  margin-bottom: 16px;
+  width: 132px;
+  height: 132px;
+  margin: 0 auto 18px;
+}
+
+.avatar-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px dashed rgba(176, 143, 97, 0.4);
 }
 
 .avatar {
-  width: 100px;
-  height: 100px;
+  position: absolute;
+  inset: 12px;
+  width: calc(100% - 24px);
+  height: calc(100% - 24px);
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid #d4b87a;
+  border: 4px solid #d4b87a;
   background: #fff;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  position: relative;
-  z-index: 2;
 }
 
-.avatar-glow {
+.seal {
   position: absolute;
-  top: -5px;
-  left: -5px;
-  right: -5px;
-  bottom: -5px;
+  right: 8px;
+  bottom: 10px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(210,180,110,0.3) 0%, transparent 70%);
-  animation: breathe 3s ease-in-out infinite;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #b44b40, #8d352b);
+  color: #fff7ef;
+  font-family: "STKaiti", "KaiTi", serif;
+  box-shadow: 0 8px 16px rgba(141, 53, 43, 0.2);
 }
 
-@keyframes breathe {
-  0%, 100% { opacity: 0.3; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(1.05); }
+.minor-text,
+.block-en,
+.item-date,
+.record-sub,
+.comment-date,
+.sub-line,
+.line-label,
+.block-meta {
+  color: #9b7a50;
 }
 
-.name-wrapper {
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
+.minor-text,
+.block-en {
+  font-size: 12px;
+  letter-spacing: 1.2px;
 }
 
-.name-prefix, .name-suffix {
-  font-size: 14px;
-  color: #b89a6a;
-  font-style: italic;
-  letter-spacing: 2px;
+.user-name,
+.block-head h2,
+.record-title-row h3 {
+  font-family: "STKaiti", "KaiTi", serif;
 }
 
 .user-name {
-  font-size: 28px;
-  font-weight: 400;
-  color: #4a3b2a;
+  margin: 8px 0 4px;
+  font-size: 38px;
+  letter-spacing: 3px;
+  color: #5d4324;
+}
+
+.sub-line {
   margin: 0;
-  letter-spacing: 4px;
-  font-family: "STKaiti", "华文楷书", "KaiTi", serif;
-}
-
-.user-title {
-  font-size: 12px;
-  color: #9b8a6b;
-  letter-spacing: 2px;
-  margin: 8px 0;
-}
-
-.user-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 16px;
-  background: linear-gradient(135deg, #f9efdf, #f5e8d4);
-  border-radius: 40px;
   font-size: 13px;
-  color: #b87c4a;
-  border: 1px solid #e8dcc8;
+  letter-spacing: 2px;
 }
 
-.badge-icon {
+.intro-block {
+  margin: 24px 0 22px;
+  padding: 18px 0;
+  border-top: 1px solid rgba(176, 143, 97, 0.2);
+  border-bottom: 1px solid rgba(176, 143, 97, 0.2);
+  line-height: 1.95;
+  color: #6e5535;
+  font-size: 15px;
+}
+
+.data-lines {
+  display: grid;
+  gap: 14px;
+}
+
+.data-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: baseline;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed rgba(176, 143, 97, 0.22);
+}
+
+.line-value {
+  color: #5c4224;
+  text-align: right;
+}
+
+.line-value.emphasis {
+  font-size: 22px;
+  color: #8f392e;
+  font-weight: 700;
+}
+
+.quick-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 24px 0 22px;
+}
+
+.ink-btn {
+  padding: 11px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(176, 143, 97, 0.26);
+  background: rgba(255, 248, 235, 0.92);
+  color: #7c5d34;
+  cursor: pointer;
+}
+
+.ink-btn.primary {
+  background: linear-gradient(135deg, #b28a55, #8b6a3f);
+  color: #fffaf2;
+  border: none;
+}
+
+.mini-section {
+  margin-top: 6px;
+}
+
+.section-caption {
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: #8a6a40;
+  letter-spacing: 1px;
+}
+
+.vertical-list.compact {
+  display: grid;
+  gap: 10px;
+}
+
+.vertical-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed rgba(176, 143, 97, 0.18);
+}
+
+.item-name {
+  color: #5b4124;
+}
+
+.empty-inline {
+  color: #8b7554;
   font-size: 14px;
 }
 
-.scroll-bottom {
-  height: 12px;
-  background: linear-gradient(180deg, #e8dcc8, #d4c4a8);
-  border-top: 1px solid #c8b894;
-}
-
-/* 章节标题 */
-.section {
-  margin-bottom: 40px;
-}
-
-.section-title {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  margin-bottom: 12px;
-}
-
-.title-icon {
-  color: #c9aa5f;
-  font-size: 18px;
-  letter-spacing: 4px;
-}
-
-.section-title h3 {
-  font-size: 20px;
-  font-weight: 400;
-  color: #5d4a2e;
-  margin: 0;
-  font-family: "STKaiti", "华文楷书", "KaiTi", serif;
-  letter-spacing: 4px;
-}
-
-.title-divider {
-  width: 80px;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, #d4b87a, #c9aa5f, #d4b87a, transparent);
-  margin: 0 auto 24px;
-}
-
-/* 空状态诗签 */
-.empty-poem {
-  text-align: center;
-  padding: 20px;
-}
-
-.poem-card {
-  background: rgba(255, 250, 240, 0.9);
-  border-radius: 16px;
-  padding: 28px 20px;
-  border: 1px solid #e8dcc0;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-}
-
-.poem-line {
-  font-size: 16px;
-  color: #7d6848;
-  line-height: 2;
-  letter-spacing: 1px;
-  font-family: "STKaiti", "华文楷书", "KaiTi", serif;
-}
-
-.poem-desc {
-  font-size: 12px;
-  color: #b8a072;
-  margin: 16px 0 12px;
-}
-
-.poem-btn {
-  background: linear-gradient(135deg, #ecdba8, #e0cf9c);
-  border: none;
-  padding: 8px 24px;
-  border-radius: 40px;
-  font-size: 13px;
-  color: #5d4a2e;
-  cursor: pointer;
-  font-family: "STKaiti", serif;
-  transition: all 0.2s;
-}
-
-.poem-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-}
-
-/* 诗签网格 */
-.poem-grid {
+.content-column {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 16px;
+  gap: 34px;
 }
 
-.poem-card-item {
-  animation: fadeInUp 0.4s ease both;
+.content-block {
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(176, 143, 97, 0.2);
 }
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.card-inner {
-  background: linear-gradient(135deg, #fffef5, #fff9ef);
-  border-radius: 12px;
-  padding: 16px 12px;
-  text-align: center;
-  border: 1px solid #ecdba8;
-  position: relative;
-  transition: all 0.3s;
-  cursor: default;
-}
-
-.card-inner:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(100, 70, 30, 0.12);
-}
-
-.card-icon {
-  font-size: 28px;
-  margin-bottom: 8px;
-}
-
-.card-name {
-  font-size: 16px;
-  font-weight: 500;
-  color: #5d4a2e;
-  margin-bottom: 6px;
-  font-family: "STKaiti", "华文楷书", "KaiTi", serif;
-}
-
-.card-date {
-  font-size: 10px;
-  color: #b89a6a;
-}
-
-.card-seal {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-}
-
-.seal-mark {
-  font-size: 12px;
-  color: #c9aa5f;
-  font-family: "STKaiti", serif;
-  border: 1px solid #d4b87a;
-  padding: 2px 4px;
-  border-radius: 2px;
-  background: rgba(200, 170, 100, 0.1);
-  transform: rotate(-10deg);
-  display: inline-block;
-}
-
-/* 评论笺纸 */
-.comment-list {
+.block-head {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.block-head h2 {
+  margin: 6px 0 0;
+  font-size: 34px;
+  color: #5d4325;
+  letter-spacing: 2px;
+}
+
+.empty-area {
+  padding: 24px 0 12px;
+  color: #775d39;
+  line-height: 1.9;
+}
+
+.empty-area.slim {
+  padding-top: 18px;
+}
+
+.empty-title {
+  font-size: 22px;
+  color: #654828;
+  margin-bottom: 6px;
+  font-family: "STKaiti", "KaiTi", serif;
+}
+
+.record-list {
+  display: grid;
+}
+
+/* .scenic-list {
+  gap: 12px;
+} */
+
+.record-row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) 48px;
   gap: 16px;
+  align-items: center;
+  padding: 12px 6px;
+  border-top: 1px dashed rgba(176, 143, 97, 0.18);
 }
 
-.comment-scroll {
-  animation: slideIn 0.4s ease both;
+.record-index {
+  font-size: 24px;
+  color: #b08f61;
+  font-family: Georgia, serif;
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-15px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+.record-title-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
-.comment-paper {
-  background: #fffef5;
-  border-radius: 4px 16px 16px 4px;
-  padding: 20px;
-  position: relative;
-  border-left: 6px solid #d4b87a;
-  box-shadow: 2px 4px 12px rgba(0,0,0,0.06);
-  transition: all 0.2s;
+.record-title-row h3 {
+  margin: 0;
+  font-size: 26px;
+  color: #5a4023;
+}
+
+.record-tag {
+  font-size: 12px;
+  color: #8f6a3c;
+  background: rgba(176, 143, 97, 0.12);
+  border-radius: 999px;
+  padding: 5px 10px;
+}
+
+.record-seal {
+  justify-self: end;
+  color: #9c3f34;
+  border: 1px solid rgba(156, 63, 52, 0.36);
+  padding: 4px 8px;
+  border-radius: 4px;
+  transform: rotate(-8deg);
+}
+
+.comment-list {
+  gap: 0;
+}
+
+.comment-entry {
+  padding: 18px 2px 18px 0;
+  border-top: 1px dashed rgba(176, 143, 97, 0.18);
   cursor: pointer;
 }
 
-.comment-paper:hover {
-  box-shadow: 4px 6px 16px rgba(0,0,0,0.1);
-  transform: translateX(4px);
-}
-
-.paper-fold {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 0;
-  height: 0;
-  border-style: solid;
-  border-width: 0 30px 30px 0;
-  border-color: transparent #ecdba8 transparent transparent;
-}
-
-.comment-header {
+.comment-topline,
+.comment-bottomline {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  gap: 12px;
   flex-wrap: wrap;
-  gap: 8px;
 }
 
-.comment-scene {
-  font-size: 14px;
-  color: #b87c4a;
-  font-weight: 500;
-}
-
-.comment-tag {
-  font-size: 11px;
-  color: #c9aa5f;
-  background: rgba(200, 170, 100, 0.15);
-  padding: 4px 10px;
-  border-radius: 20px;
+.scene-name {
+  font-size: 18px;
+  color: #9b6934;
+  font-weight: 600;
 }
 
 .comment-content {
-  font-size: 14px;
-  line-height: 1.6;
-  color: #4a3b2a;
-  margin-bottom: 12px;
-  font-style: italic;
-}
-
-.comment-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 11px;
-  color: #b89a6a;
-  border-top: 1px dashed #ecdba8;
-  padding-top: 10px;
-}
-
-.comment-quote {
-  font-family: "STKaiti", serif;
-}
-
-/* 操作按钮 */
-.actions {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  margin-top: 40px;
-  padding-top: 20px;
-  border-top: 1px dashed #d4c0a0;
-  flex-wrap: wrap;
-}
-
-.seal-btn {
-  background: transparent;
-  border: none;
-  padding: 10px 28px;
-  cursor: pointer;
-  transition: all 0.3s;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border-radius: 40px;
-}
-
-.explore-btn {
-  background: linear-gradient(135deg, #e8ddcb, #ddd0bb);
-  border: 1px solid #c9aa5f;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-}
-
-.logout-btn {
-  background: linear-gradient(135deg, #f5ede0, #ebe0ce);
-  border: 1px solid #d4b87a;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-}
-
-.btn-text {
+  margin: 12px 0;
+  line-height: 1.95;
+  color: #4f3b26;
   font-size: 15px;
-  color: #8b6b42;
-  letter-spacing: 3px;
-  font-family: "STKaiti", serif;
 }
 
-.btn-seal {
-  font-size: 14px;
-  color: #c9aa5f;
+.comment-tag {
+  color: #ba8b45;
 }
 
-.seal-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(100, 70, 30, 0.15);
+.comment-link {
+  color: #7a5a33;
 }
 
-.seal-btn:active {
-  transform: translateY(0);
-}
-
-/* 响应式 */
-@media (max-width: 500px) {
-  .container {
-    padding: 16px 16px 40px;
+@media (max-width: 980px) {
+  .page-wrap {
+    width: min(100% - 24px, 1200px);
   }
-  
-  .avatar {
-    width: 80px;
-    height: 80px;
+
+  .scroll-layout {
+    grid-template-columns: 1fr;
+    gap: 26px;
   }
-  
+
+  .profile-column {
+    position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .page-wrap {
+    padding-top: 16px;
+  }
+
+  .profile-scroll {
+    padding: 22px 18px;
+  }
+
   .user-name {
-    font-size: 22px;
+    font-size: 30px;
   }
-  
-  .poem-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 12px;
+
+  .block-head h2,
+  .record-title-row h3 {
+    font-size: 24px;
   }
-  
-  .card-inner {
-    padding: 12px 8px;
+
+  .record-row {
+    grid-template-columns: 42px minmax(0, 1fr);
   }
-  
-  .card-name {
-    font-size: 14px;
-  }
-  
-  .actions {
-    gap: 12px;
-  }
-  
-  .seal-btn {
-    padding: 8px 20px;
-  }
-  
-  .btn-text {
-    font-size: 13px;
-    letter-spacing: 2px;
+
+  .record-seal {
+    display: none;
   }
 }
 </style>
