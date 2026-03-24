@@ -1,613 +1,749 @@
 <template>
-  <div class="login">
-    <!-- 水墨背景 -->
-    <div class="ink-bg"></div>
-    
-    <!-- 红日背景 -->
-    <div class="sun-bg"></div>
-    
-    <!-- 山峦层叠 -->
-    <div class="mountains">
-      <div class="mountain-layer layer1"></div>
-      <div class="mountain-layer layer2"></div>
-      <div class="mountain-layer layer3"></div>
-    </div>
-    
-    <!-- 松树剪影 -->
-    <div class="pine-tree"></div>
-    
-    <!-- 红色飘带 -->
-    <div class="ribbon"></div>
-    
-    <!-- 飞鸟 -->
-    <div class="birds">
-      <span v-for="i in 5" :key="i" class="bird" :style="{ animationDelay: i * 0.5 + 's', top: (20 + i * 8) + '%', left: (10 + i * 15) + '%' }">✧</span>
-    </div>
-    
-    <!-- 梅花点缀 -->
-    <div class="plum-blossoms">
-      <span v-for="i in 8" :key="i" class="plum" :style="{ left: Math.random() * 100 + '%', top: Math.random() * 100 + '%', animationDelay: i * 0.3 + 's' }">❀</span>
-    </div>
-    
-    <!-- 登录卷轴 -->
-    <div class="scroll-container">
-      <div class="scroll-wrapper">
-        <!-- 卷轴顶端装饰 -->
-        <div class="scroll-top">
-          <div class="scroll-roller left"></div>
-          <div class="scroll-roller right"></div>
-        </div>
-        
-        <!-- 卷轴内容 -->
-        <div class="scroll-content">
-          <div class="content-inner">
-            <div class="logo-section">
-              <div class="red-star">★</div>
-              <h1 class="title">江右文脉</h1>
-              <div class="subtitle">· 赣鄱风韵 ·</div>
-            </div>
-            
-            <div class="welcome-text">
-              <p class="poem-line">巍巍井冈存浩气</p>
-              <p class="poem-line">滔滔赣水蕴文心</p>
-              <p class="poem-desc">登临入阁 · 共赴山水之约</p>
-            </div>
-            
-            <div class="form-section">
+  <div class="book-wrapper">
+    <div class="book">
+      <!-- 图层3：注册页（最底层） - 紧凑布局，无滚动条 -->
+      <div
+        ref="registerLayer"
+        class="layer"
+        id="layerRegister"
+        :style="{ zIndex: registerZIndex, transform: registerTransform }"
+      >
+        <div class="front">
+          <div class="page-content">
+            <div class="page-title">注 册</div>
+            <div class="compact-form" ref="compactFormReg">
               <div class="input-group">
-                <span class="input-icon">👤</span>
-                <input 
-                  v-model="username" 
+                <label>👤 用户名</label>
+                <input
                   type="text"
-                  placeholder="雅号 / 姓名"
-                  @keyup.enter="login"
-                  class="input-field"
+                  id="regName"
+                  v-model="regName"
+                  placeholder="张三"
+                  autocomplete="off"
+                  @click.stop
                 />
               </div>
-              
               <div class="input-group">
-                <span class="input-icon">🔒</span>
-                <input 
-                  v-model="password" 
-                  type="password" 
-                  placeholder="密钥"
-                  @keyup.enter="login"
-                  class="input-field"
+                <label>📧 电子邮箱</label>
+                <input
+                  type="email"
+                  id="regEmail"
+                  v-model="regEmail"
+                  placeholder="student@univ.edu"
+                  autocomplete="off"
+                  @click.stop
                 />
               </div>
-              
-              <button class="login-btn" @click="login">
-                <span class="btn-text">入阁登临</span>
-                <span class="btn-icon">→</span>
-              </button>
+              <div class="input-group">
+                <label>🔒 设置密码</label>
+                <input
+                  type="password"
+                  id="regPassword"
+                  v-model="regPassword"
+                  placeholder="至少6位"
+                  autocomplete="new-password"
+                  @click.stop
+                />
+              </div>
+              <button class="btn" id="registerBtn" @click.stop="handleRegister">注册并激活</button>
+              <div class="switch-hint" id="backToLoginBtn" @click.stop="handleBackToLogin">
+                <span>← 翻回上一页</span> 已有账号
+              </div>
+              <div class="footer-note">即刻拥有校园通行证</div>
             </div>
-            
-            <div class="guest-tip">
-              <span class="tip-icon">🏮</span>
-              <span>任意雅号皆可入阁</span>
-              <span class="tip-icon">🏮</span>
-            </div>
-            
-            <div class="cultural-note">
-              <span class="note-mark">✧</span>
-              江西风景独好 · 红色精神永存
-              <span class="note-mark">✧</span>
-            </div>
+            <div class="page-corner">第 2 页</div>
           </div>
         </div>
-        
-        <!-- 卷轴底端装饰 -->
-        <div class="scroll-bottom">
-          <div class="scroll-roller left"></div>
-          <div class="scroll-roller right"></div>
+      </div>
+
+      <!-- 图层2：登录页（中间层，有背面） -->
+      <div
+        ref="loginLayer"
+        class="layer"
+        id="layerLogin"
+        :style="{ zIndex: loginZIndex, transform: loginTransform }"
+      >
+        <div class="front">
+          <div class="page-content">
+            <div class="page-title">登 录</div>
+            <div class="compact-form">
+              <div class="input-group">
+                <label>📧 学号 / 邮箱</label>
+                <input
+                  type="text"
+                  id="loginUsername"
+                  v-model="loginUsername"
+                  placeholder="20243010101"
+                  autocomplete="off"
+                  @click.stop
+                />
+              </div>
+              <div class="input-group">
+                <label>🔒 密码</label>
+                <input
+                  type="password"
+                  id="loginPassword"
+                  v-model="loginPassword"
+                  placeholder="······"
+                  autocomplete="current-password"
+                  @click.stop
+                />
+              </div>
+              <button class="btn" id="loginBtn" @click.stop="handleLogin">进入校园</button>
+              <div class="switch-hint" id="nextToRegisterBtn" @click.stop="handleNextToRegister">
+                还没有通行证？ <span>翻开下一页 →</span>
+              </div>
+              <div class="footer-note">学生证样式 · 官方通道</div>
+            </div>
+            <div class="page-corner">第 1 页</div>
+          </div>
+        </div>
+        <div class="back" ref="loginBack" @click.stop>
+          <div class="back-content">
+            <h3>📖 学生守则</h3>
+            <p>
+              1. 遵守校纪校规<br />
+              2. 诚实守信，品行端正<br />
+              3. 勤奋学习，追求卓越<br />
+              4. 尊敬师长，团结同学<br />
+              5. 爱护公物，勤俭节约
+            </p>
+            <div class="small-text">学生证 · 登录页背面</div>
+          </div>
         </div>
       </div>
+
+      <!-- 图层1：封面（最上层，有背面） -->
+      <div
+        ref="coverLayer"
+        class="layer layer-cover"
+        id="layerCover"
+        :style="{ zIndex: coverZIndex, transform: coverTransform }"
+        @click.stop="handleCoverClick"
+      >
+        <div class="front">
+          <div class="cover-content">
+            <div class="emblem">🎓📘</div>
+            <h1>景 点 通 行 证</h1>
+            <div class="stamp">✦ 景点游历 ✦</div>
+            <div class="hint">▼ 点击翻开 ▼</div>
+          </div>
+        </div>
+        <div class="back" ref="coverBack" @click.stop>
+          <div class="back-content">
+            <h3>🎓 校 训</h3>
+            <p>博学 笃行<br />明德 至善</p>
+            <div class="small-text">校园通行证 · 扉页</div>
+          </div>
+        </div>
+      </div>
+
+      <transition name="toast-fade">
+        <div
+          v-if="toastVisible"
+          class="toast"
+          :style="{ background: toastIsError ? '#c24a2c' : '#2f6b47' }"
+        >
+          {{ toastMessage }}
+        </div>
+      </transition>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from "vue";
-import { useRouter, useRoute } from "vue-router";
-import defaultAvatar from "../assets/imgs/red-soldier.png";
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 
-const router = useRouter();
-const route = useRoute();
+const router = useRouter()
+const route = useRoute()
 
-const username = ref("");
-const password = ref("");
+const coverLayer = ref(null)
+const loginLayer = ref(null)
+const registerLayer = ref(null)
+const loginBack = ref(null)
+const coverBack = ref(null)
+const compactFormReg = ref(null)
 
-const login = () => {
-  if (!username.value.trim()) {
-    alert("请输入雅号");
-    return;
+const isAnimating = ref(false)
+const currentPage = ref('cover') // cover, login, register
+
+const coverTransform = ref('rotateY(0deg)')
+const loginTransform = ref('rotateY(0deg)')
+const registerTransform = ref('rotateY(0deg)')
+
+const coverZIndex = ref('30')
+const loginZIndex = ref('20')
+const registerZIndex = ref('10')
+
+const loginUsername = ref('')
+const loginPassword = ref('')
+const regName = ref('')
+const regEmail = ref('')
+const regPassword = ref('')
+
+const toastVisible = ref(false)
+const toastMessage = ref('')
+const toastIsError = ref(false)
+let toastTimer = null
+
+function flipPageOpen(layerType, callback) {
+  if (isAnimating.value) return false
+  isAnimating.value = true
+
+  if (layerType === 'cover') coverTransform.value = 'rotateY(-180deg)'
+  if (layerType === 'login') loginTransform.value = 'rotateY(-180deg)'
+  if (layerType === 'register') registerTransform.value = 'rotateY(-180deg)'
+
+  setTimeout(() => {
+    isAnimating.value = false
+    if (callback) callback()
+  }, 800)
+  return true
+}
+
+function flipPageClose(layerType, callback) {
+  if (isAnimating.value) return false
+  isAnimating.value = true
+
+  if (layerType === 'cover') coverTransform.value = 'rotateY(0deg)'
+  if (layerType === 'login') loginTransform.value = 'rotateY(0deg)'
+  if (layerType === 'register') registerTransform.value = 'rotateY(0deg)'
+
+  setTimeout(() => {
+    isAnimating.value = false
+    if (callback) callback()
+  }, 800)
+  return true
+}
+
+// 翻开封面：从封面到登录页
+function openCover() {
+  if (currentPage.value === 'cover') {
+    flipPageOpen('cover', () => {
+      coverZIndex.value = '5'
+      loginZIndex.value = '25'
+      registerZIndex.value = '10'
+      currentPage.value = 'login'
+    })
   }
-  
-  const user = {
-    name: username.value.trim(),
-    avatar: defaultAvatar,
-    loginTime: new Date().toISOString(),
-    motto: "寻梦赣鄱"
-  };
-  
-  localStorage.setItem("user", JSON.stringify(user));
-  
-  // 重定向
-  const redirect = route.query.redirect;
-  if (redirect) {
-    router.push(redirect);
-  } else {
-    router.push("/");
+}
+
+// 翻开登录页（进入注册页）
+function openLoginToRegister() {
+  if (currentPage.value === 'login') {
+    flipPageOpen('login', () => {
+      loginZIndex.value = '6'
+      registerZIndex.value = '25'
+      coverZIndex.value = '5'
+      currentPage.value = 'register'
+    })
   }
-};
+}
+
+// 从注册页翻回登录页（合上登录页，回到登录页正面）
+function backToLoginFromRegister() {
+  if (currentPage.value === 'register') {
+    registerZIndex.value = '10'
+    loginZIndex.value = '25'
+    coverZIndex.value = '5'
+    flipPageClose('login', () => {
+      currentPage.value = 'login'
+    })
+  }
+}
+
+function handleCoverClick() {
+  if (
+    (currentPage.value === 'cover' && coverTransform.value === 'rotateY(0deg)') ||
+    coverTransform.value === ''
+  ) {
+    openCover()
+  }
+}
+
+function handleNextToRegister() {
+  if (currentPage.value === 'login') {
+    openLoginToRegister()
+  } else if (currentPage.value === 'cover') {
+    if (!isAnimating.value) {
+      openCover()
+      setTimeout(() => {
+        if (currentPage.value === 'login') {
+          openLoginToRegister()
+        }
+      }, 850)
+    }
+  }
+}
+
+function handleBackToLogin() {
+  if (currentPage.value === 'register') {
+    backToLoginFromRegister()
+  }
+}
+
+// 轻提示
+function showMessage(msg, isError = false) {
+  toastMessage.value = msg
+  toastIsError.value = isError
+  toastVisible.value = true
+
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => {
+    toastVisible.value = false
+  }, 2000)
+}
+
+// 登录逻辑
+function handleLogin() {
+  const username = loginUsername.value.trim()
+  const password = loginPassword.value.trim()
+
+  if (!username || !password) {
+    showMessage('请填写学号/邮箱和密码', true)
+    return
+  }
+
+  // 模拟登录成功：保存登录态
+  const userInfo = {
+    username,
+    loginTime: Date.now()
+  }
+  localStorage.setItem('user', JSON.stringify(userInfo))
+
+  showMessage('登录成功！欢迎使用学生通行证 ✨')
+
+  // 可选：清空密码框
+  loginPassword.value = ''
+
+  // 优先回跳守卫拦截前页面，否则进入首页
+  setTimeout(() => {
+    const redirect = route.query.redirect || '/'
+    router.push(redirect)
+  }, 800)
+}
+
+// 注册逻辑 + 自动跳转登录页 且预填邮箱
+function handleRegister() {
+  const name = regName.value.trim()
+  const email = regEmail.value.trim()
+  const password = regPassword.value.trim()
+
+  if (!name || !email || !password) {
+    showMessage('请填写完整信息', true)
+    return
+  }
+  if (password.length < 6) {
+    showMessage('密码至少需要6位', true)
+    return
+  }
+  if (!email.includes('@') || !email.includes('.')) {
+    showMessage('请输入有效的邮箱地址（包含@）', true)
+    return
+  }
+
+  showMessage(`注册成功！欢迎 ${name}，请登录 ✨`)
+
+  setTimeout(() => {
+    if (currentPage.value === 'register') {
+      backToLoginFromRegister()
+    }
+    if (email) {
+      loginUsername.value = email
+    }
+    regName.value = ''
+    regEmail.value = ''
+    regPassword.value = ''
+  }, 1000)
+}
+
+// 额外优化：确保在窄屏或任何情况下注册页面内容完全不溢出，不会出现滚动条
+function adjustNoScrollOnRegister() {
+  const regFront = registerLayer.value?.querySelector('.front')
+  if (regFront) {
+    const contentHeight = regFront.scrollHeight
+    const clientHeight = regFront.clientHeight
+    if (contentHeight > clientHeight + 2) {
+      const compactDiv = registerLayer.value?.querySelector('.compact-form')
+      if (compactDiv) compactDiv.style.paddingBottom = '0px'
+    }
+  }
+}
+
+function applyInitialDomStyleTweaks() {
+  const regFrontDiv = registerLayer.value?.querySelector('.front')
+  if (regFrontDiv) {
+    regFrontDiv.style.overflowY = 'hidden'
+    const pageContentReg = regFrontDiv.querySelector('.page-content')
+    if (pageContentReg) {
+      pageContentReg.style.height = '100%'
+      pageContentReg.style.display = 'flex'
+      pageContentReg.style.flexDirection = 'column'
+      pageContentReg.style.justifyContent = 'space-between'
+    }
+    const compactFormRegEl = regFrontDiv.querySelector('.compact-form')
+    if (compactFormRegEl) {
+      compactFormRegEl.style.flex = '1'
+      compactFormRegEl.style.display = 'flex'
+      compactFormRegEl.style.flexDirection = 'column'
+      compactFormRegEl.style.justifyContent = 'center'
+    }
+  }
+
+  const loginFrontDiv = loginLayer.value?.querySelector('.front')
+  if (loginFrontDiv) {
+    const pageContentLogin = loginFrontDiv.querySelector('.page-content')
+    if (pageContentLogin) {
+      pageContentLogin.style.height = '100%'
+      pageContentLogin.style.display = 'flex'
+      pageContentLogin.style.flexDirection = 'column'
+      pageContentLogin.style.justifyContent = 'space-between'
+    }
+    const compactLogin = loginFrontDiv.querySelector('.compact-form')
+    if (compactLogin) {
+      compactLogin.style.flex = '1'
+    }
+  }
+}
+
+onMounted(() => {
+  if (coverTransform.value === '') coverTransform.value = 'rotateY(0deg)'
+  if (loginTransform.value === '') loginTransform.value = 'rotateY(0deg)'
+  if (registerTransform.value === '') registerTransform.value = 'rotateY(0deg)'
+
+  applyInitialDomStyleTweaks()
+
+  window.addEventListener('resize', adjustNoScrollOnRegister)
+  setTimeout(adjustNoScrollOnRegister, 100)
+
+  nextTick(() => {
+    adjustNoScrollOnRegister()
+  })
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', adjustNoScrollOnRegister)
+  if (toastTimer) clearTimeout(toastTimer)
+})
 </script>
 
 <style scoped>
-.login {
-  width: 100%;
-  height: 100vh;
-  position: relative;
-  overflow: hidden;
-  background: #2a1a0f;
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-/* 水墨背景 */
-.ink-bg {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  background: 
-    radial-gradient(ellipse at 30% 40%, rgba(100, 70, 40, 0.3) 0%, transparent 60%),
-    radial-gradient(ellipse at 70% 80%, rgba(80, 50, 30, 0.4) 0%, transparent 70%),
-    repeating-linear-gradient(45deg, rgba(60, 40, 20, 0.05) 0px, rgba(60, 40, 20, 0.05) 2px, transparent 2px, transparent 8px);
-  z-index: 0;
-}
-
-/* 红日背景 */
-.sun-bg {
-  position: absolute;
-  top: -50px;
-  right: -50px;
-  width: 300px;
-  height: 300px;
-  background: radial-gradient(circle, rgba(200, 80, 50, 0.3) 0%, rgba(180, 60, 40, 0.15) 50%, transparent 80%);
-  border-radius: 50%;
-  filter: blur(40px);
-  z-index: 0;
-  animation: sunGlow 4s ease-in-out infinite;
-}
-
-@keyframes sunGlow {
-  0%, 100% { opacity: 0.5; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(1.1); }
-}
-
-/* 山峦层叠 */
-.mountains {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 40%;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.mountain-layer {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(50, 35, 25, 0.4);
-}
-
-.layer1 {
-  height: 100%;
-  background: linear-gradient(0deg, rgba(60, 40, 25, 0.5) 0%, transparent 100%);
-  clip-path: polygon(0% 100%, 8% 65%, 15% 80%, 22% 55%, 30% 70%, 38% 45%, 45% 65%, 53% 40%, 60% 55%, 68% 35%, 75% 50%, 82% 30%, 90% 45%, 95% 25%, 100% 40%, 100% 100%);
-}
-
-.layer2 {
-  height: 80%;
-  background: rgba(70, 50, 30, 0.4);
-  clip-path: polygon(0% 100%, 12% 55%, 20% 70%, 28% 48%, 35% 60%, 42% 40%, 50% 55%, 58% 38%, 65% 50%, 72% 32%, 80% 45%, 88% 28%, 100% 42%, 100% 100%);
-  opacity: 0.7;
-}
-
-.layer3 {
-  height: 60%;
-  background: rgba(90, 60, 40, 0.3);
-  clip-path: polygon(0% 100%, 18% 45%, 25% 60%, 32% 40%, 40% 52%, 48% 35%, 55% 48%, 62% 30%, 70% 42%, 78% 25%, 85% 38%, 92% 22%, 100% 35%, 100% 100%);
-  opacity: 0.5;
-}
-
-/* 松树剪影 */
-.pine-tree {
-  position: absolute;
-  bottom: 5%;
-  left: 5%;
-  width: 80px;
-  height: 120px;
-  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150"><polygon points="50,10 35,45 45,45 40,70 50,70 45,45 55,45 50,10" fill="rgba(80,100,60,0.4)"/><polygon points="50,35 40,60 48,60 45,80 55,80 52,60 60,60 50,35" fill="rgba(70,90,55,0.5)"/><rect x="48" y="80" width="4" height="50" fill="rgba(60,45,30,0.6)"/></svg>') no-repeat;
-  background-size: contain;
-  z-index: 0;
-  pointer-events: none;
-  filter: blur(2px);
-  opacity: 0.6;
-}
-
-/* 红色飘带 */
-.ribbon {
-  position: absolute;
-  top: 15%;
-  left: -10%;
-  width: 120%;
-  height: 60px;
-  background: linear-gradient(90deg, transparent, rgba(180, 60, 45, 0.4), rgba(200, 80, 55, 0.6), rgba(180, 60, 45, 0.4), transparent);
-  transform: rotate(-8deg);
-  filter: blur(6px);
-  z-index: 0;
-  pointer-events: none;
-}
-
-/* 飞鸟 */
-.birds {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.bird {
-  position: absolute;
-  font-size: 16px;
-  color: rgba(200, 170, 120, 0.5);
-  animation: fly 12s linear infinite;
-  transform: translateX(-100%);
-}
-
-@keyframes fly {
-  0% {
-    transform: translateX(-100%) translateY(0);
-    opacity: 0;
-  }
-  10% {
-    opacity: 0.5;
-  }
-  90% {
-    opacity: 0.5;
-  }
-  100% {
-    transform: translateX(100vw) translateY(20px);
-    opacity: 0;
-  }
-}
-
-/* 梅花点缀 */
-.plum-blossoms {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.plum {
-  position: absolute;
-  font-size: 12px;
-  color: rgba(200, 120, 100, 0.4);
-  animation: floatPlum 8s ease-in-out infinite;
-}
-
-@keyframes floatPlum {
-  0%, 100% {
-    transform: translateY(0) rotate(0deg);
-    opacity: 0.2;
-  }
-  50% {
-    transform: translateY(-20px) rotate(15deg);
-    opacity: 0.6;
-  }
-}
-
-/* 登录卷轴容器 */
-.scroll-container {
-  position: relative;
-  z-index: 10;
+.book-wrapper {
+  background: linear-gradient(145deg, #6b5a4a 0%, #4a3a2a 100%);
+  min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
+  font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
   padding: 20px;
 }
 
-.scroll-wrapper {
-  max-width: 420px;
-  width: 100%;
-  animation: slideUpScroll 0.6s ease-out;
-}
-
-@keyframes slideUpScroll {
-  from {
-    opacity: 0;
-    transform: translateY(50px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* 卷轴样式 */
-.scroll-top, .scroll-bottom {
-  display: flex;
-  justify-content: space-between;
-  padding: 0 20px;
+.book {
   position: relative;
+  width: 380px;
+  height: 540px;
+  perspective: 2000px;
 }
 
-.scroll-roller {
-  width: 50px;
-  height: 12px;
-  background: linear-gradient(135deg, #c97e4a, #9a5a2a);
-  border-radius: 20px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,200,150,0.5);
-}
-
-.scroll-top {
-  margin-bottom: -2px;
-}
-
-.scroll-bottom {
-  margin-top: -2px;
-}
-
-/* 卷轴内容 */
-.scroll-content {
-  background: linear-gradient(135deg, #fffef0 0%, #fff5e5 100%);
-  border-radius: 8px;
-  padding: 40px 32px;
-  position: relative;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255,255,240,0.8);
-  border-left: 4px solid #c54c2c;
-  border-right: 4px solid #c54c2c;
-}
-
-/* 宣纸纹理 */
-.scroll-content::before {
-  content: '';
+.layer {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: repeating-linear-gradient(45deg, rgba(200, 170, 120, 0.05) 0px, rgba(200, 170, 120, 0.05) 2px, transparent 2px, transparent 8px);
-  pointer-events: none;
-  border-radius: 4px;
+  width: 100%;
+  height: 100%;
+  transform-origin: left center;
+  transition: transform 0.8s cubic-bezier(0.4, 0.2, 0.2, 1);
+  border-radius: 8px 12px 12px 8px;
+  transform-style: preserve-3d;
 }
 
-.content-inner {
-  position: relative;
-  z-index: 1;
+.front,
+.back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 8px 12px 12px 8px;
+  overflow-y: auto;
 }
 
-/* Logo 区域 */
-.logo-section {
+.front {
+  background: #fffef7;
+  transform: rotateY(0deg);
+}
+
+.back {
+  background: #f5ede0;
+  transform: rotateY(180deg);
+}
+
+.layer-cover .front {
+  background: linear-gradient(135deg, #c49a6c, #8b5a3a);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-right: 2px solid #e9c891;
+  box-shadow: -5px 5px 20px rgba(0, 0, 0, 0.3);
+}
+
+.cover-content {
   text-align: center;
-  margin-bottom: 24px;
+  color: #ffefb9;
 }
 
-.red-star {
-  font-size: 42px;
-  color: #c54c2c;
-  margin-bottom: 8px;
-  animation: starPulse 2s ease-in-out infinite;
-  text-shadow: 0 0 10px rgba(200, 80, 50, 0.5);
+.cover-content .emblem {
+  font-size: 4rem;
+  margin-bottom: 20px;
 }
 
-@keyframes starPulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0.8;
-  }
-  50% {
-    transform: scale(1.1);
-    opacity: 1;
-  }
+.cover-content h1 {
+  font-size: 1.8rem;
+  text-shadow: 2px 2px 0 #5a2e1a;
+  margin-bottom: 20px;
 }
 
-.title {
-  font-size: 32px;
-  font-weight: 400;
-  color: #5a3a2a;
-  margin: 0;
-  letter-spacing: 8px;
-  font-family: "STKaiti", "华文楷书", "KaiTi", serif;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.05);
+.cover-content .stamp {
+  background: rgba(255, 235, 190, 0.3);
+  padding: 5px 15px;
+  border-radius: 30px;
+  display: inline-block;
+  margin-bottom: 20px;
 }
 
-.subtitle {
+.cover-content .hint {
+  position: absolute;
+  bottom: 25px;
+  left: 50%;
+  transform: translateX(-50%);
   font-size: 12px;
-  color: #b87c4a;
-  letter-spacing: 3px;
-  margin-top: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 5px 12px;
+  border-radius: 30px;
+  white-space: nowrap;
 }
 
-/* 欢迎诗句 */
-.welcome-text {
-  text-align: center;
-  margin: 28px 0 32px;
-  padding: 16px 0;
-  border-top: 1px dashed #e8d4b0;
-  border-bottom: 1px dashed #e8d4b0;
+.page-content {
+  padding: 20px 22px 18px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
-.poem-line {
-  font-size: 15px;
-  color: #7d5a3a;
-  line-height: 1.8;
-  font-family: "STKaiti", serif;
-  letter-spacing: 1px;
-  margin: 4px 0;
+.page-title {
+  font-size: 1.6rem;
+  font-weight: bold;
+  color: #734c2c;
+  border-left: 5px solid #c28a4e;
+  padding-left: 15px;
+  margin-bottom: 20px;
 }
 
-.poem-desc {
-  font-size: 12px;
-  color: #c97e4a;
-  margin-top: 12px;
-  letter-spacing: 1px;
-}
-
-/* 表单区域 */
-.form-section {
-  margin-top: 32px;
+.compact-form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .input-group {
-  position: relative;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  background: rgba(245, 235, 215, 0.6);
-  border-radius: 40px;
-  border: 1px solid #e8d4b0;
+  margin-bottom: 14px;
+}
+
+.input-group label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #5e3e28;
+  margin-bottom: 4px;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #ecd9b4;
+  border-radius: 30px;
+  background: #fffef7;
+  font-size: 0.85rem;
+  outline: none;
   transition: all 0.2s;
 }
 
-.input-group:focus-within {
-  border-color: #c97e4a;
-  box-shadow: 0 0 0 2px rgba(200, 120, 70, 0.2);
-  background: rgba(255, 250, 235, 0.9);
+.input-group input:focus {
+  border-color: #b57c3c;
+  box-shadow: 0 0 0 3px rgba(181, 124, 60, 0.1);
 }
 
-.input-icon {
-  padding: 0 16px;
-  font-size: 18px;
-  color: #b87c4a;
-}
-
-.input-field {
-  flex: 1;
-  padding: 14px 16px 14px 0;
+.btn {
+  background: #9b6a42;
   border: none;
-  background: transparent;
-  font-size: 15px;
-  color: #4a3a2a;
-  outline: none;
-  font-family: "STKaiti", serif;
-}
-
-.input-field::placeholder {
-  color: #c0a87a;
-  font-size: 13px;
-}
-
-/* 登录按钮 */
-.login-btn {
+  color: white;
+  font-weight: bold;
+  padding: 10px;
   width: 100%;
-  padding: 14px;
-  margin-top: 12px;
-  background: linear-gradient(135deg, #c54c2c, #9a3a20);
-  border: none;
   border-radius: 40px;
-  font-size: 16px;
-  font-weight: normal;
-  color: #fff8e8;
+  font-size: 0.95rem;
   cursor: pointer;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  font-family: "STKaiti", serif;
-  letter-spacing: 2px;
-  box-shadow: 0 4px 12px rgba(150, 50, 20, 0.3);
+  margin-top: 8px;
+  transition: background 0.2s;
 }
 
-.login-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(150, 50, 20, 0.4);
-  background: linear-gradient(135deg, #d45c38, #aa4a28);
+.btn:hover {
+  background: #7e5436;
 }
 
-.login-btn:active {
-  transform: translateY(0);
-}
-
-.btn-icon {
-  font-size: 14px;
-  transition: transform 0.2s;
-}
-
-.login-btn:hover .btn-icon {
-  transform: translateX(4px);
-}
-
-/* 游客提示 */
-.guest-tip {
+.switch-hint {
   text-align: center;
-  margin-top: 24px;
-  padding: 12px;
-  background: rgba(230, 210, 170, 0.3);
+  margin-top: 12px;
+  font-size: 0.8rem;
+  color: #a5754a;
+  cursor: pointer;
+  border-top: 1px dashed #eedbba;
+  padding-top: 12px;
+}
+
+.switch-hint span {
+  font-weight: bold;
+  color: #c1652c;
+  text-decoration: underline;
+}
+
+.footer-note {
+  margin-top: 12px;
+  font-size: 0.65rem;
+  text-align: center;
+  color: #bba16d;
+}
+
+.page-corner {
+  position: absolute;
+  bottom: 12px;
+  right: 20px;
+  font-size: 0.65rem;
+  color: #c2a074;
+}
+
+.back-content {
+  padding: 30px 25px;
+  text-align: center;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.back-content h3 {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: #9b6e42;
+  margin-bottom: 20px;
+}
+
+.back-content p {
+  font-size: 0.9rem;
+  color: #7e5a3a;
+  line-height: 1.7;
+}
+
+.back-content .small-text {
+  margin-top: 28px;
+  font-size: 0.7rem;
+  color: #c2a074;
+}
+
+.front::-webkit-scrollbar,
+.back::-webkit-scrollbar {
+  width: 4px;
+}
+
+.front::-webkit-scrollbar-track,
+.back::-webkit-scrollbar-track {
+  background: #f1e7d6;
+}
+
+.front::-webkit-scrollbar-thumb,
+.back::-webkit-scrollbar-thumb {
+  background: #c2a074;
+  border-radius: 5px;
+}
+
+#layerRegister .front {
+  overflow-y: hidden;
+}
+
+#layerLogin .front,
+#layerCover .back {
+  overflow-y: auto;
+}
+
+@media (max-width: 450px) {
+  .book {
+    width: 320px;
+    height: 500px;
+  }
+
+  .page-content {
+    padding: 16px 18px 14px;
+  }
+
+  .page-title {
+    font-size: 1.4rem;
+    margin-bottom: 16px;
+  }
+
+  .input-group {
+    margin-bottom: 12px;
+  }
+
+  .input-group input {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  .btn {
+    padding: 8px;
+    font-size: 0.9rem;
+  }
+
+  .switch-hint {
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+
+  .footer-note {
+    margin-top: 10px;
+  }
+}
+
+.toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  padding: 10px 24px;
   border-radius: 40px;
-  font-size: 12px;
-  color: #b87c4a;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+  font-size: 0.85rem;
+  z-index: 9999;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+  font-weight: 500;
+  pointer-events: none;
 }
 
-.tip-icon {
-  font-size: 12px;
+.toast-fade-enter-active,
+.toast-fade-leave-active {
+  transition: opacity 0.25s ease;
 }
 
-/* 文化注脚 */
-.cultural-note {
-  text-align: center;
-  margin-top: 20px;
-  font-size: 10px;
-  color: #c0a87a;
-  letter-spacing: 1px;
-}
-
-.note-mark {
-  margin: 0 6px;
-  font-size: 8px;
-}
-
-/* 响应式 */
-@media (max-width: 500px) {
-  .scroll-content {
-    padding: 30px 24px;
-  }
-  
-  .title {
-    font-size: 26px;
-    letter-spacing: 4px;
-  }
-  
-  .poem-line {
-    font-size: 13px;
-  }
-  
-  .input-field {
-    padding: 12px 12px 12px 0;
-    font-size: 14px;
-  }
-  
-  .scroll-roller {
-    width: 35px;
-    height: 10px;
-  }
-  
-  .pine-tree {
-    display: none;
-  }
+.toast-fade-enter-from,
+.toast-fade-leave-to {
+  opacity: 0;
 }
 </style>

@@ -1,55 +1,133 @@
 <template>
-  <div class="dialogue-page">
-    <div class="scene-bg" :style="{ backgroundImage: 'url(' + currentBgImage + ')' }"></div>
-    <div class="scene-mask"></div>
-    <div class="paper-edge left"></div>
-    <div class="paper-edge right"></div>
+  <div
+    class="dialogue-page"
+    @mousemove="handleMouseMove"
+    @mouseleave="resetParallax"
+  >
+    <!-- 背景层 -->
+    <div
+      class="scene-bg main"
+      :style="{
+        backgroundImage: 'url(' + currentBgImage + ')',
+        transform: `scale(1.08) translate(${bgOffsetX}px, ${bgOffsetY}px)`
+      }"
+    ></div>
+    <div class="scene-bg blur"></div>
+    <div class="scene-vignette"></div>
+    <div class="mist mist-1"></div>
+    <div class="mist mist-2"></div>
+    <div class="grain"></div>
 
-    <div class="top-actions">
-      <button class="skip-btn" @click.stop="skipToStory">跳过</button>
+    <!-- 顶部信息 -->
+    <div class="top-bar">
+      <div class="scene-chip">{{ scenicTitle }}</div>
+      <div class="progress-wrap">
+        <div class="progress-text">剧情进度 {{ index + 1 }} / {{ dialogue.length }}</div>
+        <div class="progress-track">
+          <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
+        </div>
+      </div>
+      <button class="skip-btn" @click.stop="skipToStory">跳过剧情</button>
     </div>
 
+    <!-- 中景角色 -->
     <div class="character-stage">
-      <div class="traveler-figure" :class="{ active: currentRole === 'traveler', dim: currentRole !== 'traveler' }">
-        <div class="traveler-shadow"></div>
-        <img :src="travelerImage" class="traveler-img" alt="旅人" />
+      <div
+        class="character traveler-card"
+        :class="{
+          active: currentRole === 'traveler',
+          dim: currentRole !== 'traveler'
+        }"
+        :style="{ transform: `translate(${travelerOffsetX}px, ${travelerOffsetY}px)` }"
+      >
+        <div class="character-halo traveler"></div>
+        <!-- <div class="character-ring"></div> -->
+        <img :src="travelerImage" class="character-img traveler-img" alt="旅人" />
+        <!-- <div class="character-tag left">
+          <span class="tag-role">旅人</span>
+          <span class="tag-name">{{ travelerName }}</span>
+        </div> -->
       </div>
 
-      <div class="npc-figure" :class="{ active: currentRole === 'npc', dim: currentRole !== 'npc' }">
-        <div class="npc-glow"></div>
-        <img :src="npcImage" class="npc-img" :alt="currentSpeakerName" />
+      <div
+        class="character npc-card"
+        :class="{
+          active: currentRole === 'npc',
+          dim: currentRole !== 'npc'
+        }"
+        :style="{ transform: `translate(${npcOffsetX}px, ${npcOffsetY}px)` }"
+      >
+        <div class="character-halo npc"></div>
+        <!-- <div class="character-ring"></div> -->
+        <img :src="npcImage" class="character-img npc-img" :alt="npcName" />
+        <!-- <div class="character-tag right">
+          <span class="tag-role">向导</span>
+          <span class="tag-name">{{ npcName }}</span>
+        </div> -->
       </div>
     </div>
 
-    <div class="dialogue-board" @click="next">
-      <div class="name-plate" :class="currentRole">{{ currentSpeakerName }}</div>
+    <!-- 底部剧情板 -->
+    <div class="dialogue-shell">
+      <div class="dialogue-card" @click="next">
+        <div class="dialogue-card-inner">
+          <div class="dialogue-head">
+            <div class="speaker-badge" :class="currentRole">
+              <span class="speaker-dot"></span>
+              <span>{{ currentSpeakerName }}</span>
+            </div>
 
-      <div class="dialogue-inner">
-        <div class="speaker-tip">
-          <span class="tip-dot"></span>
-          <span>{{ currentRole === 'traveler' ? '你正在发问' : '对方正在回应' }}</span>
+            <div class="head-right">
+              <div class="mood-line">
+                {{ currentRole === 'traveler' ? '旅人提问中' : '人物讲述中' }}
+              </div>
+              <button class="instant-btn" @click.stop="toggleAutoOrComplete">
+                {{ isTyping ? '显示全文' : autoPlay ? '停止自动' : '自动播放' }}
+              </button>
+            </div>
+          </div>
+
+          <div class="dialogue-main">
+            <div class="quote-mark">“</div>
+            <div class="dialogue-text">
+              {{ displayedText }}<span v-if="isTyping" class="typing-caret"></span>
+            </div>
+          </div>
+
+          <div class="dialogue-foot">
+            <div class="poem-box">
+              <div class="poem-label">风物引句</div>
+              <div class="poem-text">
+                {{ currentRole === 'npc' && npcPoem ? npcPoem : footHint }}
+              </div>
+            </div>
+
+            <div class="continue-area">
+              <div class="continue-tip">
+                {{ isTyping ? '点击可快速显示' : isLastLine ? '点击进入故事页' : '点击继续剧情' }}
+              </div>
+              <div class="continue-icon" :class="{ end: isLastLine && !isTyping }">
+                <span v-if="isTyping">···</span>
+                <span v-else-if="isLastLine">➜</span>
+                <span v-else>»</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="dialogue-text">{{ currentText }}</div>
       </div>
 
-      <div class="dialogue-footer">
-        <div class="poem-line" v-if="currentRole === 'npc' && npcPoem">{{ npcPoem }}</div>
-        <div class="poem-line" v-else>轻触继续对话</div>
-        <div class="continue-mark">
-          <span v-if="!isLastLine">»</span>
-          <span v-else>➜</span>
-        </div>
-      </div>
+      <div class="tap-hint">轻触对话框继续</div>
     </div>
 
+    <!-- DEMO 提示 -->
     <transition name="fade-soft">
       <div v-if="isDemo && showDemoTip" class="invitation-mask">
         <div class="invitation-panel">
-          <div class="invitation-title">客官且慢</div>
+          <div class="invitation-kicker">试玩模式</div>
+          <div class="invitation-title">后续剧情待解锁</div>
           <div class="invitation-desc">
-            登录后可解锁完整剧情，
-            <br />
-            并留下你的游历印记。
+            登录后可查看完整对话内容，<br />
+            并保存你的景点打卡记录。
           </div>
           <div class="invitation-actions">
             <button class="panel-btn primary" @click="goLogin">前往登录</button>
@@ -62,7 +140,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import defaultAvatar from "@/assets/imgs/red-soldier1.png";
@@ -88,17 +166,20 @@ const npcConfig = {
   1: {
     name: "云游货郎",
     image: defaultAvatar,
-    poem: "庐山烟雨浙江潮，未到空闻意已遥"
+    poem: "庐山烟雨浙江潮，未到空闻意已遥",
+    title: "庐山·云雾初开"
   },
   2: {
     name: "山间老翁",
     image: defaultAvatar,
-    poem: "黄洋界上炮声隆，报道敌军宵遁"
+    poem: "黄洋界上炮声隆，报道敌军宵遁",
+    title: "井冈山·松涛回声"
   },
   3: {
     name: "桃源村叟",
     image: defaultAvatar,
-    poem: "黄萼裳裳绿叶稠，千村欣卜榨新油"
+    poem: "黄萼裳裳绿叶稠，千村欣卜榨新油",
+    title: "婺源·春野入画"
   }
 };
 
@@ -114,6 +195,7 @@ const npcName = npcConfig[scenicId]?.name || "云游货郎";
 const npcImage = npcConfig[scenicId]?.image || defaultAvatar;
 const travelerImage = defaultAvatarA;
 const npcPoem = npcConfig[scenicId]?.poem || "";
+const scenicTitle = npcConfig[scenicId]?.title || "江西风物";
 
 const dialogues = {
   1: [
@@ -150,8 +232,83 @@ const currentText = computed(() => currentItem.value.text);
 const currentRole = computed(() => currentItem.value.role);
 const currentSpeakerName = computed(() => currentItem.value.speaker);
 const isLastLine = computed(() => index.value === dialogue.length - 1);
+const progressPercent = computed(() => ((index.value + 1) / dialogue.length) * 100);
+const footHint = computed(() => {
+  if (isTyping.value) return "文字正在铺展";
+  return isLastLine.value ? "这一段旅程将通往故事正文" : "下一句故事正在等你";
+});
+
+const displayedText = ref("");
+const isTyping = ref(false);
+const autoPlay = ref(false);
+let typingTimer = null;
+let autoTimer = null;
+
+const bgOffsetX = ref(0);
+const bgOffsetY = ref(0);
+const travelerOffsetX = ref(0);
+const travelerOffsetY = ref(0);
+const npcOffsetX = ref(0);
+const npcOffsetY = ref(0);
+
+const startTyping = () => {
+  clearTyping();
+  displayedText.value = "";
+  isTyping.value = true;
+  const text = currentText.value;
+  let i = 0;
+
+  typingTimer = setInterval(() => {
+    displayedText.value = text.slice(0, i + 1);
+    i += 1;
+    if (i >= text.length) {
+      clearTyping();
+      isTyping.value = false;
+      if (autoPlay.value) {
+        queueAutoNext();
+      }
+    }
+  }, 36);
+};
+
+const clearTyping = () => {
+  if (typingTimer) {
+    clearInterval(typingTimer);
+    typingTimer = null;
+  }
+};
+
+const clearAuto = () => {
+  if (autoTimer) {
+    clearTimeout(autoTimer);
+    autoTimer = null;
+  }
+};
+
+const queueAutoNext = () => {
+  clearAuto();
+  autoTimer = setTimeout(() => {
+    if (!isTyping.value) {
+      next();
+    }
+  }, 1200);
+};
+
+const completeTyping = () => {
+  clearTyping();
+  displayedText.value = currentText.value;
+  isTyping.value = false;
+  if (autoPlay.value) {
+    queueAutoNext();
+  }
+};
 
 const next = () => {
+  if (isTyping.value) {
+    completeTyping();
+    return;
+  }
+
   if (isDemo && index.value === 2 && showDemoTip.value) return;
 
   if (index.value < dialogue.length - 1) {
@@ -161,7 +318,23 @@ const next = () => {
   }
 };
 
+const toggleAutoOrComplete = () => {
+  if (isTyping.value) {
+    completeTyping();
+    return;
+  }
+
+  autoPlay.value = !autoPlay.value;
+  if (autoPlay.value) {
+    queueAutoNext();
+  } else {
+    clearAuto();
+  }
+};
+
 const goStoryPage = () => {
+  clearTyping();
+  clearAuto();
   router.push({
     path: "/story",
     query: {
@@ -183,11 +356,41 @@ const closeTip = () => {
 };
 
 const goLogin = () => {
+  clearTyping();
+  clearAuto();
   router.push({
     path: "/login",
     query: { redirect: `/dialogue?id=${scenicId}` }
   });
 };
+
+const handleMouseMove = (e) => {
+  const { innerWidth, innerHeight } = window;
+  const x = (e.clientX / innerWidth - 0.5);
+  const y = (e.clientY / innerHeight - 0.5);
+
+  bgOffsetX.value = x * -10;
+  bgOffsetY.value = y * -10;
+
+  travelerOffsetX.value = x * -12;
+  travelerOffsetY.value = y * -8;
+
+  npcOffsetX.value = x * 12;
+  npcOffsetY.value = y * -8;
+};
+
+const resetParallax = () => {
+  bgOffsetX.value = 0;
+  bgOffsetY.value = 0;
+  travelerOffsetX.value = 0;
+  travelerOffsetY.value = 0;
+  npcOffsetX.value = 0;
+  npcOffsetY.value = 0;
+};
+
+watch(currentText, () => {
+  startTyping();
+}, { immediate: true });
 
 onMounted(() => {
   const user = localStorage.getItem("user");
@@ -198,292 +401,527 @@ onMounted(() => {
     });
   }
 });
+
+onBeforeUnmount(() => {
+  clearTyping();
+  clearAuto();
+});
 </script>
 
 <style scoped>
 .dialogue-page {
   position: relative;
   width: 100%;
-  height: 100vh;
+  min-height: 100vh;
   overflow: hidden;
-  background: #ede2ce;
+  background: #15110d;
+  user-select: none;
 }
 
 .scene-bg {
   position: absolute;
-  inset: 0;
+  inset: -3%;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  transform: scale(1.03);
+  transition: transform 0.2s linear;
 }
 
-.scene-mask {
+.scene-bg.blur {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 238, 205, 0.14), transparent 24%),
+    radial-gradient(circle at 80% 18%, rgba(255, 229, 180, 0.12), transparent 22%),
+    linear-gradient(180deg, rgba(255, 245, 220, 0.08) 0%, rgba(12, 10, 8, 0.3) 100%);
+  filter: blur(18px);
+  opacity: 0.65;
+}
+
+.scene-vignette {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(255, 248, 236, 0.12) 0%, rgba(36, 25, 12, 0.1) 100%),
-    radial-gradient(circle at 50% 30%, rgba(255, 250, 239, 0.12) 0%, transparent 42%),
-    linear-gradient(0deg, rgba(38, 26, 12, 0.18) 0%, rgba(38, 26, 12, 0) 35%);
+    radial-gradient(circle at center, rgba(0,0,0,0) 34%, rgba(0,0,0,0.18) 68%, rgba(0,0,0,0.55) 100%),
+    linear-gradient(180deg, rgba(9, 7, 5, 0.1) 0%, rgba(9, 7, 5, 0.22) 100%);
 }
 
-.paper-edge {
+.mist,
+.grain {
   position: absolute;
-  top: 0;
-  width: 54px;
-  height: 100%;
-  z-index: 1;
+  inset: 0;
   pointer-events: none;
 }
 
-.paper-edge.left {
-  left: 0;
-  background: linear-gradient(90deg, rgba(150, 119, 76, 0.18), transparent);
+.mist {
+  opacity: 0.38;
+  filter: blur(24px);
 }
 
-.paper-edge.right {
-  right: 0;
-  background: linear-gradient(270deg, rgba(150, 119, 76, 0.18), transparent);
+.mist-1 {
+  background:
+    radial-gradient(circle at 18% 35%, rgba(255,255,255,0.22), transparent 24%),
+    radial-gradient(circle at 65% 42%, rgba(255,248,230,0.16), transparent 22%);
+  animation: driftA 14s ease-in-out infinite alternate;
 }
 
-.top-actions {
+.mist-2 {
+  background:
+    radial-gradient(circle at 80% 62%, rgba(255,255,255,0.16), transparent 20%),
+    radial-gradient(circle at 36% 72%, rgba(255,245,215,0.12), transparent 18%);
+  animation: driftB 18s ease-in-out infinite alternate;
+}
+
+.grain {
+  background-image:
+    radial-gradient(rgba(255,255,255,0.06) 0.6px, transparent 0.6px);
+  background-size: 10px 10px;
+  opacity: 0.06;
+}
+
+@keyframes driftA {
+  0% { transform: translate3d(-2%, 0, 0) scale(1); }
+  100% { transform: translate3d(3%, -2%, 0) scale(1.06); }
+}
+
+@keyframes driftB {
+  0% { transform: translate3d(1%, 2%, 0) scale(1); }
+  100% { transform: translate3d(-3%, -1%, 0) scale(1.08); }
+}
+
+.top-bar {
   position: absolute;
-  top: 24px;
-  right: 24px;
-  z-index: 6;
+  top: 20px;
+  left: 20px;
+  right: 20px;
+  z-index: 8;
+  display: grid;
+  grid-template-columns: auto minmax(240px, 420px) auto;
+  align-items: center;
+  gap: 16px;
+}
+
+.scene-chip,
+.skip-btn,
+.instant-btn,
+.panel-btn {
+  backdrop-filter: blur(10px);
+}
+
+.scene-chip {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 223, 172, 0.22);
+  background: rgba(37, 24, 14, 0.42);
+  color: #f9e8c5;
+  font-size: 14px;
+  letter-spacing: 1px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+}
+
+.progress-wrap {
+  justify-self: center;
+  width: 100%;
+  max-width: 420px;
+}
+
+.progress-text {
+  color: rgba(255, 238, 206, 0.88);
+  font-size: 13px;
+  margin-bottom: 8px;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+.progress-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 244, 223, 0.16);
+  border: 1px solid rgba(255, 223, 172, 0.14);
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ffcf7d 0%, #f0a84d 100%);
+  box-shadow: 0 0 20px rgba(255, 191, 94, 0.45);
+  transition: width 0.32s ease;
+}
+
+.skip-btn,
+.instant-btn,
+.panel-btn {
+  border: 1px solid rgba(255, 223, 172, 0.2);
+  background: rgba(34, 23, 15, 0.42);
+  color: #f8e1b5;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.25s ease;
 }
 
 .skip-btn {
-  border: 1px solid rgba(121, 77, 39, 0.35);
-  background: rgba(255, 248, 235, 0.72);
-  color: #7b4f2e;
-  border-radius: 999px;
-  padding: 8px 18px;
+  justify-self: end;
+  padding: 10px 18px;
   font-size: 14px;
-  font-family: "STKaiti", "KaiTi", serif;
-  cursor: pointer;
-  backdrop-filter: blur(6px);
+}
+
+.instant-btn {
+  padding: 8px 14px;
+  font-size: 12px;
+}
+
+.skip-btn:hover,
+.instant-btn:hover,
+.panel-btn:hover {
+  transform: translateY(-2px);
+  background: rgba(48, 31, 20, 0.58);
 }
 
 .character-stage {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: 4;
   pointer-events: none;
 }
 
-.traveler-figure,
-.npc-figure {
+.character {
+  position: absolute;
+  bottom: 19%;
+  width: min(41vw, 730px);
   transition: all 0.28s ease;
 }
 
-.traveler-figure {
-  position: absolute;
-  left: 7%;
-  bottom: 15%;
-  width: min(29vw, 420px);
-  opacity: 0.95;
+.traveler-card {
+  left: 0;
 }
 
-.traveler-shadow {
-  position: absolute;
-  left: 18%;
-  right: 18%;
-  bottom: 10px;
-  height: 26px;
-  border-radius: 50%;
-  background: rgba(41, 29, 14, 0.2);
-  filter: blur(10px);
+.npc-card {
+  right: 0;
 }
 
-.traveler-img {
-  width: 100%;
-  display: block;
-  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.18));
-}
-
-.npc-figure {
+.character-halo {
   position: absolute;
-  right: 5%;
-  bottom: 18%;
-  width: min(29vw, 420px);
-}
-
-.npc-glow {
-  position: absolute;
-  left: 10%;
-  right: 10%;
-  bottom: 18px;
+  inset: auto 8% 12% 8%;
   height: 34px;
   border-radius: 50%;
-  background: rgba(56, 36, 17, 0.22);
   filter: blur(12px);
 }
 
-.npc-img {
+.character-halo.traveler {
+  background: rgba(186, 146, 88, 0.28);
+}
+
+.character-halo.npc {
+  background: rgba(216, 138, 71, 0.24);
+}
+
+.character-ring {
+  position: absolute;
+  left: 11%;
+  right: 11%;
+  bottom: 18%;
+  height: 66%;
+  border-radius: 32px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0));
+  border: 1px solid rgba(255, 226, 176, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+}
+
+.character-img {
   position: relative;
   width: 100%;
   display: block;
-  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.18));
+  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.28));
 }
 
-.traveler-figure.active,
-.npc-figure.active {
+.character.active {
   opacity: 1;
-  transform: scale(1.04);
+  transform: translateY(-6px) scale(1.03);
 }
 
-.traveler-figure.dim,
-.npc-figure.dim {
-  opacity: 0.45;
-  transform: scale(0.98);
+.character.dim {
+  opacity: 0.42;
+  transform: scale(0.97);
 }
 
-.traveler-figure.dim .traveler-img,
-.npc-figure.dim .npc-img {
-  filter: brightness(0.62) saturate(0.72);
+.character.dim .character-img {
+  filter: brightness(0.5) saturate(0.7);
 }
 
-.dialogue-board {
+.character-tag {
+  position: absolute;
+  bottom: 16%;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 110px;
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: rgba(25, 17, 12, 0.48);
+  border: 1px solid rgba(255, 224, 177, 0.14);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.16);
+}
+
+.character-tag.left {
+  left: 0;
+}
+
+.character-tag.right {
+  right: 0;
+  text-align: right;
+}
+
+.tag-role {
+  font-size: 12px;
+  color: rgba(255, 224, 177, 0.72);
+  letter-spacing: 1px;
+}
+
+.tag-name {
+  font-size: 22px;
+  color: #fff1d0;
+  font-family: "STKaiti", "KaiTi", serif;
+  letter-spacing: 1px;
+}
+
+.dialogue-shell {
   position: absolute;
   left: 50%;
-  bottom: 4%;
+  bottom: 18px;
   transform: translateX(-50%);
-  width: min(1220px, calc(100% - 90px));
-  min-height: 188px;
-  z-index: 5;
-  cursor: pointer;
-  background: linear-gradient(180deg, rgba(247, 239, 223, 0.97) 0%, rgba(241, 232, 214, 0.98) 100%);
-  border: 3px solid #7f5735;
-  border-radius: 28px;
-  box-shadow: 0 20px 40px rgba(57, 35, 16, 0.18);
-  padding: 34px 42px 24px;
+  width: min(1240px, calc(100% - 28px));
+  z-index: 9;
 }
 
-.dialogue-board::before {
+.dialogue-card {
+  position: relative;
+  cursor: pointer;
+  border-radius: 30px;
+  background:
+    linear-gradient(180deg, rgba(28, 20, 14, 0.78) 0%, rgba(18, 13, 9, 0.82) 100%);
+  border: 1px solid rgba(255, 226, 176, 0.16);
+  box-shadow:
+    0 24px 60px rgba(0,0,0,0.35),
+    inset 0 0 0 1px rgba(255,255,255,0.03);
+  overflow: hidden;
+}
+
+.dialogue-card::before {
   content: "";
   position: absolute;
-  inset: 12px;
-  border: 1px solid rgba(127, 87, 53, 0.18);
-  border-radius: 18px;
+  inset: 0;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.06), transparent 28%),
+    radial-gradient(circle at 90% 10%, rgba(255, 201, 122, 0.12), transparent 20%);
   pointer-events: none;
 }
 
-.name-plate {
-  position: absolute;
-  top: -20px;
-  min-width: 170px;
-  text-align: center;
-  padding: 10px 28px;
-  border-radius: 18px;
-  color: #fff6e8;
-  font-size: 28px;
-  line-height: 1;
-  font-family: "STKaiti", "KaiTi", serif;
-  font-weight: 700;
-  box-shadow: 0 8px 18px rgba(109, 58, 31, 0.25);
-  transition: all 0.25s ease;
-}
-
-.name-plate.traveler {
-  left: 18%;
-  transform: translateX(-50%);
-  background: #9b5a36;
-}
-
-.name-plate.npc {
-  left: 80%;
-  transform: translateX(-50%);
-  background: #a85f38;
-}
-
-.dialogue-inner {
+.dialogue-card-inner {
   position: relative;
   z-index: 1;
+  padding: 24px 28px 22px;
 }
 
-.speaker-tip {
+.dialogue-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.speaker-badge {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-  color: #9a774e;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  color: #fff2d2;
+  font-weight: 600;
+  border: 1px solid rgba(255, 223, 172, 0.12);
+  font-family: "STKaiti", "KaiTi", serif;
+}
+
+.speaker-badge.traveler {
+  background: rgba(180, 111, 64, 0.24);
+}
+
+.speaker-badge.npc {
+  background: rgba(129, 92, 52, 0.28);
+}
+
+.speaker-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #ffd086, #f0aa50);
+  box-shadow: 0 0 12px rgba(255, 200, 100, 0.4);
+}
+
+.head-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mood-line {
+  color: rgba(255, 230, 189, 0.68);
   font-size: 13px;
 }
 
-.tip-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #c28a4e;
+.dialogue-main {
+  position: relative;
+  margin-top: 18px;
+  padding-left: 32px;
+  min-height: 120px;
+}
+
+.quote-mark {
+  position: absolute;
+  left: 0;
+  top: -6px;
+  font-size: 60px;
+  line-height: 1;
+  color: rgba(255, 208, 134, 0.22);
+  font-family: Georgia, serif;
 }
 
 .dialogue-text {
-  min-height: 90px;
-  padding-top: 4px;
-  font-size: clamp(24px, 2vw, 34px);
-  line-height: 1.85;
-  color: #3d2816;
+  color: #fff4dc;
+  font-size: clamp(20px, 2vw, 32px);
+  line-height: 1.9;
+  letter-spacing: 1px;
   font-family: "STKaiti", "KaiTi", serif;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.18);
+}
+
+.typing-caret {
+  display: inline-block;
+  width: 10px;
+  height: 1.15em;
+  vertical-align: -0.15em;
+  margin-left: 4px;
+  border-radius: 3px;
+  background: rgba(255, 213, 149, 0.82);
+  animation: blinkCaret 0.8s steps(1) infinite;
+}
+
+@keyframes blinkCaret {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.dialogue-foot {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px;
+  align-items: end;
+}
+
+.poem-box {
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(255, 238, 205, 0.06);
+  border: 1px solid rgba(255, 226, 176, 0.08);
+}
+
+.poem-label {
+  color: rgba(255, 213, 149, 0.64);
+  font-size: 12px;
+  margin-bottom: 4px;
   letter-spacing: 1px;
 }
 
-.dialogue-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: end;
-  gap: 12px;
-  margin-top: 10px;
-}
-
-.poem-line {
-  color: #9c7a52;
+.poem-text {
+  color: rgba(255, 239, 211, 0.84);
   font-size: 13px;
   letter-spacing: 1px;
 }
 
-.continue-mark {
-  color: #d88a3b;
-  font-size: 36px;
-  line-height: 1;
+.continue-area {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.continue-tip,
+.tap-hint {
+  color: rgba(255, 232, 192, 0.6);
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.continue-icon {
+  min-width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 208, 134, 0.12);
+  color: #ffd086;
+  font-size: 26px;
   animation: pulseArrow 1.2s ease-in-out infinite;
+  box-shadow: inset 0 0 0 1px rgba(255, 223, 172, 0.1);
+}
+
+.continue-icon.end {
+  background: rgba(255, 185, 98, 0.18);
+}
+
+.tap-hint {
+  margin-top: 10px;
+  text-align: center;
 }
 
 @keyframes pulseArrow {
-  0%, 100% { transform: translateX(0); opacity: 0.75; }
-  50% { transform: translateX(6px); opacity: 1; }
+  0%, 100% { transform: translateX(0); opacity: 0.74; }
+  50% { transform: translateX(5px); opacity: 1; }
 }
 
 .invitation-mask {
   position: fixed;
   inset: 0;
-  background: rgba(28, 18, 9, 0.52);
-  backdrop-filter: blur(4px);
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 20;
+  background: rgba(9, 7, 5, 0.56);
+  backdrop-filter: blur(8px);
 }
 
 .invitation-panel {
-  width: min(360px, calc(100% - 32px));
-  background: linear-gradient(180deg, #fbf2df 0%, #f4e7cb 100%);
-  border: 2px solid #8c603c;
-  border-radius: 22px;
-  padding: 28px 24px 22px;
+  width: min(420px, calc(100% - 32px));
+  padding: 28px 24px 24px;
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(42, 28, 18, 0.92) 0%, rgba(24, 16, 11, 0.95) 100%);
+  border: 1px solid rgba(255, 223, 172, 0.16);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.4);
   text-align: center;
-  box-shadow: 0 18px 36px rgba(40, 24, 11, 0.22);
+}
+
+.invitation-kicker {
+  color: rgba(255, 213, 149, 0.72);
+  font-size: 13px;
+  letter-spacing: 2px;
 }
 
 .invitation-title {
-  font-size: 28px;
-  color: #6d4524;
+  margin-top: 10px;
+  font-size: 30px;
+  color: #fff0cc;
   font-family: "STKaiti", "KaiTi", serif;
 }
 
 .invitation-desc {
   margin-top: 14px;
-  color: #856441;
+  color: rgba(255, 235, 202, 0.78);
   line-height: 1.9;
   font-size: 15px;
 }
@@ -497,19 +935,14 @@ onMounted(() => {
 }
 
 .panel-btn {
-  border-radius: 999px;
-  padding: 10px 20px;
-  border: 1px solid rgba(140, 96, 60, 0.28);
-  background: rgba(255, 248, 234, 0.92);
-  color: #7c5634;
-  cursor: pointer;
-  font-family: "STKaiti", "KaiTi", serif;
+  padding: 10px 18px;
+  color: #ffe5b7;
 }
 
 .panel-btn.primary {
   border: none;
-  background: linear-gradient(135deg, #b48a55, #8b643c);
-  color: #fff8ef;
+  background: linear-gradient(135deg, #d39b53, #a56b37);
+  color: #fff9ef;
 }
 
 .fade-soft-enter-active,
@@ -523,106 +956,98 @@ onMounted(() => {
   transform: translateY(8px);
 }
 
-@media (max-width: 900px) {
-  .traveler-figure {
-   width: min(38vw, 270px);
-    left: 5%;
-    bottom: 18%;
+@media (max-width: 1024px) {
+  .top-bar {
+    grid-template-columns: 1fr;
+    justify-items: center;
   }
 
-  .npc-figure {
-    width: min(38vw, 270px);
-    right: 5%;
-    bottom: 18%;
+  .scene-chip,
+  .skip-btn {
+    justify-self: center;
   }
 
-  .dialogue-board {
-    width: calc(100% - 28px);
-    padding: 28px 22px 20px;
-    bottom: 10px;
-    min-height: 156px;
-  }
-
-  .name-plate {
-    min-width: 126px;
-    font-size: 22px;
-    padding: 8px 20px;
-  }
-
-  .name-plate.traveler {
-    left: 22%;
-  }
-
-  .name-plate.npc {
-    left: 80%;
+  .character {
+    width: min(34vw, 320px);
+    bottom: 24%;
   }
 
   .dialogue-text {
-    font-size: 20px;
-    min-height: 72px;
+    font-size: 22px;
   }
 }
 
-@media (max-width: 600px) {
-  .top-actions {
-    top: 14px;
-    right: 14px;
+@media (max-width: 760px) {
+  .top-bar {
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    gap: 10px;
   }
 
-  .skip-btn {
-    font-size: 12px;
-    padding: 7px 14px;
+  .character {
+    width: 180px;
+    bottom: 28%;
   }
 
-  .traveler-figure {
-    left: 2%;
-    bottom: 24%;
-    width: 178px;
+  .traveler-card {
+    left: -16px;
   }
 
-  .npc-figure {
-    right: 0;
-    bottom: 22%;
-    width: 178px;
+  .npc-card {
+    right: -16px;
   }
 
-  .dialogue-board {
-    width: calc(100% - 16px);
-    border-radius: 20px;
-    border-width: 2px;
-    padding: 22px 14px 16px;
-    bottom: 8px;
-    min-height: 144px;
-  }
-
-  .name-plate {
-    top: -16px;
-    font-size: 18px;
-    min-width: 96px;
-    padding: 7px 14px;
+  .character-tag {
+    min-width: auto;
+    padding: 8px 12px;
     border-radius: 14px;
   }
 
-  .name-plate.traveler {
-    left: 20%;
+  .tag-name {
+    font-size: 16px;
   }
 
-  .name-plate.npc {
-    left: 80%;
+  .dialogue-shell {
+    width: calc(100% - 12px);
+    bottom: 8px;
+  }
+
+  .dialogue-card-inner {
+    padding: 16px 14px 14px;
+  }
+
+  .dialogue-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .head-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .dialogue-main {
+    padding-left: 18px;
+    min-height: 92px;
+  }
+
+  .quote-mark {
+    font-size: 42px;
+    top: -2px;
   }
 
   .dialogue-text {
     font-size: 17px;
-    line-height: 1.8;
+    line-height: 1.85;
   }
 
-  .speaker-tip,
-  .poem-line {
-    display: none;
+  .dialogue-foot {
+    grid-template-columns: 1fr;
   }
 
-  .continue-mark {
-    font-size: 30px;
+  .continue-area {
+    justify-content: space-between;
   }
 }
 </style>

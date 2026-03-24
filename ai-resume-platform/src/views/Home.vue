@@ -74,7 +74,7 @@
 <script setup>
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import bgImg from "../assets/imgs/bg.jpg";
+import bgImg from "../assets/imgs/bg.png";
 
 const router = useRouter();
 
@@ -255,7 +255,7 @@ const goDetail = () => {
   gap: 6px;
   background: rgba(50, 40, 28, 0.85);
   backdrop-filter: blur(4px);
-  padding: 6px 14px 6px 10px;
+  padding: 6px 24px 6px 24px;
   border-radius: 40px;
   border: 1px solid rgba(200, 170, 100, 0.6);
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
