@@ -49,7 +49,7 @@
               <div class="switch-hint" id="backToLoginBtn" @click.stop="handleBackToLogin">
                 <span>← 翻回上一页</span> 已有账号
               </div>
-              <div class="footer-note">即刻拥有校园通行证</div>
+              <div class="footer-note">即刻拥有景点通行证</div>
             </div>
             <div class="page-corner">第 2 页</div>
           </div>
@@ -68,12 +68,12 @@
             <div class="page-title">登 录</div>
             <div class="compact-form">
               <div class="input-group">
-                <label>📧 学号 / 邮箱</label>
+                <label>📧 用户名 / 邮箱</label>
                 <input
                   type="text"
                   id="loginUsername"
                   v-model="loginUsername"
-                  placeholder="20243010101"
+                  placeholder="user"
                   autocomplete="off"
                   @click.stop
                 />
@@ -89,26 +89,26 @@
                   @click.stop
                 />
               </div>
-              <button class="btn" id="loginBtn" @click.stop="handleLogin">进入校园</button>
+              <button class="btn" id="loginBtn" @click.stop="handleLogin">开始游玩</button>
               <div class="switch-hint" id="nextToRegisterBtn" @click.stop="handleNextToRegister">
                 还没有通行证？ <span>翻开下一页 →</span>
               </div>
-              <div class="footer-note">学生证样式 · 官方通道</div>
+              <div class="footer-note">江西印象  · 山川秀丽</div>
             </div>
             <div class="page-corner">第 1 页</div>
           </div>
         </div>
         <div class="back" ref="loginBack" @click.stop>
           <div class="back-content">
-            <h3>📖 学生守则</h3>
-            <p>
-              1. 遵守校纪校规<br />
-              2. 诚实守信，品行端正<br />
-              3. 勤奋学习，追求卓越<br />
-              4. 尊敬师长，团结同学<br />
-              5. 爱护公物，勤俭节约
-            </p>
-            <div class="small-text">学生证 · 登录页背面</div>
+            <h3>📍 景点游览指南</h3>
+          <p>
+            1. 文明旅游，爱护环境<br />
+            2. 尊重当地文化与风俗<br />
+            3. 注意安全，合理规划路线<br />
+            4. 保护自然景观与历史遗迹<br />
+            5. 放慢脚步，感受旅途之美
+          </p>
+          <div class="small-text">江西文旅 · 游览手册</div>
           </div>
         </div>
       </div>
@@ -123,7 +123,7 @@
       >
         <div class="front">
           <div class="cover-content">
-            <div class="emblem">🎓📘</div>
+            <div class="emblem">🌄</div>
             <h1>景 点 通 行 证</h1>
             <div class="stamp">✦ 景点游历 ✦</div>
             <div class="hint">▼ 点击翻开 ▼</div>
@@ -131,9 +131,12 @@
         </div>
         <div class="back" ref="coverBack" @click.stop>
           <div class="back-content">
-            <h3>🎓 校 训</h3>
-            <p>博学 笃行<br />明德 至善</p>
-            <div class="small-text">校园通行证 · 扉页</div>
+           <h3>🌄 江西风物</h3>
+            <p>
+            山川秀丽，文脉悠长<br />
+            古韵今风，尽在其间
+            </p>
+            <div class="small-text">江西文旅 · 扉页</div>
           </div>
         </div>
       </div>
@@ -301,7 +304,7 @@ function handleLogin() {
   const password = loginPassword.value.trim()
 
   if (!username || !password) {
-    showMessage('请填写学号/邮箱和密码', true)
+    showMessage('请填写用户名/邮箱和密码', true)
     return
   }
 
@@ -312,7 +315,7 @@ function handleLogin() {
   }
   localStorage.setItem('user', JSON.stringify(userInfo))
 
-  showMessage('登录成功！欢迎使用学生通行证 ✨')
+  showMessage('登录成功！欢迎使用景点通行证 ✨')
 
   // 可选：清空密码框
   loginPassword.value = ''

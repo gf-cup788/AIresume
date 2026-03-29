@@ -128,6 +128,7 @@ export default {
       localStorage.removeItem("user");
       this.isLogin = false;
       this.avatarUrl = avatarImg;
+      alert("已退出登录");
       this.$router.push("/");
     }
   },
