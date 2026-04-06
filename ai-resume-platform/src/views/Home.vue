@@ -2,129 +2,139 @@
   <div class="home">
     <!-- 水墨晕染背景 -->
     <div class="ink-wash"></div>
-    
+
     <!-- 宣纸纹理 -->
     <div class="paper-texture"></div>
-    
+
     <!-- 古画地图容器 -->
     <div class="map-container">
       <img :src="bgImg" class="map-img" />
-      
+
       <!-- 地图题跋 -->
       <div class="map-inscription">
-        <span class="inscription-text">江右胜迹图</span>
+        <span class="inscription-text">江右九域图</span>
         <span class="inscription-seal">● 遊</span>
       </div>
-      
+
       <!-- 山水印章装饰 -->
       <div class="map-seal top-left"></div>
       <div class="map-seal bottom-right"></div>
-    </div>
-    
-    <!-- 景点标记 - 古风图钉 -->
-    <div
-      v-for="spot in scenicList"
-      :key="spot.id"
-      class="spot"
-      :style="{
-        left: spot.x + '%',
-        top: spot.y + '%'
-      }"
-      @click="selectSpot(spot)"
-    >
-      <div class="spot-marker" :class="{ active: selected?.id === spot.id }">
-        <span class="marker-icon">{{ spot.icon }}</span>
-        <span class="marker-name">{{ spot.name }}</span>
+
+      <!-- 加载状态 -->
+      <div v-if="regionLoading" class="region-loading">
+        地区加载中...
       </div>
-      <div class="spot-ripple"></div>
-    </div>
-    
-    <!-- 景点诗签卡片 - 居中模态框 -->
-    <div v-if="selected" class="modal-overlay" @click="closeCard">
-      <div class="poem-card" @click.stop>
-        <button class="close-btn" @click="closeCard">
-          <span class="close-icon">✕</span>
-        </button>
-        
-        <div class="card-scroll">
-          <div class="card-header">
-            <span class="header-left">❀</span>
-            <span class="header-title">{{ selected.name }}</span>
-            <span class="header-right">❀</span>
-          </div>
-          <div class="card-poem">{{ selected.poem }}</div>
-          <div class="card-desc">{{ selected.desc }}</div>
-          <div class="card-footer">
-            <button class="enter-btn" @click="goDetail">
-              <span class="btn-icon">🏮</span>
-              <span>入画寻幽</span>
-              <span class="btn-arrow">→</span>
-            </button>
-          </div>
+
+      <!-- 加载失败 -->
+      <div v-else-if="regionError" class="region-loading error">
+        {{ regionError }}
+      </div>
+
+      <!-- 地区标记 -->
+      <div
+        v-for="spot in regionList"
+        :key="spot.id"
+        class="spot"
+        :style="{
+          left: spot.x + '%',
+          top: spot.y + '%'
+        }"
+        @click="goRegion(spot)"
+      >
+        <div class="spot-marker">
+          <span class="marker-icon">{{ spot.icon }}</span>
+          <span class="marker-name">{{ spot.name }}</span>
         </div>
-        <div class="card-seal"></div>
+        <div class="spot-ripple"></div>
       </div>
     </div>
-    
+
     <!-- 古琴声波纹装饰 -->
     <div class="sound-wave"></div>
   </div>
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { request } from "@/utils/request";
 import bgImg from "../assets/imgs/bg.png";
 
 const router = useRouter();
 
-const selected = ref(null);
+const regionList = ref([]);
+const regionLoading = ref(false);
+const regionError = ref("");
 
-// 景点数据 - 增加古风元素
-const scenicList = ref([
-  {
-    id: 1,
-    name: "庐山",
-    x: 55,
-    y: 35,
-    icon: "🏔️",
-    poem: "飞流直下三千尺，疑是银河落九天",
-    desc: "匡庐奇秀甲天下，云雾缭绕，瀑布如练，太白居士曾在此留下千古绝唱。"
-  },
-  {
-    id: 2,
-    name: "井冈山",
-    x: 40,
-    y: 70,
-    icon: "⛰️",
-    poem: "星星之火，可以燎原",
-    desc: "中国革命的摇篮，红色精神的发源地，巍巍井冈，浩气长存。"
-  },
-  {
-    id: 3,
-    name: "婺源",
-    x: 70,
-    y: 45,
-    icon: "🌸",
-    poem: "黄萼裳裳绿叶稠，千村欣卜榨新油",
-    desc: "中国最美乡村，白墙黛瓦，油菜花海，徽州人家，水墨江南。"
+// 地区名称与地图坐标的对应关系
+const regionPositionMap = {
+  南昌: { x: 49, y: 39, icon: "🏮" },
+  九江: { x: 44, y: 26, icon: "🏮" },
+  上饶: { x: 73, y: 40, icon: "🏮" },
+  景德镇: { x: 63, y: 29, icon: "🏮" },
+  鹰潭: { x: 63, y: 44, icon: "🏮" },
+  新余: { x: 42, y: 53, icon: "🏮" },
+  宜春: { x: 31, y: 47, icon: "🏮" },
+  萍乡: { x: 22, y: 56, icon: "🏮" },
+  吉安: { x: 40, y: 67, icon: "🏮" },
+  抚州: { x: 57, y: 55, icon: "🏮" },
+  赣州: { x: 46, y: 83, icon: "🏮" }
+};
+
+const fetchRegions = async () => {
+  regionLoading.value = true;
+  regionError.value = "";
+
+  try {
+    const res = await request("/api/regions", {
+      method: "GET"
+    });
+
+    const list = Array.isArray(res?.data) ? res.data : [];
+
+    regionList.value = list.map((item, index) => {
+      const position = regionPositionMap[item.name] || {
+        x: 50,
+        y: 35 + index * 6,
+        icon: "🏮"
+      };
+
+      return {
+        ...item,
+        ...position
+      };
+    });
+  } catch (error) {
+    regionList.value = [];
+    regionError.value = error?.message || "地区获取失败";
+  } finally {
+    regionLoading.value = false;
   }
-]);
-
-const selectSpot = (spot) => {
-  selected.value = spot;
 };
 
-const closeCard = () => {
-  selected.value = null;
-};
+const goRegion = (item) => {
+  sessionStorage.setItem(
+    "jx_detail_transition",
+    JSON.stringify({
+      regionId: item.id,
+      regionName: item.name,
+      from: "home",
+      time: Date.now()
+    })
+  );
 
-const goDetail = () => {
   router.push({
     path: "/detail",
-    query: { id: selected.value.id }
+    query: {
+      regionId: item.id,
+      regionName: item.name
+    }
   });
 };
+
+onMounted(() => {
+  fetchRegions();
+});
 </script>
 
 <style scoped>
@@ -143,7 +153,7 @@ const goDetail = () => {
   left: 0;
   width: 100%;
   height: 100%;
-  background: 
+  background:
     radial-gradient(ellipse at 20% 30%, rgba(100, 80, 50, 0.08) 0%, transparent 50%),
     radial-gradient(ellipse at 85% 70%, rgba(80, 60, 40, 0.06) 0%, transparent 50%),
     radial-gradient(ellipse at 50% 50%, rgba(120, 90, 60, 0.05) 0%, transparent 60%);
@@ -240,7 +250,27 @@ const goDetail = () => {
   background: radial-gradient(circle, rgba(140, 90, 60, 0.12), transparent);
 }
 
-/* 景点标记 - 古风设计 */
+/* 加载提示 */
+.region-loading {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 12;
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: rgba(50, 40, 28, 0.82);
+  color: #ecdba8;
+  border: 1px solid rgba(200, 170, 100, 0.45);
+  backdrop-filter: blur(4px);
+  font-size: 14px;
+  font-family: "STKaiti", serif;
+}
+
+.region-loading.error {
+  color: #f0b199;
+}
+
+/* 地区标记 */
 .spot {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -258,7 +288,7 @@ const goDetail = () => {
   padding: 6px 24px 6px 24px;
   border-radius: 40px;
   border: 1px solid rgba(200, 170, 100, 0.6);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   transition: all 0.2s;
   position: relative;
   z-index: 2;
@@ -268,26 +298,12 @@ const goDetail = () => {
   transform: scale(1.08);
   background: rgba(80, 65, 45, 0.95);
   border-color: #c9aa5f;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-}
-
-.spot-marker.active {
-  background: linear-gradient(135deg, #c9aa5f, #b88d4a);
-  border-color: #ecdba8;
-  box-shadow: 0 0 12px rgba(200, 170, 100, 0.5);
-}
-
-.spot-marker.active .marker-icon {
-  filter: none;
-}
-
-.spot-marker.active .marker-name {
-  color: #2a2418;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 .marker-icon {
   font-size: 18px;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
 }
 
 .marker-name {
@@ -329,192 +345,6 @@ const goDetail = () => {
   }
 }
 
-/* ========== 模态框遮罩 ========== */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(5px);
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* 诗签卡片 - 居中显示 */
-.poem-card {
-  position: relative;
-  width: 380px;
-  max-width: 85vw;
-  background: rgba(30, 24, 18, 0.96);
-  backdrop-filter: blur(20px);
-  border-radius: 24px;
-  border: 1px solid rgba(200, 170, 100, 0.6);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-  overflow: hidden;
-  animation: cardPop 0.35s cubic-bezier(0.34, 1.2, 0.64, 1);
-  z-index: 101;
-}
-
-@keyframes cardPop {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* 关闭按钮 */
-.close-btn {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: rgba(200, 170, 100, 0.2);
-  border: 1px solid rgba(200, 170, 100, 0.5);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  z-index: 10;
-  font-size: 16px;
-  color: #ecdba8;
-}
-
-.close-btn:hover {
-  background: rgba(200, 170, 100, 0.4);
-  transform: rotate(90deg);
-  border-color: #c9aa5f;
-}
-
-.close-icon {
-  font-size: 16px;
-  line-height: 1;
-}
-
-.card-scroll {
-  padding: 32px 24px 28px;
-  position: relative;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 1px dashed rgba(200, 170, 100, 0.4);
-}
-
-.header-left, .header-right {
-  font-size: 14px;
-  color: #c9aa5f;
-  opacity: 0.7;
-}
-
-.header-title {
-  font-size: 28px;
-  font-weight: 400;
-  color: #ecdba8;
-  font-family: "STKaiti", "华文楷书", "KaiTi", serif;
-  letter-spacing: 6px;
-}
-
-.card-poem {
-  text-align: center;
-  font-size: 15px;
-  color: #d4bc84;
-  font-style: italic;
-  line-height: 1.7;
-  margin-bottom: 20px;
-  padding: 14px;
-  background: rgba(200, 170, 100, 0.1);
-  border-radius: 16px;
-  border-left: 2px solid #c9aa5f;
-  border-right: 2px solid #c9aa5f;
-  font-family: "STKaiti", serif;
-}
-
-.card-desc {
-  font-size: 14px;
-  color: #e0d0b0;
-  line-height: 1.7;
-  margin-bottom: 24px;
-  text-align: justify;
-}
-
-.card-footer {
-  text-align: center;
-}
-
-.enter-btn {
-  background: linear-gradient(135deg, #c9aa5f, #b88d4a);
-  border: none;
-  padding: 12px 32px;
-  border-radius: 50px;
-  font-size: 15px;
-  color: #2a2418;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  font-family: "STKaiti", serif;
-  transition: all 0.3s;
-  letter-spacing: 2px;
-}
-
-.enter-btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-  background: linear-gradient(135deg, #e0bc74, #c9aa5f);
-  gap: 16px;
-}
-
-.btn-icon {
-  font-size: 16px;
-}
-
-.btn-arrow {
-  font-size: 14px;
-  transition: transform 0.2s;
-}
-
-.enter-btn:hover .btn-arrow {
-  transform: translateX(5px);
-}
-
-.card-seal {
-  position: absolute;
-  bottom: 16px;
-  right: 20px;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(200, 100, 70, 0.5), rgba(160, 70, 50, 0.3));
-  opacity: 0.5;
-  pointer-events: none;
-}
-
 /* 古琴声波纹装饰 */
 .sound-wave {
   position: absolute;
@@ -525,60 +355,41 @@ const goDetail = () => {
   pointer-events: none;
   z-index: 5;
   opacity: 0.4;
-  background: repeating-linear-gradient(90deg, 
-    transparent, 
+  background: repeating-linear-gradient(
+    90deg,
+    transparent,
     transparent 3px,
     rgba(140, 100, 60, 0.3) 3px,
-    rgba(140, 100, 60, 0.3) 5px);
+    rgba(140, 100, 60, 0.3) 5px
+  );
   border-radius: 4px;
 }
 
 /* 响应式 */
 @media (max-width: 600px) {
-  .poem-card {
-    width: 90vw;
-  }
-  
-  .card-scroll {
-    padding: 28px 20px 24px;
-  }
-  
-  .header-title {
-    font-size: 22px;
-    letter-spacing: 4px;
-  }
-  
-  .card-poem {
-    font-size: 13px;
-  }
-  
-  .card-desc {
-    font-size: 13px;
-  }
-  
-  .close-btn {
-    top: 12px;
-    right: 12px;
-    width: 28px;
-    height: 28px;
-  }
-  
   .marker-name {
     font-size: 11px;
   }
-  
+
   .spot-marker {
     padding: 4px 10px 4px 8px;
   }
-  
+
   .map-inscription {
     bottom: 12px;
     right: 12px;
     padding: 4px 12px;
   }
-  
+
   .inscription-text {
     font-size: 10px;
+  }
+
+  .region-loading {
+    top: 12px;
+    right: 12px;
+    font-size: 12px;
+    padding: 8px 12px;
   }
 }
 
@@ -586,11 +397,11 @@ const goDetail = () => {
   .marker-name {
     display: none;
   }
-  
+
   .spot-marker {
     padding: 6px;
   }
-  
+
   .marker-icon {
     font-size: 20px;
   }

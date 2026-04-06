@@ -66,7 +66,7 @@ const close = () => {
   overflow: hidden;
   border-radius: 28px;
   background:
-    linear-gradient(145deg, rgba(255, 252, 245, 0.98), rgba(245, 250, 240, 0.98));
+    linear-gradient(145deg, rgba(255, 252, 245, 0.98), rgba(247, 241, 207, 0.98));
   border: 1px solid rgba(124, 155, 95, 0.16);
   box-shadow:
     0 28px 70px rgba(36, 52, 41, 0.22),

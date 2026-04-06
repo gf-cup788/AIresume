@@ -1,5 +1,33 @@
 <template>
   <div class="detail-page">
+    <transition name="detail-loading-fade">
+      <div
+        v-if="pageEntering"
+        class="page-loading-overlay"
+      >
+        <div class="mist-backdrop"></div>
+
+        <div class="mist-layer mist-layer-back">
+          <img class="mist-half left back" :src="yun1" alt="云雾" />
+          <img class="mist-half right back" :src="yun1" alt="云雾" />
+        </div>
+
+        <div class="mist-layer mist-layer-front">
+          <img class="mist-half left front" :src="yun2" alt="云雾" />
+          <img class="mist-half right front" :src="yun2" alt="云雾" />
+        </div>
+<!-- 
+        <div class="mist-center-panel">
+          <div class="mist-title">{{ pageLoadingTitle }}</div>
+          <div class="mist-text">{{ pageLoadingText }}</div>
+          <div class="mist-progress-bar">
+            <div class="mist-progress-fill" :style="{ width: `${loadingProgress}%` }"></div>
+          </div>
+        </div>
+        -->
+      </div>
+    </transition>
+
     <div
       class="page-bg"
       :style="{ backgroundImage: `url(${currentScenic.img})` }"
@@ -32,7 +60,7 @@
           </filter>
 
           <pattern
-            v-for="item in scenicList"
+            v-for="item in wheelScenicList"
             :key="`pattern-${item.id}`"
             :id="`img-pattern-${item.id}`"
             patternUnits="userSpaceOnUse"
@@ -40,7 +68,7 @@
             height="760"
           >
             <image
-              :href="item.img"
+              :href="item.coverImage || item.img"
               x="0"
               y="0"
               width="760"
@@ -293,10 +321,10 @@
               <div class="comment-item" v-for="item in comments" :key="item.id">
                 <div class="comment-head">
                   <div class="comment-user">
-                    <span class="avatar">{{ item.user.slice(0, 1) }}</span>
-                    <span class="name">{{ item.user }}</span>
+                    <span class="avatar">{{ getCommentDisplayName(item).slice(0, 1) }}</span>
+                    <span class="name">{{ getCommentDisplayName(item) }}</span>
                   </div>
-                  <span class="comment-tag">{{ item.tag }}</span>
+                  <span class="comment-tag">{{ item.tag || item.category || "默认标签" }}</span>
                 </div>
 
                 <div class="comment-body">
@@ -304,7 +332,26 @@
                 </div>
 
                 <div class="comment-foot">
-                  {{ item.date || "刚刚" }}
+                  <span class="comment-date">{{ item.date || item.createTime || "刚刚" }}</span>
+
+                  <div class="comment-actions">
+                    <button
+                      class="comment-action like"
+                      :class="{ active: item.liked }"
+                      @click="toggleLike(item)"
+                    >
+                      {{ item.liked ? "已赞" : "点赞" }}
+                      <span v-if="typeof item.likeCount === 'number'">({{ item.likeCount }})</span>
+                    </button>
+
+                    <button
+                      v-if="canDeleteComment(item)"
+                      class="comment-action delete"
+                      @click="deleteComment(item)"
+                    >
+                      删除
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -322,12 +369,15 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { request } from "@/utils/request";
 
 import lushan from "@/assets/imgs/lushan.jpg";
 import jinggangshan from "@/assets/imgs/jinggangshan.jpg";
 import wuyuan from "@/assets/imgs/wuyuan.jpg";
 import twangge from "@/assets/imgs/tenwangge.jpg";
 import sanqingshan from "@/assets/imgs/sanqingsan.jpg";
+import yun1 from "@/assets/imgs/yun1.png";
+import yun2 from "@/assets/imgs/yun2.png";
 
 const router = useRouter();
 const route = useRoute();
@@ -335,6 +385,10 @@ const route = useRoute();
 const isLogin = ref(false);
 const activeTab = ref("intro");
 const activeId = ref(1);
+const pageEntering = ref(true);
+const pageLoadingTitle = ref("正在展开景点画卷");
+const pageLoadingText = ref("图片和景点数据正在准备中...");
+// const loadingProgress = ref(0);
 
 const content = ref("");
 const selectedTag = ref("");
@@ -566,15 +620,130 @@ const scenicList = [
   }
 ];
 
+const wheelScenicList = ref(
+  scenicList.map((item) => ({
+    id: item.id,
+    apiId: item.id,
+    name: item.name,
+    coverImage: item.img,
+    img: item.img
+  }))
+);
+
+const scenicDetailMap = ref({});
+
+async function fetchScenicDetail(apiId, localId = apiId) {
+  if (!apiId) return;
+
+  try {
+    const res = await request(`/api/scenics/${apiId}`, {
+      method: "GET"
+    });
+
+    const detail = res?.data;
+    if (!detail) return;
+
+    const fallback = scenicList.find((item) => item.id === localId) || scenicList[0];
+
+    scenicDetailMap.value[localId] = {
+      ...fallback,
+      apiId: detail.id,
+      regionId: detail.regionId,
+      regionName: detail.regionName,
+      name: detail.name || fallback?.name || "",
+      desc: detail.intro || fallback?.desc || "",
+      intro: detail.intro || fallback?.desc || "",
+      highlights: Array.isArray(detail.highlights) && detail.highlights.length
+        ? detail.highlights
+        : (fallback?.highlights || []),
+      summary: detail.summary || "",
+      dialogues: Array.isArray(detail.dialogues) ? detail.dialogues : [],
+      gallery: Array.isArray(detail.images) && detail.images.length
+        ? detail.images
+        : (fallback?.gallery || [fallback?.img].filter(Boolean)),
+      images: Array.isArray(detail.images) ? detail.images : [],
+      img:
+        (Array.isArray(detail.images) && detail.images[0]) ||
+        fallback?.img ||
+        "",
+      foods: fallback?.foods || [],
+      poem: fallback?.poem || ""
+    };
+  } catch (error) {
+    console.error("获取景点详情失败：", error);
+  }
+}
+
+async function fetchRegionScenics() {
+  const regionId = Number(route.query.regionId);
+  if (!regionId) return;
+
+  try {
+    const res = await request(`/api/scenics?regionId=${regionId}`, {
+      method: "GET"
+    });
+
+    const list = Array.isArray(res?.data) ? res.data : [];
+    if (!list.length) return;
+
+    wheelScenicList.value = list.map((item, index) => ({
+      id: scenicList[index]?.id ?? item.id ?? index + 1,
+      apiId: item.id,
+      name: item.name,
+      coverImage: item.coverImage || scenicList[index]?.img || "",
+      img: item.coverImage || scenicList[index]?.img || ""
+    }));
+
+    if (!wheelScenicList.value.some((item) => item.id === activeId.value)) {
+      activeId.value = wheelScenicList.value[0]?.id || activeId.value;
+    }
+
+    await Promise.all(
+      wheelScenicList.value.map((item) => fetchScenicDetail(item.apiId, item.id))
+    );
+  } catch (error) {
+    console.error("获取景点列表失败：", error);
+  }
+}
+
+const regionFoods = ref([]);
+
+async function fetchRegionFoods() {
+  const regionId = Number(route.query.regionId);
+  if (!regionId) return;
+
+  try {
+    const res = await request(`/api/foods?regionId=${regionId}`, {
+      method: "GET"
+    });
+
+    const list = Array.isArray(res?.data) ? res.data : [];
+    regionFoods.value = list.map((item) => ({
+      id: item.id,
+      name: item.name || "",
+      tag: item.regionName || "地方美食",
+      desc: item.name || "",
+      image: item.imageUrl || ""
+    }));
+  } catch (error) {
+    console.error("获取美食列表失败：", error);
+    regionFoods.value = [];
+  }
+}
+
 const commentsMap = ref({});
 const comments = computed(() => commentsMap.value[activeId.value] || []);
 
 const currentScenic = computed(() => {
-  return scenicList.find((item) => item.id === activeId.value) || scenicList[0];
+  return (
+    scenicDetailMap.value[activeId.value] ||
+    scenicList.find((item) => item.id === activeId.value) ||
+    scenicList[0]
+  );
 });
 
 const foodBeltItems = computed(() => {
-  const foods = currentScenic.value.foods || [];
+  const foods = regionFoods.value.length ? regionFoods.value : (currentScenic.value.foods || []);
   return [...foods, ...foods, ...foods];
 });
 
@@ -680,14 +849,14 @@ const sectors = computed(() => {
   const startAngle = 13;
   const endAngle = 166;
 
-  const count = scenicList.length;
+  const count = wheelScenicList.value.length;
   const totalSweep = endAngle - startAngle;
   const gap = 2.4;
   const totalGap = gap * (count - 1);
   const usableSweep = totalSweep - totalGap;
   const sectorSweep = usableSweep / count;
 
-  return scenicList.map((item, index) => {
+  return wheelScenicList.value.map((item, index) => {
     const start = startAngle + index * (sectorSweep + gap);
     const end = start + sectorSweep;
     const mid = (start + end) / 2;
@@ -718,10 +887,157 @@ function selectScenic(id) {
   activeTab.value = "intro";
   content.value = "";
   selectedTag.value = "";
+
+  const target = wheelScenicList.value.find((item) => item.id === id);
+  if (target && !scenicDetailMap.value[id]) {
+    fetchScenicDetail(target.apiId, target.id);
+  }
+  if (target) {
+    fetchComments(target.apiId || id, id);
+  }
 }
 
 function selectTag(tag) {
   selectedTag.value = tag;
+}
+
+function getCurrentUser() {
+  try {
+    return JSON.parse(localStorage.getItem("user") || "{}") || {};
+  } catch {
+    return {};
+  }
+}
+
+function getCurrentUserName() {
+  const user = getCurrentUser();
+  return user?.name || user?.username || "游客";
+}
+
+function getCommentDisplayName(item = {}) {
+  return item.nickname || item.user || item.username || "游客";
+}
+
+function normalizeCommentItem(item = {}) {
+  const currentUser = getCurrentUser();
+  const displayName =
+    item.nickname ||
+    item.user ||
+    item.username ||
+    item.name ||
+    "游客";
+
+  const currentUserId = currentUser?.id ?? currentUser?.userId;
+  const itemUserId = item?.userId ?? item?.uid;
+
+  return {
+    ...item,
+    id: item.id,
+    userId: itemUserId,
+    username: item.username || item.user || displayName,
+    nickname: item.nickname || displayName,
+    user: displayName,
+    avatar: item.avatar || "",
+    scenicId: item.scenicId ?? item.scenicID ?? currentScenic.value?.apiId ?? activeId.value,
+    tag: item.tag || item.category || "默认标签",
+    category: item.category || item.tag || "默认标签",
+    date: item.date || item.createTime || "刚刚",
+    createTime: item.createTime || item.date || "刚刚",
+    likeCount: typeof item.likeCount === "number" ? item.likeCount : 0,
+    liked: !!item.liked,
+    isMine:
+      typeof item.isMine === "boolean"
+        ? item.isMine
+        : (currentUserId != null && itemUserId != null
+            ? String(currentUserId) === String(itemUserId)
+            : displayName === getCurrentUserName())
+  };
+}
+
+function canDeleteComment(item) {
+  if (!isLogin.value || !item) return false;
+
+  const currentUser = getCurrentUser();
+  const currentUserId = currentUser?.id ?? currentUser?.userId;
+  const itemUserId = item?.userId ?? item?.uid;
+
+  if (currentUserId != null && itemUserId != null) {
+    return String(currentUserId) === String(itemUserId);
+  }
+
+  return getCommentDisplayName(item) === getCurrentUserName();
+}
+
+async function fetchComments(scenicId = currentScenic.value.apiId || activeId.value, localId = activeId.value) {
+  if (!scenicId) return;
+
+  try {
+    const res = await request(`/api/comments?scenicId=${scenicId}`, {
+      method: "GET"
+    });
+
+    const list = Array.isArray(res?.data) ? res.data : [];
+    commentsMap.value[localId] = list.map((item) => normalizeCommentItem(item));
+    saveComments();
+  } catch (error) {
+    console.error("获取评论失败：", error);
+  }
+}
+
+async function toggleLike(item) {
+  if (!item?.id) {
+    alert("评论不存在");
+    return;
+  }
+
+  const oldLiked = !!item.liked;
+  const oldCount = typeof item.likeCount === "number" ? item.likeCount : 0;
+
+  item.liked = !oldLiked;
+  item.likeCount = oldLiked ? Math.max(0, oldCount - 1) : oldCount + 1;
+
+  try {
+    await request(`/api/comments/${item.id}/like`, {
+      method: "POST"
+    });
+    saveComments();
+  } catch (error) {
+    item.liked = oldLiked;
+    item.likeCount = oldCount;
+    alert(error?.message || "点赞失败");
+  }
+}
+
+async function deleteComment(item) {
+  if (!item?.id) {
+    alert("评论不存在");
+    return;
+  }
+
+  if (!canDeleteComment(item)) {
+    alert("只能删除自己发表的评论");
+    return;
+  }
+
+  const list = commentsMap.value[activeId.value] || [];
+  const idx = list.findIndex((comment) => String(comment.id) === String(item.id));
+  if (idx === -1) {
+    alert("评论不存在");
+    return;
+  }
+
+  const backup = { ...list[idx] };
+  list.splice(idx, 1);
+
+  try {
+    await request(`/api/comments/${item.id}`, {
+      method: "DELETE"
+    });
+    saveComments();
+  } catch (error) {
+    list.splice(idx, 0, backup);
+    alert(error?.message || "删除评论失败");
+  }
 }
 
 function saveComments() {
@@ -731,8 +1047,19 @@ function saveComments() {
 function loadComments() {
   const stored = localStorage.getItem("jx_scenic_comments");
   if (stored) {
-    commentsMap.value = JSON.parse(stored);
-    return;
+    try {
+      const parsed = JSON.parse(stored);
+      const normalized = {};
+      Object.keys(parsed || {}).forEach((key) => {
+        normalized[key] = Array.isArray(parsed[key])
+          ? parsed[key].map((item) => normalizeCommentItem(item))
+          : [];
+      });
+      commentsMap.value = normalized;
+      return;
+    } catch {
+      localStorage.removeItem("jx_scenic_comments");
+    }
   }
 
   commentsMap.value = {
@@ -767,9 +1094,15 @@ function loadComments() {
     5: [],
     6: []
   };
+
+  Object.keys(commentsMap.value).forEach((key) => {
+    commentsMap.value[key] = (commentsMap.value[key] || []).map((item) =>
+      normalizeCommentItem(item)
+    );
+  });
 }
 
-function submitComment() {
+async function submitComment() {
   if (!content.value.trim()) {
     alert("请输入评论内容");
     return;
@@ -780,23 +1113,26 @@ function submitComment() {
     return;
   }
 
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const userName = getCurrentUserName();
+  const scenicId = currentScenic.value.apiId || activeId.value;
+  const commentPayload = {
+    scenicId,
+    category: selectedTag.value,
+    content: content.value.trim()
+  };
 
-  if (!commentsMap.value[activeId.value]) {
-    commentsMap.value[activeId.value] = [];
+  try {
+    await request(`/api/comments`, {
+      method: "POST",
+      body: commentPayload
+    });
+
+    await fetchComments(scenicId, activeId.value);
+    content.value = "";
+    selectedTag.value = "";
+  } catch (error) {
+    alert(error?.message || "发布评论失败");
   }
-
-  commentsMap.value[activeId.value].unshift({
-    id: Date.now(),
-    user: user?.name || "游客",
-    content: content.value.trim(),
-    tag: selectedTag.value,
-    date: "刚刚"
-  });
-
-  saveComments();
-  content.value = "";
-  selectedTag.value = "";
 }
 
 function startDialogue() {
@@ -804,6 +1140,7 @@ function startDialogue() {
     path: "/dialogue",
     query: {
       id: activeId.value,
+      apiId: currentScenic.value.apiId || activeId.value,
       demo: isLogin.value ? "false" : "true"
     }
   });
@@ -819,18 +1156,105 @@ function goLogin() {
 }
 
 function goBack() {
-  router.back();
+  router.push({ path: '/', query: { target: 'home' } })
 }
 
-onMounted(() => {
-  loadComments();
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
+function preloadImages(urls = []) {
+  const validUrls = [...new Set((urls || []).filter(Boolean))];
+  if (!validUrls.length) return Promise.resolve();
+
+  return Promise.allSettled(
+    validUrls.map((url) => new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(url);
+      img.onerror = () => resolve(url);
+      img.src = url;
+    }))
+  );
+}
+
+function getInitialActiveId() {
   const queryId = Number(route.query.id);
-  if (queryId && scenicList.some((item) => item.id === queryId)) {
-    activeId.value = queryId;
+  if (queryId) {
+    const targetByApiId = wheelScenicList.value.find((item) => item.apiId === queryId);
+    if (targetByApiId) return targetByApiId.id;
+    if (scenicList.some((item) => item.id === queryId)) return queryId;
+  }
+  return wheelScenicList.value[0]?.id || activeId.value || 1;
+}
+
+function collectEntranceImages() {
+  const scenicImages = Object.values(scenicDetailMap.value || {}).flatMap((item) => [
+    item?.img,
+    ...(Array.isArray(item?.gallery) ? item.gallery : [])
+  ]);
+
+  const wheelImages = wheelScenicList.value.flatMap((item) => [item.coverImage, item.img]);
+  const foodImages = (regionFoods.value || []).map((item) => item.image);
+
+  return [...new Set([...scenicImages, ...wheelImages, ...foodImages].filter(Boolean))];
+}
+
+async function preparePageEntrance() {
+  const transitionInfo = (() => {
+    try {
+      return JSON.parse(sessionStorage.getItem('jx_detail_transition') || '{}');
+    } catch {
+      return {};
+    }
+  })();
+
+  if (transitionInfo?.regionName) {
+    pageLoadingTitle.value = `正在进入${transitionInfo.regionName}`;
   }
 
+  pageEntering.value = true;
+  pageLoadingText.value = '云雾正在缓缓散开，景点画卷即将展开...';
+
+  const entranceTimer = setTimeout(() => {
+    pageEntering.value = false;
+    sessionStorage.removeItem('jx_detail_transition');
+  }, 2600);
+
+  try {
+    loadComments();
+
+    await fetchRegionScenics();
+    pageLoadingText.value = '正在装点当地风物与美食...';
+
+    await fetchRegionFoods();
+
+    activeId.value = getInitialActiveId();
+
+    const currentWheelItem = wheelScenicList.value.find((item) => item.id === activeId.value);
+    if (currentWheelItem && !scenicDetailMap.value[activeId.value]) {
+      await fetchScenicDetail(currentWheelItem.apiId, currentWheelItem.id);
+    }
+
+    pageLoadingText.value = '雨雾渐散，图片与评论正在入卷...';
+
+    Promise.allSettled([
+      currentWheelItem ? fetchComments(currentWheelItem.apiId || activeId.value, activeId.value) : Promise.resolve(),
+      preloadImages(collectEntranceImages())
+    ]);
+  } finally {
+    await wait(2600);
+    clearTimeout(entranceTimer);
+    if (pageEntering.value) {
+      pageEntering.value = false;
+      sessionStorage.removeItem('jx_detail_transition');
+    }
+  }
+}
+
+onMounted(async () => {
   isLogin.value = !!localStorage.getItem("user");
+
+  await preparePageEntrance();
   startGalleryAutoPlay();
 
   document.addEventListener("keydown", handleKeydown);
@@ -849,9 +1273,202 @@ function handleKeydown(e) {
 </script>
 
 <style scoped>
+.detail-loading-fade-enter-active,
+.detail-loading-fade-leave-active {
+  transition: opacity 0.55s ease;
+}
+
+.detail-loading-fade-enter-from,
+.detail-loading-fade-leave-to {
+  opacity: 0;
+}
+
+.page-loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  overflow: hidden;
+  background: radial-gradient(circle at center, rgba(244, 240, 233, 0.22) 0%, rgba(231, 223, 210, 0.58) 58%, rgba(219, 211, 197, 0.78) 100%);
+}
+
+.mist-backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at center, rgba(255, 251, 245, 0.78) 0%, rgba(241, 236, 227, 0.46) 28%, rgba(225, 217, 205, 0.18) 58%, rgba(225, 217, 205, 0) 78%),
+    linear-gradient(180deg, rgba(240, 235, 226, 0.8), rgba(229, 221, 208, 0.68));
+  animation: mistBackdropOpen 2.4s ease-out forwards;
+}
+
+.mist-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.mist-half {
+  position: absolute;
+  top: 50%;
+  width: 72vw;
+  max-width: 1050px;
+  min-width: 560px;
+  user-select: none;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  opacity: 1;
+  filter: drop-shadow(0 10px 30px rgba(89, 80, 65, 0.08));
+}
+
+.mist-half.left {
+  right: 20%;
+  transform-origin: center center;
+}
+
+.mist-half.right {
+  left: 20%;
+  transform-origin: center center;
+}
+
+.mist-half.back.left {
+   top: 78%;
+  animation: mistOpenBackLeft 2.4s cubic-bezier(0.22, 0.8, 0.2, 1) forwards;
+}
+
+.mist-half.back.right {
+   top: 78%;
+  animation: mistOpenBackRight 2.4s cubic-bezier(0.22, 0.8, 0.2, 1) forwards;
+}
+
+.mist-half.front.left {
+  top: 28%;
+  animation: mistOpenFrontLeft 2.2s cubic-bezier(0.22, 0.8, 0.2, 1) forwards;
+}
+
+.mist-half.front.right {
+  top: 28%;
+  animation: mistOpenFrontRight 2.2s cubic-bezier(0.22, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes mistBackdropOpen {
+  0% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 0.90;
+  }
+  100% {
+    opacity: 0.1;
+  }
+}
+
+@keyframes mistOpenBackLeft {
+  0% {
+    transform: translate3d(-22%, -50%, 0) scale(1.18);
+    opacity: 1;
+  }
+  60% {
+    transform: translate3d(calc(-22% - 18vw), -50%, 0) scale(1.2);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate3d(calc(-22% - 34vw), -50%, 0) scale(1.22);
+    opacity: 0;
+  }
+}
+
+@keyframes mistOpenBackRight {
+  0% {
+    transform: translate3d(22%, -50%, 0) scaleX(-1) scale(1.18);
+    opacity: 1;
+  }
+  60% {
+    transform: translate3d(calc(22% + 18vw), -50%, 0) scaleX(-1) scale(1.2);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate3d(calc(22% + 34vw), -50%, 0) scaleX(-1) scale(1.22);
+    opacity: 0;
+  }
+}
+
+@keyframes mistOpenFrontLeft {
+  0% {
+    transform: translate3d(-14%, -50%, 0) scale(1.06);
+    opacity: 1;
+  }
+  60% {
+    transform: translate3d(calc(-14% - 24vw), -50%, 0) scale(1.09);
+    opacity: 0.56;
+  }
+  100% {
+    transform: translate3d(calc(-14% - 42vw), -50%, 0) scale(1.12);
+    opacity: 0;
+  }
+}
+
+@keyframes mistOpenFrontRight {
+  0% {
+    transform: translate3d(14%, -50%, 0) scaleX(-1) scale(1.06);
+    opacity: 1;
+  }
+  60% {
+    transform: translate3d(calc(14% + 24vw), -50%, 0) scaleX(-1) scale(1.09);
+    opacity: 0.56;
+  }
+  100% {
+    transform: translate3d(calc(14% + 42vw), -50%, 0) scaleX(-1) scale(1.12);
+    opacity: 0;
+  }
+}
+
+.mist-center-panel {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(460px, 82vw);
+  transform: translate(-50%, -50%);
+  padding: 28px 30px 24px;
+  text-align: center;
+  border-radius: 30px;
+  background: rgba(255, 250, 242, 0.56);
+  border: 1px solid rgba(172, 145, 112, 0.18);
+  box-shadow: 0 18px 46px rgba(92, 72, 44, 0.12);
+  opacity: 0;
+}
+
+.mist-title {
+  margin-bottom: 10px;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #6a4823;
+}
+
+.mist-text {
+  margin-bottom: 16px;
+  font-size: 15px;
+  line-height: 1.8;
+  color: #89694a;
+}
+
+.mist-progress-bar {
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(143, 108, 67, 0.14);
+}
+
+.mist-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(164, 126, 84, 0.7), rgba(202, 170, 130, 0.92));
+}
+
 * {
   box-sizing: border-box;
 }
+
 
 .detail-page {
   --wheel-size: clamp(940px, 62vw, 1040px);
@@ -943,14 +1560,14 @@ function handleKeydown(e) {
 
 .sector-border {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.95);
+  stroke: rgba(255, 255, 255, 0.5);
   stroke-width: 4;
   stroke-linejoin: round;
   transition: all 0.3s ease;
 }
 
 .sector-border.active {
-  stroke: #ffffff;
+  stroke: rgba(255, 255, 255, 0.5);
   stroke-width: 5;
 }
 
@@ -1034,6 +1651,13 @@ function handleKeydown(e) {
 .tab-box {
   display: flex;
   justify-content: center;
+   width: 284px;   /* 142 * 2 */
+  height: 56px;
+  margin: 0 auto;
+  background: url(@/assets/imgs/jspl.png) no-repeat center center;
+  background-size: 100% 100%;
+  /* overflow: hidden; */
+   border-radius: 12px;
   /* margin-bottom: 14px; */
 }
 
@@ -1046,6 +1670,8 @@ function handleKeydown(e) {
   font-weight: 700;
   cursor: pointer;
   transition: all 0.25s ease;
+   background: transparent;
+   
 }
 
 .tab-btn:first-child {
@@ -1075,7 +1701,7 @@ function handleKeydown(e) {
   display: grid;
   grid-template-columns: 700px 1fr;
   grid-template-rows: auto auto;
-  gap: 22px;
+  gap: 2px;
   padding-right: 6px;
   align-content: start;
 }
@@ -1232,9 +1858,14 @@ function handleKeydown(e) {
   background: #7d3421;
   transform: scale(1.2);
 }
+.intro-text{
+  background: url(@/assets/imgs/jieshao.png);
+  padding: 35px;
+  background-size: 100% 100%;
+}
 
 .intro-text h3 {
-  margin: 0 0 10px;
+  margin: 0 0 5px;
   color: #7d3421;
   font-size: 20px;
 }
@@ -1251,21 +1882,25 @@ function handleKeydown(e) {
   padding-left: 18px;
   color: #5c4a3d;
   line-height: 2;
+  list-style: none;
+  padding-left: 0; 
 }
 
 .action-row {
-  margin-top: 26px;
+  margin-top: 15px;
+  
 }
 
 .action-btn {
   border: none;
-  background: linear-gradient(135deg, #c77755, #9f4a30);
+  background: linear-gradient(135deg, #fcd7c1, #c4a489);
   color: #fff;
-  padding: 12px 26px;
+  padding: 10px 26px;
   border-radius: 999px;
   cursor: pointer;
   font-size: 15px;
   box-shadow: 0 8px 20px rgba(159, 74, 48, 0.26);
+  
 }
 
 /* 美食流水线区域 */
@@ -1559,6 +2194,38 @@ function handleKeydown(e) {
   margin-top: 10px;
   color: #9f8a7c;
   font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.comment-date {
+  flex: 1;
+}
+
+.comment-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.comment-action {
+  border: none;
+  background: transparent;
+  color: #a86b4c;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+}
+
+.comment-action.like.active {
+  color: #c85d39;
+  font-weight: 700;
+}
+
+.comment-action.delete {
+  color: #b04f35;
 }
 
 .empty-box {
@@ -1768,4 +2435,25 @@ function handleKeydown(e) {
     height: 84px;
   }
 }
+
+@media (max-width: 900px) {
+  .mist-half {
+    width: 90vw;
+    min-width: 420px;
+  }
+
+  .mist-center-panel {
+    width: min(380px, 84vw);
+    padding: 24px 22px 20px;
+  }
+
+  .mist-title {
+    font-size: 22px;
+  }
+
+  .mist-text {
+    font-size: 14px;
+  }
+}
+
 </style>

@@ -208,7 +208,7 @@ const initPageData = () => {
 }
 
 const goHome = () => {
-  router.push('/')
+  router.push({ path: '/', query: { target: 'home' } })
 }
 
 const logout = () => {

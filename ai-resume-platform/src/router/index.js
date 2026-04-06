@@ -1,9 +1,16 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import IntroHome from '../views/IntroHome.vue'
 import Home from '../views/Home.vue'
 
 const routes = [
   {
     path: '/',
+    name: 'IntroHome',
+    component: IntroHome,
+    meta: { title: '云游江西' }
+  },
+  {
+    path: '/home',
     name: 'Home',
     component: Home,
     meta: { title: '江西文旅' }
@@ -48,7 +55,7 @@ const router = createRouter({
 // 路由守卫
 router.beforeEach((to, from, next) => {
   document.title = to.meta.title || '江西文旅'
-  
+
   // 需要登录的页面
   if (to.meta.requiresAuth) {
     const user = localStorage.getItem('user')
@@ -60,7 +67,7 @@ router.beforeEach((to, from, next) => {
       return
     }
   }
-  
+
   next()
 })
 
