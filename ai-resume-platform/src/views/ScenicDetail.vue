@@ -376,7 +376,7 @@ import jinggangshan from "@/assets/imgs/jinggangshan.jpg";
 import wuyuan from "@/assets/imgs/wuyuan.jpg";
 import twangge from "@/assets/imgs/tenwangge.jpg";
 import sanqingshan from "@/assets/imgs/sanqingsan.jpg";
-import yun1 from "@/assets/imgs/yun1.png";
+import yun1 from "@/assets/imgs/yun2.png";
 import yun2 from "@/assets/imgs/yun2.png";
 
 const router = useRouter();
@@ -1213,51 +1213,74 @@ async function preparePageEntrance() {
   }
 
   pageEntering.value = true;
-  pageLoadingText.value = '云雾正在缓缓散开，景点画卷即将展开...';
+  pageLoadingText.value = '景点数据正在加载中，请稍候...';
 
-  const entranceTimer = setTimeout(() => {
-    pageEntering.value = false;
-    sessionStorage.removeItem('jx_detail_transition');
-  }, 2600);
+  const minAnimationTime = wait(2600);
+
+  loadComments();
+
+  const scenicTask = fetchRegionScenics();
+
+  const foodTask = scenicTask
+    .then(async () => {
+      pageLoadingText.value = '正在装点当地风物与美食...';
+      await fetchRegionFoods();
+    })
+    .catch((error) => {
+      console.error('加载当地美食失败：', error);
+    });
+
+  const detailTask = scenicTask
+    .then(async () => {
+      activeId.value = getInitialActiveId();
+
+      const currentWheelItem = wheelScenicList.value.find((item) => item.id === activeId.value);
+      if (currentWheelItem && !scenicDetailMap.value[activeId.value]) {
+        await fetchScenicDetail(currentWheelItem.apiId, currentWheelItem.id);
+      }
+
+      pageLoadingText.value = '图片与评论正在同步加载...';
+      return currentWheelItem;
+    })
+    .catch((error) => {
+      console.error('加载景点详情失败：', error);
+      return null;
+    });
+
+  const extraTask = detailTask
+    .then((currentWheelItem) =>
+      Promise.allSettled([
+        currentWheelItem
+          ? fetchComments(currentWheelItem.apiId || activeId.value, activeId.value)
+          : Promise.resolve(),
+        preloadImages(collectEntranceImages())
+      ])
+    )
+    .catch((error) => {
+      console.error('加载评论或预加载图片失败：', error);
+    });
+
+  scenicTask.catch((error) => {
+    console.error('加载景点列表失败：', error);
+  });
+
+  Promise.allSettled([scenicTask, foodTask, detailTask, extraTask]).then(() => {
+    startGalleryAutoPlay();
+  });
 
   try {
-    loadComments();
-
-    await fetchRegionScenics();
-    pageLoadingText.value = '正在装点当地风物与美食...';
-
-    await fetchRegionFoods();
-
-    activeId.value = getInitialActiveId();
-
-    const currentWheelItem = wheelScenicList.value.find((item) => item.id === activeId.value);
-    if (currentWheelItem && !scenicDetailMap.value[activeId.value]) {
-      await fetchScenicDetail(currentWheelItem.apiId, currentWheelItem.id);
-    }
-
-    pageLoadingText.value = '雨雾渐散，图片与评论正在入卷...';
-
-    Promise.allSettled([
-      currentWheelItem ? fetchComments(currentWheelItem.apiId || activeId.value, activeId.value) : Promise.resolve(),
-      preloadImages(collectEntranceImages())
-    ]);
+    await minAnimationTime;
   } finally {
-    await wait(2600);
-    clearTimeout(entranceTimer);
-    if (pageEntering.value) {
-      pageEntering.value = false;
-      sessionStorage.removeItem('jx_detail_transition');
-    }
+    pageEntering.value = false;
+    sessionStorage.removeItem('jx_detail_transition');
   }
 }
 
-onMounted(async () => {
+onMounted(() => {
   isLogin.value = !!localStorage.getItem("user");
-
-  await preparePageEntrance();
-  startGalleryAutoPlay();
-
   document.addEventListener("keydown", handleKeydown);
+
+  preparePageEntrance();
 });
 
 onUnmounted(() => {
@@ -1497,10 +1520,10 @@ function handleKeydown(e) {
   background:
     linear-gradient(
       90deg,
-      rgba(239, 234, 226, 0.84) 0%,
-      rgba(239, 234, 226, 0.72) 32%,
+      rgba(239, 234, 226, 0.80) 0%,
+      rgba(239, 234, 226, 0.70) 32%,
       rgba(244, 240, 233, 0.9) 60%,
-      rgba(244, 240, 233, 0.96) 100%
+      rgba(244, 240, 233, 0.90) 100%
     );
   backdrop-filter: blur(2px);
 }
