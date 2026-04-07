@@ -35,20 +35,26 @@
         v-for="spot in regionList"
         :key="spot.id"
         class="spot"
-        :style="{
-          left: spot.x + '%',
-          top: spot.y + '%'
-        }"
+        :style="{ left: spot.x + '%', top: spot.y + '%' }"
         @click="goRegion(spot)"
       >
-        <div class="spot-marker">
-          <span class="marker-icon">{{ spot.icon }}</span>
-          <span class="marker-name">{{ spot.name }}</span>
+        <!-- 灯笼标记 -->
+        <div class="lantern-marker" :style="{ '--color': spot.color }">
+          <div class="lantern-head"></div>
+          <div class="lantern-content">
+            <img 
+              v-if="spot.sealImg" 
+              :src="spot.sealImg" 
+              class="lantern-seal" 
+              alt="印章"
+            />
+            <span class="lantern-name">{{ spot.name }}</span>
+          </div>
+          <div class="lantern-tassel"></div>
         </div>
-        <div class="spot-ripple"></div>
+        <div class="lantern-light" :style="{ '--color': spot.color }"></div>
       </div>
     </div>
-
     <!-- 古琴声波纹装饰 -->
     <div class="sound-wave"></div>
   </div>
@@ -58,7 +64,14 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { request } from "@/utils/request";
-import bgImg from "../assets/imgs/bg.png";
+import bgImg from "../assets/imgs/JiangXiMap.png";
+// 导入各城市印章图片
+import sealNanchang from "../assets/seal/NanChang.png";
+import sealJiujiang from "../assets/seal/JiuJiang.png";
+import sealShangrao from "../assets/seal/ShangRao.png";
+import sealJingdezhen from "../assets/seal/JingDeZhen.png";
+import sealJian from "../assets/seal/JiAn.png";
+import sealGanzhou from "../assets/seal/GanZhou.png";
 
 const router = useRouter();
 
@@ -68,17 +81,36 @@ const regionError = ref("");
 
 // 地区名称与地图坐标的对应关系
 const regionPositionMap = {
-  南昌: { x: 49, y: 39, icon: "🏮" },
-  九江: { x: 44, y: 26, icon: "🏮" },
-  上饶: { x: 73, y: 40, icon: "🏮" },
-  景德镇: { x: 63, y: 29, icon: "🏮" },
-  鹰潭: { x: 63, y: 44, icon: "🏮" },
-  新余: { x: 42, y: 53, icon: "🏮" },
-  宜春: { x: 31, y: 47, icon: "🏮" },
-  萍乡: { x: 22, y: 56, icon: "🏮" },
-  吉安: { x: 40, y: 67, icon: "🏮" },
-  抚州: { x: 57, y: 55, icon: "🏮" },
-  赣州: { x: 46, y: 83, icon: "🏮" }
+  南昌: { 
+    x: 49.5, y: 30.5, 
+    sealImg: sealNanchang, 
+    color: "#D92B2B" 
+  }, 
+  九江: { 
+    x: 45.5, y: 20.5, 
+    sealImg: sealJiujiang, 
+    color: "#165DFF" 
+  }, 
+  上饶: { 
+    x: 61.5, y: 30.5, 
+    sealImg: sealShangrao, 
+    color: "#00B42A" 
+  }, 
+  景德镇: { 
+    x: 57.5, y: 23.5, 
+    sealImg: sealJingdezhen, 
+    color: "#FF7D00" 
+  }, 
+  吉安: { 
+    x: 42.5, y: 55.5, 
+    sealImg: sealJian, 
+    color: "#00C1D4" 
+  }, 
+  赣州: { 
+    x: 43.5, y: 73.5, 
+    sealImg: sealGanzhou, 
+    color: "#AB2893" 
+  }
 };
 
 const fetchRegions = async () => {
@@ -188,7 +220,8 @@ onMounted(() => {
 .map-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;     /* 完整显示图片，不裁剪 */
+  object-position: center; /* 居中 */
   filter: sepia(0.15) contrast(1.05) brightness(1.02);
   transition: all 0.3s;
 }
@@ -270,79 +303,120 @@ onMounted(() => {
   color: #f0b199;
 }
 
-/* 地区标记 */
+/* 标记容器 */
 .spot {
   position: absolute;
   transform: translate(-50%, -50%);
   cursor: pointer;
   z-index: 10;
-  transition: all 0.3s ease;
 }
 
-.spot-marker {
+/* 主体：雅致水墨挂牌 + 流苏组合 */
+.lantern-marker {
+  --color: #961e1e;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: all 0.3s ease;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.1));
+}
+
+/* 顶部挂绳（古风画轴感） */
+.lantern-head {
+  width: 14px;
+  height: 4px;
+  background: var(--color);
+  border-radius: 50% 50% 0 0;
+  margin-bottom: 0;
+}
+.lantern-seal {
+  width: 20px;   
+  height: 20px;  
+  object-fit: contain; 
+  filter: sepia(0.1) contrast(1.1); 
+}
+/* 主体牌：水墨圆角长牌 */
+.lantern-content {
+  min-height: 32px;
+  padding: 8px 10px;
+  background: rgba(245, 235, 220, 0.75);
+  border: 1px solid var(--color);
+  border-radius: 50% 50% 40% 40%;
   display: flex;
   align-items: center;
-  gap: 6px;
-  background: rgba(50, 40, 28, 0.85);
-  backdrop-filter: blur(4px);
-  padding: 6px 24px 6px 24px;
-  border-radius: 40px;
-  border: 1px solid rgba(200, 170, 100, 0.6);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  transition: all 0.2s;
+  gap: 4px;
   position: relative;
-  z-index: 2;
 }
 
-.spot:hover .spot-marker {
-  transform: scale(1.08);
-  background: rgba(80, 65, 45, 0.95);
-  border-color: #c9aa5f;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+/* 多流苏 · 轻盈飘渺（你要的效果） */
+.lantern-tassel {
+  width: 14px;
+  height: 18px;
+  background: linear-gradient(to bottom,
+    var(--color),
+    var(--color) 1px,
+    transparent 1px,
+    transparent 2px,
+    var(--color) 2px,
+    var(--color) 3px,
+    transparent 3px,
+    transparent 4px,
+    var(--color) 4px
+  );
+  opacity: 0.7;
+  animation: tassel-swing 3s ease-in-out infinite alternate;
+}
+@keyframes tassel-swing {
+  0% { transform: rotate(-3deg); }
+  100% { transform: rotate(3deg); }
 }
 
-.marker-icon {
-  font-size: 18px;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
-}
-
-.marker-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: #ecdba8;
+/* 图标：篆体小印 · 高级不幼稚 */
+.lantern-icon {
+  font-size: 16px;
+  color: var(--color);
+  font-weight: bold;
   font-family: "STKaiti", serif;
-  letter-spacing: 1px;
+  text-shadow: 0 0 1px rgba(0,0,0,0.1);
 }
 
-.spot-ripple {
+/* 城市名：书法排版 · 清晰有气质 */
+.lantern-name {
+  font-size: 14px;
+  font-family: "STKaiti", "KaiTi", serif;
+  color: #3d2e1f;
+  letter-spacing: 1.5px;
+  font-weight: 500;
+}
+
+/* 悬浮：轻轻上浮 + 墨色加深 */
+.spot:hover .lantern-marker {
+  transform: scale(1.06) translateY(-3px);
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.15));
+}
+.spot:hover .lantern-content {
+  background: rgba(250, 240, 225, 0.95);
+  border-color: var(--color);
+}
+
+/* 光晕：淡墨扩散 · 不刺眼 */
+.lantern-light {
   position: absolute;
-  top: 50%;
   left: 50%;
-  width: 100%;
-  height: 100%;
+  top: 50%;
   transform: translate(-50%, -50%);
+  width: 150%;
+  height: 180%;
+  background: radial-gradient(circle, var(--color), transparent 80%);
+  opacity: 0.1;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(200, 170, 100, 0.4), transparent);
-  opacity: 0;
-  transition: all 0.3s;
   pointer-events: none;
+  animation: glow 3s ease-in-out infinite alternate;
 }
-
-.spot:hover .spot-ripple {
-  animation: ripple 1.2s ease-out infinite;
-}
-
-@keyframes ripple {
-  0% {
-    width: 100%;
-    height: 100%;
-    opacity: 0.6;
-  }
-  100% {
-    width: 180%;
-    height: 180%;
-    opacity: 0;
-  }
+@keyframes glow {
+  0% { opacity: 0.1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0.18; transform: translate(-50%, -50%) scale(1.08); }
 }
 
 /* 古琴声波纹装饰 */
@@ -366,44 +440,16 @@ onMounted(() => {
 }
 
 /* 响应式 */
-@media (max-width: 600px) {
-  .marker-name {
-    font-size: 11px;
-  }
-
-  .spot-marker {
-    padding: 4px 10px 4px 8px;
-  }
-
-  .map-inscription {
-    bottom: 12px;
-    right: 12px;
-    padding: 4px 12px;
-  }
-
-  .inscription-text {
-    font-size: 10px;
-  }
-
-  .region-loading {
-    top: 12px;
-    right: 12px;
-    font-size: 12px;
-    padding: 8px 12px;
-  }
-}
-
 @media (max-width: 500px) {
-  .marker-name {
-    display: none;
+  .lantern-name { display: none; }
+  .lantern-content { 
+    min-width: unset; 
+    padding: 6px 8px; /* 调整内边距 */
+    justify-content: center; /* 印章居中 */
   }
-
-  .spot-marker {
-    padding: 6px;
-  }
-
-  .marker-icon {
-    font-size: 20px;
+  .lantern-seal {
+    width: 18px; /* 移动端缩小印章 */
+    height: 18px;
   }
 }
 </style>
