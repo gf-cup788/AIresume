@@ -12,12 +12,6 @@
         <div class="mist mist-3 mist-move-3"></div>
       </div>
 
-      <!-- 顶部按钮 
-      <div class="top-actions">
-        <button class="back-btn" @click="goSecondScreenSmooth">返回首页</button>
-      </div>
-      -->
-
       <!-- 标题 -->
       <div class="hero-content" :style="titleStyle">
         <div class="title-en fade-up delay-1">Jiangxi Cultural Travel</div>
@@ -34,9 +28,14 @@
         </div>
 
         <div class="scroll-tip fade-up delay-6" @click="scrollToHomeSmooth">
-          <div class="tip-circle">
-            <span>向下</span>
-            <span class="arrow">↓</span>
+          <div class="sunset-wrapper" :style="sunsetStyle">
+            <div class="sunset-circle">
+              <div class="sun-core"></div>
+              <div class="sun-halo"></div>
+              <div class="ripple ripple-1"></div>
+              <div class="ripple ripple-2"></div>
+              <div class="ripple ripple-3"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -104,6 +103,14 @@ const titleStyle = computed(() => {
   }
 })
 
+// 落日动画
+const sunsetStyle = computed(() => {
+  const p = progress.value
+  return {
+    transform: `translateY(${p * 400}px) scale(${1 - p * 0.2})`,
+    opacity: 1 - p * 0.8
+  }
+})
 /* 四座山分开动画 */
 const leftBackStyle = computed(() => {
   const p = progress.value
@@ -470,30 +477,27 @@ watch(
   display: flex;
   justify-content: center;
 }
+.sunset-wrapper {
+  display: flex;
+  justify-content: center;
+  transition: transform 0.03s linear, opacity 0.03s linear;
+}
 
-.tip-circle {
-  width: 118px;
-  height: 118px;
+/* 落日按钮容器 */
+.sunset-circle {
+  width: 80px;
+  height: 80px;
+  background: transparent;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(177, 140, 114, 0.18);
-  box-shadow:
-    inset 0 0 20px rgba(255, 255, 255, 0.16),
-    0 12px 28px rgba(186, 159, 135, 0.12);
-  backdrop-filter: blur(6px);
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: all 0.25s ease;
   cursor: pointer;
   user-select: none;
   animation: tipBreath 3.2s ease-in-out infinite;
-}
-
-.tip-circle:hover {
-  transform: translateY(-4px);
 }
 
 @keyframes tipBreath {
@@ -508,21 +512,77 @@ watch(
       0 16px 34px rgba(186, 159, 135, 0.2);
   }
 }
-
-.arrow {
-  color: #a56547;
-  font-size: 24px;
-  animation: arrowMove 1.5s ease-in-out infinite;
+/* 落日核心（橙红渐变圆形） */
+.sun-core {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(253, 182, 120, 0.8) 0%,
+    rgba(254, 158, 74, 0.8) 40%,
+    rgba(236, 113, 5, 0.7) 70%,
+    rgba(253, 122, 8, 0.6) 100%
+  );
+  /* 核心发光 */
+  box-shadow: 
+    inset 0 0 10px rgba(255, 120, 0, 0.9),
+    0 0 40px rgba(255, 120, 0, 0.8);
+  z-index: 1;
 }
 
-@keyframes arrowMove {
-  0%, 100% {
-    transform: translateY(0);
-    opacity: 0.75;
-  }
-  50% {
-    transform: translateY(6px);
+/* 落日光晕（外层淡色发光） */
+.sun-halo {
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  opacity: 0.5;
+  background: radial-gradient(
+    circle center,
+    rgba(255, 206, 88, 0.6) 0%,
+    rgba(254, 124, 43, 0.4) 70%,
+    transparent 100%
+  );
+  filter: blur(15px);
+  z-index: 0;
+}
+.ripple {
+  position: absolute;
+  width: 80%;
+  height: 30px;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+  border: 2px solid rgba(248, 225, 208, 0.4);
+  border-top: none;
+  animation: downRipple 2s ease-out infinite;
+  transition: opacity 0.3s linear, transform 0.3s linear;
+  z-index: 0;
+}
+/* 第一条涟漪：无延迟（默认） */
+.ripple-1 {
+  animation-delay: 0s;
+}
+
+/* 第二条涟漪：延迟 0.6s */
+.ripple-2 {
+  animation-delay: 0.6s;
+}
+
+/* 第三条涟漪：延迟 1.2s */
+.ripple-3 {
+  animation-delay: 1.2s;
+}
+@keyframes downRipple {
+  0% {
+    /* 初始状态：紧贴按钮底部，完全不透明 */
+    transform: translateX(-50%) scale(1);
     opacity: 1;
+  }
+  100% {
+    /* 结束状态：向下扩散、变淡消失 */
+    transform: translateX(-50%) scale(1.5) translateY(20px);
+    opacity: 0;
   }
 }
 
@@ -688,11 +748,6 @@ watch(
     max-width: 88%;
     font-size: 13px;
     line-height: 1.9;
-  }
-
-  .tip-circle {
-    width: 92px;
-    height: 92px;
   }
 
   .mountain.front {

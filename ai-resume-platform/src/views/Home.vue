@@ -87,7 +87,7 @@ const regionPositionMap = {
     color: "#D92B2B" 
   }, 
   九江: { 
-    x: 45.5, y: 20.5, 
+    x: 45.5, y: 19.5, 
     sealImg: sealJiujiang, 
     color: "#165DFF" 
   }, 
@@ -107,7 +107,7 @@ const regionPositionMap = {
     color: "#00C1D4" 
   }, 
   赣州: { 
-    x: 43.5, y: 73.5, 
+    x: 43.5, y: 75.5, 
     sealImg: sealGanzhou, 
     color: "#AB2893" 
   }
@@ -211,8 +211,8 @@ onMounted(() => {
 /* 地图容器 */
 .map-container {
   position: relative;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   overflow: hidden;
   z-index: 0;
 }
@@ -220,8 +220,8 @@ onMounted(() => {
 .map-img {
   width: 100%;
   height: 100%;
-  object-fit: contain;     /* 完整显示图片，不裁剪 */
-  object-position: center; /* 居中 */
+  object-fit: cover;   
+  object-position: 60% center; 
   filter: sepia(0.15) contrast(1.05) brightness(1.02);
   transition: all 0.3s;
 }
