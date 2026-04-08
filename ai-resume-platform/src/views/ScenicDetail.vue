@@ -1496,7 +1496,7 @@ function handleKeydown(e) {
 .detail-page {
   --wheel-size: clamp(940px, 62vw, 1040px);
   --wheel-left: calc(var(--wheel-size) * -0.59);
-  --left-panel-width: clamp(370px, 35vw, 660px);
+  --left-panel-width: clamp(300px, 24vw, 360px);
   position: relative;
   width: 100%;
   min-height: 100vh;
@@ -1532,7 +1532,7 @@ function handleKeydown(e) {
   position: relative;
   z-index: 2;
   width: var(--left-panel-width);
-  min-width: 420px;
+  min-width: 300px;
   height: 100vh;
   overflow: hidden;
 }
@@ -1630,9 +1630,16 @@ function handleKeydown(e) {
   min-width: 0;
   width: 100%;
   height: 100vh;
-  padding: 20px 28px 4px 0;
+  overflow-y: auto;
+  padding: 10px 28px 4px 0;
   display: flex;
   flex-direction: column;
+  /* 隐藏滚动条 */
+  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;  /* IE/Edge */
+}
+.right-panel::-webkit-scrollbar {
+  display: none;  /* Chrome/Safari */
 }
 
 .back-btn {
@@ -1644,7 +1651,7 @@ function handleKeydown(e) {
   padding: 10px 20px;
   border-radius: 999px;
   cursor: pointer;
-  margin-bottom: 18px;
+  margin-bottom: -40px;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
 }
 
@@ -1654,7 +1661,6 @@ function handleKeydown(e) {
   margin: 0 auto 16px;
   text-align: center;
   border-radius: 16px;
-  /* padding: 20px 24px 16px; */
 }
 
 .title-box h1 {
@@ -1674,7 +1680,7 @@ function handleKeydown(e) {
 .tab-box {
   display: flex;
   justify-content: center;
-   width: 284px;   /* 142 * 2 */
+  width: 284px;   /* 142 * 2 */
   height: 56px;
   margin: 0 auto;
   background: url(@/assets/imgs/jspl.png) no-repeat center center;
@@ -1711,16 +1717,16 @@ function handleKeydown(e) {
 }
 
 .content-box {
-  flex: 1;
-  min-height: 0;
+  flex: 0 1 auto;
+  min-height: auto;
   border-radius: 16px;
-  padding: 24px;
-  overflow: hidden;
+  padding: 8px 8px;
+  overflow: visible;
 }
 
 .intro-panel {
-  height: 100%;
-  overflow-y: auto;
+  height: auto;
+  overflow-y: visible;
   display: grid;
   grid-template-columns: 700px 1fr;
   grid-template-rows: auto auto;
@@ -1883,8 +1889,15 @@ function handleKeydown(e) {
 }
 .intro-text{
   background: url(@/assets/imgs/jieshao.png);
+  background-size: cover;
+  background-position: center;
+  background-attachment: local;
   padding: 35px;
-  background-size: 100% 100%;
+  height: 400px;           
+  overflow-y: overlay;        
+  display: flex;
+  flex-direction: column;
+  scrollbar-gutter: stable;
 }
 
 .intro-text h3 {
@@ -1907,6 +1920,19 @@ function handleKeydown(e) {
   line-height: 2;
   list-style: none;
   padding-left: 0; 
+}
+
+.intro-text::-webkit-scrollbar {
+  width: 4px;
+  height: 380px;
+}
+.intro-text::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 35px 0; 
+}
+.intro-text::-webkit-scrollbar-thumb {
+  background: rgba(125, 52, 33, 0.4);
+  border-radius: 4px;
 }
 
 .action-row {
@@ -1997,7 +2023,7 @@ function handleKeydown(e) {
 .food-belt-card {
   width: 250px;
   min-width: 250px;
-  height: 180px;
+  height: 160px;
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(214, 195, 181, 0.72);
   border-radius: 18px;
@@ -2010,7 +2036,7 @@ function handleKeydown(e) {
 
 .food-belt-image {
   width: 100%;
-  height: 146px;
+  height: 120px;
   /* overflow: hidden; */
 }
 
@@ -2296,6 +2322,9 @@ function handleKeydown(e) {
   .intro-image {
     height: 320px;
   }
+  .intro-text {
+    height: 320px;  
+  }
 
   .intro-card {
     width: 205px;
@@ -2326,9 +2355,10 @@ function handleKeydown(e) {
 
 @media (max-width: 900px) {
   .detail-page {
+    position: relative;  /* 移动端恢复相对定位 */
     display: block;
     overflow-y: auto;
-    min-height: 100vh;
+    height: auto;
   }
 
   .left-wheel-wrap {
@@ -2356,6 +2386,7 @@ function handleKeydown(e) {
   .right-panel {
     width: 100%;
     height: auto;
+    overflow-y: visible;
     min-width: 0;
     padding: 8px 16px 24px;
   }

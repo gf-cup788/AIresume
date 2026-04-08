@@ -41,7 +41,7 @@
         <!-- 灯笼标记 -->
         <div class="lantern-marker" :style="{ '--color': spot.color }">
           <div class="lantern-head"></div>
-          <div class="lantern-content">
+          <div class="lantern-content" :style="{ background: spot.lightBg }">
             <img 
               v-if="spot.sealImg" 
               :src="spot.sealImg" 
@@ -84,32 +84,38 @@ const regionPositionMap = {
   南昌: { 
     x: 49.5, y: 30.5, 
     sealImg: sealNanchang, 
-    color: "#D92B2B" 
+    color: "#D92B2B",
+    lightBg: "rgba(245, 160, 160, 0.85)"  // 粉红 + 透明度
   }, 
   九江: { 
     x: 45.5, y: 19.5, 
     sealImg: sealJiujiang, 
-    color: "#165DFF" 
+    color: "#165DFF",
+    lightBg: "rgba(168, 200, 255, 0.85)"  // 浅蓝 + 透明度
   }, 
   上饶: { 
     x: 61.5, y: 30.5, 
     sealImg: sealShangrao, 
-    color: "#00B42A" 
+    color: "#00B42A",
+    lightBg: "rgba(160, 230, 176, 0.85)"  // 浅绿 + 透明度
   }, 
   景德镇: { 
     x: 57.5, y: 23.5, 
     sealImg: sealJingdezhen, 
-    color: "#FF7D00" 
+    color: "#FF7D00",
+    lightBg: "rgba(255, 209, 160, 0.85)"  // 浅橙 + 透明度
   }, 
   吉安: { 
     x: 42.5, y: 55.5, 
     sealImg: sealJian, 
-    color: "#00C1D4" 
+    color: "#00C1D4",
+    lightBg: "rgba(160, 240, 245, 0.85)"  // 浅青 + 透明度
   }, 
   赣州: { 
     x: 43.5, y: 75.5, 
     sealImg: sealGanzhou, 
-    color: "#AB2893" 
+    color: "#AB2893",
+    lightBg: "rgba(229, 176, 216, 0.85)"  // 浅紫 + 透明度
   }
 };
 
@@ -324,8 +330,8 @@ onMounted(() => {
 
 /* 顶部挂绳（古风画轴感） */
 .lantern-head {
-  width: 14px;
-  height: 4px;
+  width: 18px;
+  height: 8px;
   background: var(--color);
   border-radius: 50% 50% 0 0;
   margin-bottom: 0;
@@ -340,7 +346,6 @@ onMounted(() => {
 .lantern-content {
   min-height: 32px;
   padding: 8px 10px;
-  background: rgba(245, 235, 220, 0.75);
   border: 1px solid var(--color);
   border-radius: 50% 50% 40% 40%;
   display: flex;
@@ -349,10 +354,10 @@ onMounted(() => {
   position: relative;
 }
 
-/* 多流苏 · 轻盈飘渺（你要的效果） */
+/* 多流苏 · 轻盈飘渺 */
 .lantern-tassel {
-  width: 14px;
-  height: 18px;
+  width: 20px;
+  height: 24px;
   background: linear-gradient(to bottom,
     var(--color),
     var(--color) 1px,
@@ -372,7 +377,7 @@ onMounted(() => {
   100% { transform: rotate(3deg); }
 }
 
-/* 图标：篆体小印 · 高级不幼稚 */
+/* 图标：篆体小印 */
 .lantern-icon {
   font-size: 16px;
   color: var(--color);
@@ -381,11 +386,11 @@ onMounted(() => {
   text-shadow: 0 0 1px rgba(0,0,0,0.1);
 }
 
-/* 城市名：书法排版 · 清晰有气质 */
+/* 城市名：书法排版 */
 .lantern-name {
   font-size: 14px;
   font-family: "STKaiti", "KaiTi", serif;
-  color: #3d2e1f;
+  color: #2b231c;
   letter-spacing: 1.5px;
   font-weight: 500;
 }
