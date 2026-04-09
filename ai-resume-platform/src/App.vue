@@ -1,17 +1,31 @@
 <template>
   <div id="app">
-    <!-- 圆形头像漂浮 - 右上角（对话页隐藏） -->
+    <!-- 古风落款头像 -->
     <div
       v-if="!hideFloatingAvatar"
       class="floating-avatar"
       @click="toggleMenu"
     >
-      <div class="avatar-ring">
-        <img :src="avatarUrl" class="avatar" />
-        <div class="avatar-ripple"></div>
+      <!-- 落款主体：闲章 + 头像 + 竖排字 -->
+      <div class="signature-seal-wrapper">
+        <!-- 朱红闲章（斑驳毛边圆形，纯CSS实现） -->
+        <div class="seal-stamp">
+          <img :src="avatarUrl" class="seal-avatar" />
+        </div>
+        <!-- 竖排落款容器（含上下印章） -->
+        <div class="signature-container">
+          <!-- 上方：江湖印章 -->
+          <img :src="JiangHuImg" class="seal-mark top-seal" />
+          
+          <!-- 竖排文字 -->
+          <div class="signature-vertical-text">{{ nicknameText }}</div>
+          
+          <!-- 下方：游客印章 -->
+          <img :src="YouKeImg" class="seal-mark bottom-seal" />
+        </div>
       </div>
 
-      <!-- 古风下拉菜单 -->
+      <!-- 下拉菜单 -->
       <transition name="menu-fade">
         <div v-if="showMenu" class="menu-scroll" @click.stop>
           <div class="menu-header">
@@ -24,21 +38,11 @@
               <span class="item-icon">📜</span>
               <span>游历簿</span>
             </div>
-
-            <div
-              v-if="!isLogin"
-              class="menu-item"
-              @click.stop="goLogin"
-            >
+            <div v-if="!isLogin" class="menu-item" @click.stop="goLogin">
               <span class="item-icon">🏮</span>
               <span>登楼</span>
             </div>
-
-            <div
-              v-else
-              class="menu-item logout-item"
-              @click.stop="logout"
-            >
+            <div v-else class="menu-item logout-item" @click.stop="logout">
               <span class="item-icon">🍃</span>
               <span>辞别</span>
             </div>
@@ -48,39 +52,48 @@
       </transition>
     </div>
 
-    <!-- 页面内容 -->
     <router-view />
   </div>
 </template>
 
 <script>
 import avatarImg from "./assets/imgs/red-soldier.png";
-
+import JiangHuImg from "./assets/Seal/JiangHu.png";
+import  YouKeImg  from "./assets/Seal/YouKe.png";
 export default {
   data() {
     return {
       isLogin: false,
       avatarUrl: avatarImg,
-      showMenu: false
+      showMenu: false,
+      JiangHuImg: JiangHuImg,
+      YouKeImg: YouKeImg
     };
   },
-
   computed: {
-    // 在对话页隐藏头像，避免遮挡内容
     hideFloatingAvatar() {
       return this.$route.path === "/dialogue";
+    },
+    nicknameText() {
+      if (this.isLogin) {
+        const user = localStorage.getItem("user");
+        if (user) {
+          try {
+            const userData = JSON.parse(user);
+            return userData.nickname;
+          } catch (e) {}
+        }
+      }
+      return "访客";
     }
   },
-
   created() {
     this.checkLogin();
     window.addEventListener("click", this.handleClickOutside);
   },
-
   beforeDestroy() {
     window.removeEventListener("click", this.handleClickOutside);
   },
-
   methods: {
     checkLogin() {
       const user = localStorage.getItem("user");
@@ -89,50 +102,34 @@ export default {
         try {
           const userData = JSON.parse(user);
           this.avatarUrl = userData.avatar || avatarImg;
-        } catch (e) {
-          this.avatarUrl = avatarImg;
-        }
+        } catch (e) {}
       } else {
         this.isLogin = false;
         this.avatarUrl = avatarImg;
       }
     },
-
-    toggleMenu(event) {
-      event.stopPropagation();
+    toggleMenu(e) {
+      e.stopPropagation();
       this.showMenu = !this.showMenu;
     },
-
     handleClickOutside() {
-      if (this.showMenu) {
-        this.showMenu = false;
-      }
+      this.showMenu = false;
     },
-
     goUserCenter() {
       this.showMenu = false;
-      if (this.isLogin) {
-        this.$router.push("/user");
-      } else {
-        this.$router.push("/login");
-      }
+      this.$router.push(this.isLogin ? "/user" : "/login");
     },
-
     goLogin() {
       this.showMenu = false;
       this.$router.push("/login");
     },
-
     logout() {
       this.showMenu = false;
       localStorage.removeItem("user");
       this.isLogin = false;
       this.avatarUrl = avatarImg;
-      alert("已退出登录");
-      this.$router.push("/");
     }
   },
-
   watch: {
     $route() {
       this.checkLogin();
@@ -148,113 +145,147 @@ export default {
   padding: 0;
   box-sizing: border-box;
 }
-
 #app {
   min-height: 100vh;
-  position: relative;
-  font-family: "STKaiti", "华文楷书", "KaiTi", serif;
+  font-family: "STKaiti", "KaiTi", serif;
 }
 
-/* ========== 圆形漂浮头像 - 右上角 ========== */
+/* 右上角漂浮 */
 .floating-avatar {
   position: fixed;
-  top: 25px;
-  right: 25px;
+  top: 10px;
+  right: 10px;
   z-index: 1000;
   cursor: pointer;
 }
 
-/* 头像圆环 */
-.avatar-ring {
+/* 落款整体容器 */
+.signature-seal-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ============== 核心：纯CSS实现朱红闲章（稳定版） ============== */
+.seal-stamp {
+  width: 50px;
+  height: 50px;
   position: relative;
-  width: 52px;
-  height: 52px;
+  background: #a83b2a;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(200, 170, 100, 0.4), rgba(160, 130, 80, 0.25));
-  padding: 2px;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(2deg);
 }
 
-.avatar-ring:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+.seal-stamp::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border-radius: 50%;
+  
+  /* 断断续续的圆环 - 多段有墨/无墨交替 */
+  background: conic-gradient(
+  from 0deg,
+  #a83b2a 0deg 23deg,      /* 有墨 */
+  transparent 23deg 25deg,  /* 断墨 */
+  #a83b2a 25deg 45deg,      /* 有墨 */
+  transparent 45deg 70deg,  /* 断墨*/
+  #a83b2a 70deg 93deg,      /* 有墨 */
+  transparent 93deg 98deg,  /* 断墨 */
+  #a83b2a 98deg 105deg,     /* 有墨 */
+  transparent 105deg 106deg, /* 断墨 */
+  #a83b2a 106deg 156deg,    /* 有墨 */
+  transparent 156deg 159deg, /* 断墨 */
+  #a83b2a 159deg 200deg,    /* 有墨 */
+  transparent 200deg 267deg, /* 断墨 */
+  #a83b2a 267deg 274deg,    /* 有墨 */
+  transparent 274deg 283deg, /* 断墨 */
+  #a83b2a 283deg 289deg,    /* 有墨 */
+  transparent 289deg 340deg, /* 断墨 */
+  #a83b2a 340deg 345deg,    /* 有墨 */
+  transparent 345deg 359deg, /* 断墨 */
+  #a83b2a 359deg 360deg     /* 有墨 */
+);
+  
+  mask: radial-gradient(circle at center, transparent 65%, black 70%);
+  -webkit-mask: radial-gradient(circle at center, transparent 65%, black 70%);
+  transform: rotate(-8deg);
+  filter: blur(2px);
+  pointer-events: none;
 }
 
-.avatar {
-  width: 100%;
-  height: 100%;
+/* 印章内圆形头像 */
+.seal-avatar {
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   object-fit: cover;
-  background: #2a2418;
-  border: 2px solid rgba(200, 170, 100, 0.6);
-  transition: all 0.3s;
+  position: relative;
+  z-index: 2;
+}
+/* 落款容器（包含上下印章 + 竖排文字） */
+.signature-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
 }
 
-.avatar-ring:hover .avatar {
-  border-color: #c9aa5f;
+/* 印章图案样式 */
+.seal-mark {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  opacity: 0.8;
+  filter: sepia(1) saturate(10) hue-rotate(340deg) brightness(0.8) contrast(1.5);
 }
 
-/* 涟漪动画 */
-.avatar-ripple {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 100%;
-  height: 100%;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  pointer-events: none;
-  animation: ripple 2s ease-out infinite;
+.top-seal {
+  transform: rotate(-5deg);
 }
 
-@keyframes ripple {
-  0% {
-    width: 100%;
-    height: 100%;
-    opacity: 0.5;
-    box-shadow: 0 0 0 0 rgba(200, 170, 100, 0.6);
-  }
-  50% {
-    width: 130%;
-    height: 130%;
-    opacity: 0.3;
-    box-shadow: 0 0 0 6px rgba(200, 170, 100, 0.3);
-  }
-  100% {
-    width: 160%;
-    height: 160%;
-    opacity: 0;
-    box-shadow: 0 0 0 12px rgba(200, 170, 100, 0);
-  }
+.bottom-seal {
+  transform: rotate(5deg);
 }
 
-/* ========== 古风下拉菜单 ========== */
+.signature-seal-wrapper:hover .seal-mark {
+  opacity: 1;
+}
+
+/* 竖排毛笔小字落款 */
+.signature-vertical-text {
+  writing-mode: vertical-rl;
+  font-size: 16px;
+  color: #121212;
+  font-family: "华文楷书", "STKaiti", "KaiTi", "楷体", serif;
+  letter-spacing: 2px;
+  line-height: 1.5;
+  transform: rotate(-1deg);
+}
+
+/* 菜单样式 */
 .menu-scroll {
   position: absolute;
-  top: 62px;
+  top: 90px;
   right: 0;
   width: 160px;
-  background: rgba(30, 24, 18, 0.95);
+  background: rgba(30,24,18,0.95);
   backdrop-filter: blur(12px);
+  border: 1px solid rgba(200,170,100,0.5);
   border-radius: 12px;
-  border: 1px solid rgba(200, 170, 100, 0.5);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
   overflow: hidden;
   animation: menuSlideDown 0.25s ease;
 }
-
 @keyframes menuSlideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity:0; transform: translateY(-8px); }
+  to { opacity:1; transform: translateY(0); }
 }
-
 .menu-header {
   background: linear-gradient(135deg, #5d4a2e, #4a3824);
   padding: 10px 12px;
@@ -265,23 +296,19 @@ export default {
   gap: 8px;
   border-bottom: 1px solid #c9aa5f;
 }
-
 .header-dot {
   font-size: 8px;
   color: #ecdba8;
 }
-
 .header-text {
   font-size: 12px;
   color: #ecdba8;
   font-family: "STKaiti", serif;
   letter-spacing: 2px;
 }
-
 .menu-body {
   padding: 8px 0;
 }
-
 .menu-item {
   display: flex;
   align-items: center;
@@ -290,79 +317,62 @@ export default {
   cursor: pointer;
   transition: all 0.2s;
   border-left: 2px solid transparent;
+  color: #ecdba8;
+  font-size: 13px;
+  font-family: "STKaiti", serif;
+  letter-spacing: 1px;
 }
-
 .menu-item:hover {
-  background: rgba(200, 170, 100, 0.15);
+  background: rgba(200,170,100,0.15);
   border-left-color: #c9aa5f;
   padding-left: 20px;
 }
-
 .item-icon {
   font-size: 14px;
   width: 24px;
   text-align: center;
 }
-
-.menu-item span:last-child {
-  font-size: 13px;
-  color: #ecdba8;
-  font-family: "STKaiti", serif;
-  letter-spacing: 1px;
-}
-
 .logout-item:hover {
-  background: rgba(180, 100, 80, 0.2);
+  background: rgba(180,100,80,0.2);
   border-left-color: #c96a4a;
 }
-
 .logout-item:hover span:last-child {
   color: #e8b89a;
 }
-
 .menu-footer {
   height: 3px;
   background: linear-gradient(90deg, #c9aa5f, #ecdba8, #c9aa5f);
 }
-
 .menu-fade-enter-active,
 .menu-fade-leave-active {
   transition: all 0.2s ease;
 }
-
 .menu-fade-enter-from,
 .menu-fade-leave-to {
   opacity: 0;
   transform: translateY(-8px);
 }
 
+/* 移动端适配 */
 @media (max-width: 600px) {
   .floating-avatar {
     top: 15px;
     right: 15px;
   }
-
-  .avatar-ring {
-    width: 44px;
-    height: 44px;
+  .seal-stamp {
+    width: 48px;
+    height: 48px;
   }
-
+  .seal-avatar {
+    width: 38px;
+    height: 38px;
+  }
+  .signature-vertical-text {
+    font-size: 12px;
+  }
   .menu-scroll {
+    top: 80px;
     width: 140px;
-    top: 52px;
-  }
-
-  .menu-item {
-    padding: 8px 14px;
-  }
-
-  .menu-item span:last-child {
-    font-size: 12px;
-  }
-
-  .item-icon {
-    font-size: 12px;
-    width: 20px;
   }
 }
 </style>
