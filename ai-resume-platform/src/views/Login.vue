@@ -154,20 +154,6 @@
                   </div>
 
                   <div class="input-group">
-                    <label>昵称</label>
-                    <input
-                      v-model="regNickname"
-                      type="text"
-                      placeholder="请输入昵称（可选）"
-                      autocomplete="off"
-                      @click.stop
-                      @mousedown.stop
-                      @pointerdown.stop
-                      @touchstart.stop
-                    />
-                  </div>
-
-                  <div class="input-group">
                     <label>设置密码</label>
                     <input
                       v-model="regPassword"
@@ -288,7 +274,6 @@ const loginUsername = ref('')
 const loginPassword = ref('')
 
 const regName = ref('')
-const regNickname = ref('')
 const regPassword = ref('')
 const regConfirmPassword = ref('')
 
@@ -495,12 +480,10 @@ function goToRegister() {
 
   const index = pageFlip.getCurrentPageIndex?.() ?? 0
 
-  // 只要当前处于登录阶段，就允许翻到下一页
   if (currentPage.value === 'login' || index === 1 || index === 2 || index === 3) {
     safeFlipNext('top')
   }
 }
-
 
 function goBackToLogin() {
   if (!pageFlip) return
@@ -551,7 +534,6 @@ async function handleLogin() {
 
 async function handleRegister() {
   const username = regName.value.trim()
-  const nickname = regNickname.value.trim()
   const password = regPassword.value.trim()
   const confirmPassword = regConfirmPassword.value.trim()
 
@@ -585,16 +567,11 @@ async function handleRegister() {
       confirmPassword
     }
 
-    if (nickname) {
-      payload.nickname = nickname
-    }
-
     const res = await registerApi(payload)
 
     showMessage(res?.message || '注册成功')
 
     regName.value = ''
-    regNickname.value = ''
     regPassword.value = ''
     regConfirmPassword.value = ''
 

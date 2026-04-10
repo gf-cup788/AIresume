@@ -1354,30 +1354,33 @@ function handleKeydown(e) {
 
 .mist-half.back.left {
    top: 78%;
-  animation: mistOpenBackLeft 2.4s cubic-bezier(0.22, 0.8, 0.2, 1) forwards;
+  animation: mistOpenBackLeft 4.4s cubic-bezier(0.1, 0.7, 0.2, 1) forwards;
 }
 
 .mist-half.back.right {
    top: 78%;
-  animation: mistOpenBackRight 2.4s cubic-bezier(0.22, 0.8, 0.2, 1) forwards;
+  animation: mistOpenBackRight 4.4s cubic-bezier(0.1, 0.7, 0.2, 1) forwards;
 }
 
 .mist-half.front.left {
   top: 28%;
-  animation: mistOpenFrontLeft 2.2s cubic-bezier(0.22, 0.8, 0.2, 1) forwards;
+  animation: mistOpenFrontLeft 4.2s cubic-bezier(0.1, 0.7, 0.2, 1) forwards;
 }
 
 .mist-half.front.right {
   top: 28%;
-  animation: mistOpenFrontRight 2.2s cubic-bezier(0.22, 0.8, 0.2, 1) forwards;
+  animation: mistOpenFrontRight 4.2s cubic-bezier(0.1, 0.7, 0.2, 1) forwards;
 }
 
 @keyframes mistBackdropOpen {
   0% {
     opacity: 1;
   }
-  70% {
-    opacity: 0.90;
+  65% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 0.88;
   }
   100% {
     opacity: 0.1;
@@ -1390,7 +1393,7 @@ function handleKeydown(e) {
     opacity: 1;
   }
   60% {
-    transform: translate3d(calc(-22% - 18vw), -50%, 0) scale(1.2);
+    transform: translate3d(calc(-22% - 28vw), -50%, 0) scale(1.2);
     opacity: 0.9;
   }
   100% {
@@ -1405,7 +1408,7 @@ function handleKeydown(e) {
     opacity: 1;
   }
   60% {
-    transform: translate3d(calc(22% + 18vw), -50%, 0) scaleX(-1) scale(1.2);
+    transform: translate3d(calc(22% + 28vw), -50%, 0) scaleX(-1) scale(1.2);
     opacity: 0.9;
   }
   100% {
@@ -1420,7 +1423,7 @@ function handleKeydown(e) {
     opacity: 1;
   }
   60% {
-    transform: translate3d(calc(-14% - 24vw), -50%, 0) scale(1.09);
+    transform: translate3d(calc(-14% - 34vw), -50%, 0) scale(1.09);
     opacity: 0.56;
   }
   100% {
@@ -1435,7 +1438,7 @@ function handleKeydown(e) {
     opacity: 1;
   }
   60% {
-    transform: translate3d(calc(14% + 24vw), -50%, 0) scaleX(-1) scale(1.09);
+    transform: translate3d(calc(14% + 34vw), -50%, 0) scaleX(-1) scale(1.09);
     opacity: 0.56;
   }
   100% {
