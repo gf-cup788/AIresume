@@ -1,212 +1,288 @@
 <template>
-  <div class="book-wrapper">
-    <div class="book">
-      <!-- 图层3：注册页（最底层） -->
-      <div
-        ref="registerLayer"
-        class="layer"
-        id="layerRegister"
-        :style="{ zIndex: registerZIndex, transform: registerTransform }"
-      >
-        <div class="front">
-          <div class="page-content">
-            <div class="page-title">注 册</div>
-            <div class="compact-form" ref="compactFormReg">
-              <div class="input-group">
-                <label>👤 用户名</label>
-                <input
-                  type="text"
-                  v-model="regName"
-                  placeholder="请输入用户名"
-                  autocomplete="off"
-                  @click.stop
-                />
-              </div>
-
-              <div class="input-group">
-                <label>🏷️ 昵称</label>
-                <input
-                  type="text"
-                  v-model="regNickname"
-                  placeholder="请输入昵称（可选）"
-                  autocomplete="off"
-                  @click.stop
-                />
-              </div>
-
-              <div class="input-group">
-                <label>🔒 设置密码</label>
-                <input
-                  type="password"
-                  v-model="regPassword"
-                  placeholder="至少6位"
-                  autocomplete="new-password"
-                  @click.stop
-                />
-              </div>
-
-              <div class="input-group">
-                <label>🔐 确认密码</label>
-                <input
-                  type="password"
-                  v-model="regConfirmPassword"
-                  placeholder="请再次输入密码"
-                  autocomplete="new-password"
-                  @click.stop
-                />
-              </div>
-
-              <button
-                class="btn"
-                @click.stop="handleRegister"
-                :disabled="registerLoading"
-              >
-                {{ registerLoading ? '提交中...' : '注册并激活' }}
-              </button>
-
-              <div class="switch-hint" @click.stop="handleBackToLogin">
-                <span>← 翻回上一页</span> 已有账号
-              </div>
-              <div class="footer-note">即刻拥有景点通行证</div>
-            </div>
-            <div class="page-corner">第 2 页</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 图层2：登录页 -->
-      <div
-        ref="loginLayer"
-        class="layer"
-        id="layerLogin"
-        :style="{ zIndex: loginZIndex, transform: loginTransform }"
-      >
-        <div class="front">
-          <div class="page-content">
-            <div class="page-title">登 录</div>
-            <div class="compact-form">
-              <div class="input-group">
-                <label>📧 用户名</label>
-                <input
-                  type="text"
-                  v-model="loginUsername"
-                  placeholder="请输入用户名"
-                  autocomplete="off"
-                  @keyup.enter="handleLogin"
-                  @click.stop
-                />
-              </div>
-              <div class="input-group">
-                <label>🔒 密码</label>
-                <input
-                  type="password"
-                  v-model="loginPassword"
-                  placeholder="请输入密码"
-                  autocomplete="current-password"
-                  @keyup.enter="handleLogin"
-                  @click.stop
-                />
-              </div>
-
-              <button
-                class="btn"
-                @click.stop="handleLogin"
-                :disabled="loginLoading"
-              >
-                {{ loginLoading ? '登录中...' : '开始游玩' }}
-              </button>
-
-              <div class="switch-hint" @click.stop="handleNextToRegister">
-                还没有通行证？ <span>翻开下一页 →</span>
-              </div>
-              <div class="footer-note">江西印象 · 山川秀丽</div>
-            </div>
-            <div class="page-corner">第 1 页</div>
-          </div>
-        </div>
-
-        <div class="back" ref="loginBack" @click.stop>
-          <div class="back-content">
-            <h3>📍 景点游览指南</h3>
-            <p>
-              1. 文明旅游，爱护环境<br />
-              2. 尊重当地文化与风俗<br />
-              3. 注意安全，合理规划路线<br />
-              4. 保护自然景观与历史遗迹<br />
-              5. 放慢脚步，感受旅途之美
-            </p>
-            <div class="small-text">江西文旅 · 游览手册</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 图层1：封面 -->
-      <div
-        ref="coverLayer"
-        class="layer layer-cover"
-        id="layerCover"
-        :style="{ zIndex: coverZIndex, transform: coverTransform }"
-        @click.stop="handleCoverClick"
-      >
-        <div class="front">
-          <div class="cover-content">
-            <div class="emblem">🌄</div>
-            <h1>景 点 通 行 证</h1>
-            <div class="stamp">✦ 景点游历 ✦</div>
-            <div class="hint">▼ 点击翻开 ▼</div>
-          </div>
-        </div>
-
-        <div class="back" ref="coverBack" @click.stop>
-          <div class="back-content">
-            <h3>🌄 江西风物</h3>
-            <p>
-              山川秀丽，文脉悠长<br />
-              古韵今风，尽在其间
-            </p>
-            <div class="small-text">江西文旅 · 扉页</div>
-          </div>
-        </div>
-      </div>
-
-      <transition name="toast-fade">
-        <div
-          v-if="toastVisible"
-          class="toast"
-          :style="{ background: toastIsError ? '#c24a2c' : '#2f6b47' }"
-        >
-          {{ toastMessage }}
-        </div>
-      </transition>
+  <div class="login-page">
+    <div class="click-hint">
+      {{
+        currentPage === 'cover'
+          ? '点击封面翻开'
+          : '可拖动右下角或点击按钮翻页'
+      }}
     </div>
+
+    <div class="book-stage">
+      <div ref="bookSection" class="book-section">
+        <div ref="bookWrapper" class="book-clipper">
+          <div ref="bookRef" class="book">
+            <!-- 1. 封面 -->
+            <div class="page page-cover" data-density="hard">
+              <div
+                class="page-content cover-page"
+                @pointerdown.capture.stop.prevent
+                @mousedown.capture.stop.prevent
+                @touchstart.capture.stop.prevent
+                @click.capture.stop.prevent="handleCoverClick"
+              >
+                <div class="cover-overlay"></div>
+                <div class="cover-inner">
+                  <div class="emblem">🌄</div>
+                  <h1>景 点 通 行 证</h1>
+                  <div class="stamp">✦ 景点游历 ✦</div>
+                  <div class="hint">▼ 点击翻开 ▼</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. 说明页 -->
+            <div class="page page-hard">
+              <div class="page-content intro-page">
+                <div class="intro-wrap">
+                  <div class="intro-tag">PREFACE</div>
+                  <h2>景点游览指南</h2>
+                  <p>
+                    1. 文明旅游，爱护环境<br />
+                    2. 尊重当地文化与风俗<br />
+                    3. 注意安全，合理规划路线<br />
+                    4. 保护自然景观与历史遗迹<br />
+                    5. 放慢脚步，感受旅途之美
+                  </p>
+                  <div class="small-text">江西文旅 · 游览手册</div>
+                </div>
+                <span class="page-num left">01</span>
+              </div>
+            </div>
+
+            <!-- 3. 登录页 -->
+            <div class="page">
+              <div class="page-content form-page">
+                <div class="page-title">登 录</div>
+
+                <div class="compact-form">
+                  <div class="input-group">
+                    <label>用户名</label>
+                    <input
+                      v-model="loginUsername"
+                      type="text"
+                      placeholder="请输入用户名"
+                      autocomplete="off"
+                      @keyup.enter="handleLogin"
+                      @click.stop
+                      @mousedown.stop
+                      @pointerdown.stop
+                      @touchstart.stop
+                    />
+                  </div>
+
+                  <div class="input-group">
+                    <label>密码</label>
+                    <input
+                      v-model="loginPassword"
+                      type="password"
+                      placeholder="请输入密码"
+                      autocomplete="current-password"
+                      @keyup.enter="handleLogin"
+                      @click.stop
+                      @mousedown.stop
+                      @pointerdown.stop
+                      @touchstart.stop
+                    />
+                  </div>
+
+                  <button
+                    class="btn"
+                    :disabled="loginLoading"
+                    @click.stop="handleLogin"
+                    @mousedown.stop
+                    @pointerdown.stop
+                    @touchstart.stop
+                  >
+                    {{ loginLoading ? '登录中...' : '开始游玩' }}
+                  </button>
+
+                  <div
+                    class="switch-hint"
+                    @click.stop="goToRegister"
+                    @mousedown.stop
+                    @pointerdown.stop
+                    @touchstart.stop
+                  >
+                    还没有通行证？ <span>翻开下一页 →</span>
+                  </div>
+
+                  <div class="footer-note">江西印象 · 山川秀丽</div>
+                </div>
+
+                <span class="page-num right">02</span>
+              </div>
+            </div>
+
+            <!-- 4. 说明页 -->
+            <div class="page page-hard">
+              <div class="page-content intro-page intro-page-mid">
+                <div class="intro-wrap">
+                  <div class="intro-tag">NOTICE</div>
+                  <h2>登录后可体验</h2>
+                  <p>
+                    1. 浏览江西各地景点内容<br />
+                    2. 参与互动故事与小游戏<br />
+                    3. 收藏喜欢的旅游路线<br />
+                    4. 查看景区特色文化与美食<br />
+                    5. 开启沉浸式游玩体验
+                  </p>
+                  <div class="small-text">山水有相逢 · 风景有故事</div>
+                </div>
+                <span class="page-num left">03</span>
+              </div>
+            </div>
+
+            <!-- 5. 注册页 -->
+            <div class="page">
+              <div class="page-content form-page">
+                <div class="page-title">注 册</div>
+
+                <div class="compact-form compact-form-reg">
+                  <div class="input-group">
+                    <label>用户名</label>
+                    <input
+                      v-model="regName"
+                      type="text"
+                      placeholder="请输入用户名"
+                      autocomplete="off"
+                      @click.stop
+                      @mousedown.stop
+                      @pointerdown.stop
+                      @touchstart.stop
+                    />
+                  </div>
+
+                  <div class="input-group">
+                    <label>昵称</label>
+                    <input
+                      v-model="regNickname"
+                      type="text"
+                      placeholder="请输入昵称（可选）"
+                      autocomplete="off"
+                      @click.stop
+                      @mousedown.stop
+                      @pointerdown.stop
+                      @touchstart.stop
+                    />
+                  </div>
+
+                  <div class="input-group">
+                    <label>设置密码</label>
+                    <input
+                      v-model="regPassword"
+                      type="password"
+                      placeholder="至少6位"
+                      autocomplete="new-password"
+                      @click.stop
+                      @mousedown.stop
+                      @pointerdown.stop
+                      @touchstart.stop
+                    />
+                  </div>
+
+                  <div class="input-group">
+                    <label>确认密码</label>
+                    <input
+                      v-model="regConfirmPassword"
+                      type="password"
+                      placeholder="请再次输入密码"
+                      autocomplete="new-password"
+                      @click.stop
+                      @mousedown.stop
+                      @pointerdown.stop
+                      @touchstart.stop
+                    />
+                  </div>
+
+                  <button
+                    class="btn"
+                    :disabled="registerLoading"
+                    @click.stop="handleRegister"
+                    @mousedown.stop
+                    @pointerdown.stop
+                    @touchstart.stop
+                  >
+                    {{ registerLoading ? '提交中...' : '注册并激活' }}
+                  </button>
+
+                  <div
+                    class="switch-hint"
+                    @click.stop="goBackToLogin"
+                    @mousedown.stop
+                    @pointerdown.stop
+                    @touchstart.stop
+                  >
+                    <span>← 翻回上一页</span> 已有账号
+                  </div>
+
+                  <div class="footer-note">即刻拥有景点通行证</div>
+                </div>
+
+                <span class="page-num right">04</span>
+              </div>
+            </div>
+
+            <!-- 6. 说明页 -->
+            <div class="page page-hard">
+              <div class="page-content intro-page intro-page-last">
+                <div class="intro-wrap">
+                  <div class="intro-tag">TRAVEL NOTE</div>
+                  <h2>出发前的约定</h2>
+                  <p>
+                    1. 用心看风景，也尊重风景<br />
+                    2. 与当地人和文化温柔相处<br />
+                    3. 让旅途不止是打卡，更是感受<br />
+                    4. 收藏一处山水，也记住一段故事<br />
+                    5. 愿你在江西遇见惊喜
+                  </p>
+                  <div class="small-text">带着期待出发 · 带着回忆归来</div>
+                </div>
+                <span class="page-num left">05</span>
+              </div>
+            </div>
+
+            <!-- 7. 封底 -->
+            <div class="page page-end" data-density="hard">
+              <div class="page-content end-page">
+                <div class="end-inner">
+                  <div class="end-badge">Jiangxi Travel</div>
+                  <h2>山川秀丽 · 文脉悠长</h2>
+                  <p>愿你从登录开始，走入江西的风景与故事。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <transition name="toast-fade">
+      <div
+        v-if="toastVisible"
+        class="toast"
+        :style="{ background: toastIsError ? '#c24a2c' : '#2f6b47' }"
+      >
+        {{ toastMessage }}
+      </div>
+    </transition>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { PageFlip } from 'page-flip'
 import { loginApi, registerApi } from '@/api/auth'
 import { saveLoginInfo } from '@/utils/request'
 
 const router = useRouter()
 const route = useRoute()
 
-const coverLayer = ref(null)
-const loginLayer = ref(null)
-const registerLayer = ref(null)
-const loginBack = ref(null)
-const coverBack = ref(null)
+const bookRef = ref(null)
+const bookSection = ref(null)
 
-const isAnimating = ref(false)
-const currentPage = ref('cover') // cover, login, register
-
-const coverTransform = ref('rotateY(0deg)')
-const loginTransform = ref('rotateY(0deg)')
-const registerTransform = ref('rotateY(0deg)')
-
-const coverZIndex = ref('30')
-const loginZIndex = ref('20')
-const registerZIndex = ref('10')
+const currentPage = ref('cover')
 
 const loginUsername = ref('')
 const loginPassword = ref('')
@@ -222,102 +298,16 @@ const registerLoading = ref(false)
 const toastVisible = ref(false)
 const toastMessage = ref('')
 const toastIsError = ref(false)
+
 let toastTimer = null
+let pageFlip = null
+let resizeTimer = null
+let flipLock = false
+let flipLockTimer = null
+let isOpeningCover = false
 
-function flipPageOpen(layerType, callback) {
-  if (isAnimating.value) return false
-  isAnimating.value = true
-
-  if (layerType === 'cover') coverTransform.value = 'rotateY(-180deg)'
-  if (layerType === 'login') loginTransform.value = 'rotateY(-180deg)'
-  if (layerType === 'register') registerTransform.value = 'rotateY(-180deg)'
-
-  setTimeout(() => {
-    isAnimating.value = false
-    callback && callback()
-  }, 800)
-
-  return true
-}
-
-function flipPageClose(layerType, callback) {
-  if (isAnimating.value) return false
-  isAnimating.value = true
-
-  if (layerType === 'cover') coverTransform.value = 'rotateY(0deg)'
-  if (layerType === 'login') loginTransform.value = 'rotateY(0deg)'
-  if (layerType === 'register') registerTransform.value = 'rotateY(0deg)'
-
-  setTimeout(() => {
-    isAnimating.value = false
-    callback && callback()
-  }, 800)
-
-  return true
-}
-
-function openCover() {
-  if (currentPage.value === 'cover') {
-    flipPageOpen('cover', () => {
-      coverZIndex.value = '5'
-      loginZIndex.value = '25'
-      registerZIndex.value = '10'
-      currentPage.value = 'login'
-    })
-  }
-}
-
-function openLoginToRegister() {
-  if (currentPage.value === 'login') {
-    flipPageOpen('login', () => {
-      loginZIndex.value = '6'
-      registerZIndex.value = '25'
-      coverZIndex.value = '5'
-      currentPage.value = 'register'
-    })
-  }
-}
-
-function backToLoginFromRegister() {
-  if (currentPage.value === 'register') {
-    registerZIndex.value = '10'
-    loginZIndex.value = '25'
-    coverZIndex.value = '5'
-    flipPageClose('login', () => {
-      currentPage.value = 'login'
-    })
-  }
-}
-
-function handleCoverClick() {
-  if (
-    (currentPage.value === 'cover' && coverTransform.value === 'rotateY(0deg)') ||
-    coverTransform.value === ''
-  ) {
-    openCover()
-  }
-}
-
-function handleNextToRegister() {
-  if (currentPage.value === 'login') {
-    openLoginToRegister()
-  } else if (currentPage.value === 'cover') {
-    if (!isAnimating.value) {
-      openCover()
-      setTimeout(() => {
-        if (currentPage.value === 'login') {
-          openLoginToRegister()
-        }
-      }, 850)
-    }
-  }
-}
-
-function handleBackToLogin() {
-  if (currentPage.value === 'register') {
-    backToLoginFromRegister()
-  }
-}
+const pageWidth = 420
+const pageHeight = 620
 
 function showMessage(msg, isError = false) {
   toastMessage.value = msg
@@ -330,6 +320,197 @@ function showMessage(msg, isError = false) {
   }, 2200)
 }
 
+function mapPageState(index) {
+  const total = pageFlip?.getPageCount?.() || 0
+
+  if (index === 0) {
+    currentPage.value = 'cover'
+    return
+  }
+
+  if (index >= total - 1) {
+    currentPage.value = 'end'
+    return
+  }
+
+  if (index === 2) {
+    currentPage.value = 'login'
+    return
+  }
+
+  if (index === 4) {
+    currentPage.value = 'register'
+    return
+  }
+
+  if (index === 1 || index === 3 || index === 5) {
+    currentPage.value = 'intro'
+    return
+  }
+
+  currentPage.value = 'middle'
+}
+
+function setHalfBookCoverState() {
+  if (!bookSection.value) return
+  bookSection.value.style.transform = `translateX(-${pageWidth / 2}px)`
+}
+
+function setFullBookCenterState() {
+  if (!bookSection.value) return
+  bookSection.value.style.transform = 'translateX(0px)'
+}
+
+function setHalfBookBackState() {
+  if (!bookSection.value) return
+  bookSection.value.style.transform = `translateX(${pageWidth / 2}px)`
+}
+
+function updateBookState(index) {
+  const totalPages = pageFlip?.getPageCount?.() || 0
+  if (!bookSection.value) return
+
+  if (isOpeningCover) {
+    setFullBookCenterState()
+    mapPageState(index)
+    return
+  }
+
+  if (index === 0) {
+    setHalfBookCoverState()
+  } else if (index >= totalPages - 1) {
+    setHalfBookBackState()
+  } else {
+    setFullBookCenterState()
+  }
+
+  mapPageState(index)
+}
+
+function lockFlip() {
+  flipLock = true
+  if (flipLockTimer) clearTimeout(flipLockTimer)
+  flipLockTimer = setTimeout(() => {
+    flipLock = false
+  }, 1200)
+}
+
+function unlockFlip() {
+  flipLock = false
+  if (flipLockTimer) {
+    clearTimeout(flipLockTimer)
+    flipLockTimer = null
+  }
+}
+
+function safeFlipNext(corner = 'top') {
+  if (!pageFlip || flipLock) return
+  lockFlip()
+  pageFlip.flipNext(corner)
+}
+
+function safeFlipPrev(corner = 'top') {
+  if (!pageFlip || flipLock) return
+  lockFlip()
+  pageFlip.flipPrev(corner)
+}
+
+function initPageFlip() {
+  if (!bookRef.value) return
+
+  if (pageFlip) {
+    pageFlip.destroy()
+    pageFlip = null
+  }
+
+  pageFlip = new PageFlip(bookRef.value, {
+    width: pageWidth,
+    height: pageHeight,
+    size: 'fixed',
+    minWidth: pageWidth,
+    maxWidth: pageWidth,
+    minHeight: pageHeight,
+    maxHeight: pageHeight,
+    maxShadowOpacity: 0.45,
+    showCover: true,
+    usePortrait: false,
+    flippingTime: 900,
+    startPage: 0,
+    mobileScrollSupport: false,
+    swipeDistance: 30,
+    clickEventForward: false,
+    autoSize: false
+  })
+
+  const pages = bookRef.value.querySelectorAll('.page')
+  pageFlip.loadFromHTML(pages)
+
+  pageFlip.on('flip', (e) => {
+    updateBookState(e.data)
+  })
+
+  pageFlip.on('changeState', (e) => {
+    const state = e.data
+
+    if (state === 'flipping' && currentPage.value === 'cover') {
+      setFullBookCenterState()
+    }
+
+    if (state === 'read') {
+      isOpeningCover = false
+      unlockFlip()
+      const index = pageFlip?.getCurrentPageIndex?.() ?? 0
+      updateBookState(index)
+    }
+  })
+
+  pageFlip.on('init', () => {
+    updateBookState(0)
+  })
+
+  setTimeout(() => {
+    updateBookState(0)
+  }, 50)
+}
+
+function handleCoverClick(event) {
+  event?.preventDefault?.()
+  event?.stopPropagation?.()
+
+  if (!pageFlip || flipLock) return
+  if (currentPage.value !== 'cover') return
+
+  isOpeningCover = true
+  setFullBookCenterState()
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      safeFlipNext('top')
+    })
+  })
+}
+
+function goToRegister() {
+  if (!pageFlip || flipLock) return
+
+  const index = pageFlip.getCurrentPageIndex?.() ?? 0
+
+  // 只要当前处于登录阶段，就允许翻到下一页
+  if (currentPage.value === 'login' || index === 1 || index === 2 || index === 3) {
+    safeFlipNext('top')
+  }
+}
+
+
+function goBackToLogin() {
+  if (!pageFlip) return
+  const index = pageFlip.getCurrentPageIndex?.() ?? 0
+
+  if (index === 4 || index === 3) {
+    safeFlipPrev('top')
+  }
+}
+
 async function handleLogin() {
   const username = loginUsername.value.trim()
   const password = loginPassword.value.trim()
@@ -340,15 +521,10 @@ async function handleLogin() {
   }
 
   if (loginLoading.value) return
-
   loginLoading.value = true
 
   try {
-    const res = await loginApi({
-      username,
-      password
-    })
-
+    const res = await loginApi({ username, password })
     const token = res?.data || ''
 
     saveLoginInfo({
@@ -360,7 +536,6 @@ async function handleLogin() {
     })
 
     showMessage(res?.message || '登录成功')
-
     loginPassword.value = ''
 
     setTimeout(() => {
@@ -401,7 +576,6 @@ async function handleRegister() {
   }
 
   if (registerLoading.value) return
-
   registerLoading.value = true
 
   try {
@@ -425,7 +599,10 @@ async function handleRegister() {
     regConfirmPassword.value = ''
 
     setTimeout(() => {
-      handleBackToLogin()
+      const index = pageFlip?.getCurrentPageIndex?.() ?? 0
+      if (index === 4) {
+        safeFlipPrev('top')
+      }
     }, 700)
   } catch (error) {
     showMessage(error.message || '注册失败', true)
@@ -434,214 +611,307 @@ async function handleRegister() {
   }
 }
 
-function adjustNoScrollOnRegister() {
-  const regFront = registerLayer.value?.querySelector('.front')
-  if (regFront) {
-    const contentHeight = regFront.scrollHeight
-    const clientHeight = regFront.clientHeight
-    if (contentHeight > clientHeight + 2) {
-      const compactDiv = registerLayer.value?.querySelector('.compact-form')
-      if (compactDiv) compactDiv.style.paddingBottom = '0px'
-    }
-  }
+function handleResize() {
+  if (resizeTimer) clearTimeout(resizeTimer)
+  resizeTimer = setTimeout(() => {
+    if (!pageFlip) return
+    const index = pageFlip.getCurrentPageIndex?.() ?? 0
+    updateBookState(index)
+  }, 100)
 }
 
-function applyInitialDomStyleTweaks() {
-  const regFrontDiv = registerLayer.value?.querySelector('.front')
-  if (regFrontDiv) {
-    regFrontDiv.style.overflowY = 'hidden'
-    const pageContentReg = regFrontDiv.querySelector('.page-content')
-    if (pageContentReg) {
-      pageContentReg.style.height = '100%'
-      pageContentReg.style.display = 'flex'
-      pageContentReg.style.flexDirection = 'column'
-      pageContentReg.style.justifyContent = 'space-between'
-    }
-    const compactFormRegEl = regFrontDiv.querySelector('.compact-form')
-    if (compactFormRegEl) {
-      compactFormRegEl.style.flex = '1'
-      compactFormRegEl.style.display = 'flex'
-      compactFormRegEl.style.flexDirection = 'column'
-      compactFormRegEl.style.justifyContent = 'center'
-    }
-  }
-
-  const loginFrontDiv = loginLayer.value?.querySelector('.front')
-  if (loginFrontDiv) {
-    const pageContentLogin = loginFrontDiv.querySelector('.page-content')
-    if (pageContentLogin) {
-      pageContentLogin.style.height = '100%'
-      pageContentLogin.style.display = 'flex'
-      pageContentLogin.style.flexDirection = 'column'
-      pageContentLogin.style.justifyContent = 'space-between'
-    }
-    const compactLogin = loginFrontDiv.querySelector('.compact-form')
-    if (compactLogin) {
-      compactLogin.style.flex = '1'
-    }
-  }
+function lockBodyScroll() {
+  document.documentElement.style.overflow = 'hidden'
+  document.body.style.overflow = 'hidden'
+  document.body.style.margin = '0'
+  document.body.style.width = '100%'
+  document.body.style.height = '100%'
 }
 
-onMounted(() => {
-  if (coverTransform.value === '') coverTransform.value = 'rotateY(0deg)'
-  if (loginTransform.value === '') loginTransform.value = 'rotateY(0deg)'
-  if (registerTransform.value === '') registerTransform.value = 'rotateY(0deg)'
+function unlockBodyScroll() {
+  document.documentElement.style.overflow = ''
+  document.body.style.overflow = ''
+  document.body.style.margin = ''
+  document.body.style.width = ''
+  document.body.style.height = ''
+}
 
-  applyInitialDomStyleTweaks()
-
-  window.addEventListener('resize', adjustNoScrollOnRegister)
-  setTimeout(adjustNoScrollOnRegister, 100)
-
-  nextTick(() => {
-    adjustNoScrollOnRegister()
-  })
+onMounted(async () => {
+  lockBodyScroll()
+  await nextTick()
+  initPageFlip()
+  window.addEventListener('resize', handleResize)
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', adjustNoScrollOnRegister)
+  unlockBodyScroll()
+  window.removeEventListener('resize', handleResize)
+
   if (toastTimer) clearTimeout(toastTimer)
+  if (resizeTimer) clearTimeout(resizeTimer)
+  if (flipLockTimer) clearTimeout(flipLockTimer)
+
+  if (pageFlip) {
+    pageFlip.destroy()
+    pageFlip = null
+  }
 })
 </script>
 
 <style scoped>
 * {
-  margin: 0;
-  padding: 0;
   box-sizing: border-box;
 }
 
-.book-wrapper {
-  background: url("@/assets/imgs/wangxiangu.jpg");
-  background-size: cover;
-  background-position: center;
-  min-height: 100vh;
+:global(html),
+:global(body),
+:global(#app) {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.login-page {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background:
+    linear-gradient(rgba(16, 12, 8, 0.28), rgba(16, 12, 8, 0.28)),
+    url("@/assets/imgs/wangxiangu.jpg") center / cover no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+
+.book-stage {
+  position: relative;
+  width: min(1300px, 100vw);
+  height: min(820px, 100vh);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  pointer-events: auto;
+}
+
+.book-section {
   display: flex;
   justify-content: center;
   align-items: center;
-  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
-  padding: 20px;
+  transition: transform 0.45s cubic-bezier(0.4, 0.2, 0.2, 1);
+  will-change: transform;
+  width: 840px;
+  height: 620px;
+  overflow: visible;
+}
+
+.book-clipper {
+  position: relative;
+  width: 840px;
+  height: 620px;
+  border-radius: 16px;
+  overflow: visible;
+  /*box-shadow: 0 28px 70px rgba(0, 0, 0, 0.38);*/
 }
 
 .book {
-  position: relative;
-  width: 380px;
-  height: 540px;
-  perspective: 2000px;
+  width: 420px;
+  height: 620px;
+  overflow: visible;
 }
 
-.layer {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  transform-origin: left center;
-  transition: transform 0.8s cubic-bezier(0.4, 0.2, 0.2, 1);
-  border-radius: 8px 12px 12px 8px;
-  transform-style: preserve-3d;
-}
-
-.front,
-.back {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  backface-visibility: hidden;
-  border-radius: 8px 12px 12px 8px;
-  overflow-y: auto;
-}
-
-.front {
+.page {
   background: #fffef7;
-  transform: rotateY(0deg);
+  overflow: visible;
 }
 
-.back {
-  background: #f5ede0;
-  transform: rotateY(180deg);
+.page:nth-child(odd) {
+  border-left: 1px solid rgba(135, 103, 79, 0.14);
 }
 
-.layer-cover .front {
-  background: linear-gradient(135deg, #ffd99d, #ba8866);
+.page:nth-child(even) {
+  border-right: 1px solid rgba(135, 103, 79, 0.14);
+}
+
+.page-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.page-cover {
+  background:
+    linear-gradient(135deg, rgba(34, 20, 11, 0.06), rgba(255, 221, 161, 0.08)),
+    linear-gradient(145deg, #d8a774, #b6784a 60%, #9b6139);
+}
+
+.cover-page {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.cover-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 239, 193, 0.28), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 36%);
+}
+
+.cover-inner {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  color: #fff2c6;
+  padding: 28px;
+}
+
+.cover-inner .emblem {
+  font-size: 70px;
+  margin-bottom: 20px;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.18));
+}
+
+.cover-inner h1 {
+  margin: 0 0 22px;
+  font-size: 48px;
+  letter-spacing: 8px;
+  text-shadow: 2px 2px 0 rgba(90, 46, 26, 0.7);
+}
+
+.cover-inner .stamp {
+  display: inline-block;
+  padding: 10px 24px;
+  border-radius: 999px;
+  background: rgba(255, 235, 190, 0.24);
+  border: 1px solid rgba(255, 240, 214, 0.24);
+  font-size: 18px;
+  margin-bottom: 24px;
+}
+
+.cover-inner .hint {
+  margin-top: 18px;
+  font-size: 18px;
+  opacity: 0.96;
+}
+
+.page-hard {
+  background:
+    linear-gradient(180deg, #f7efe3 0%, #f1e6d4 100%);
+}
+
+.intro-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at top left, rgba(195, 152, 106, 0.1), transparent 36%),
+    linear-gradient(180deg, #f7f0e4 0%, #f3e7d6 100%);
+}
+
+.intro-page-mid {
+  background:
+    radial-gradient(circle at top left, rgba(179, 140, 98, 0.12), transparent 36%),
+    linear-gradient(180deg, #f8f1e6 0%, #f2e6d4 100%);
+}
+
+.intro-page-last {
+  background:
+    radial-gradient(circle at top left, rgba(198, 158, 119, 0.12), transparent 36%),
+    linear-gradient(180deg, #f8f0e2 0%, #f2e4d1 100%);
+}
+
+.intro-wrap {
+  width: 100%;
+  padding: 62px 38px;
+  text-align: center;
+  color: #6a4935;
+}
+
+.intro-tag {
+  color: #9b7c66;
+  font-size: 18px;
+  letter-spacing: 5px;
+  margin-bottom: 22px;
+  text-transform: uppercase;
+}
+
+.intro-wrap h2 {
+  font-size: 34px;
+  margin: 0 0 30px;
+  color: #7a4c2f;
+}
+
+.intro-wrap p {
+  line-height: 2;
+  font-size: 18px;
+}
+
+.small-text {
+  margin-top: 28px;
+  color: #9e826f;
+  font-size: 16px;
+}
+
+.form-page {
+  padding: 40px 30px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  border-right: 2px solid #e9c891;
-  box-shadow: -5px 5px 20px rgba(0, 0, 0, 0.3);
-}
-
-.cover-content {
-  text-align: center;
-  color: #ffefb9;
-}
-
-.cover-content .emblem {
-  font-size: 4rem;
-  margin-bottom: 20px;
-}
-
-.cover-content h1 {
-  font-size: 1.8rem;
-  text-shadow: 2px 2px 0 #5a2e1a;
-  margin-bottom: 20px;
-}
-
-.cover-content .stamp {
-  background: rgba(255, 235, 190, 0.3);
-  padding: 6px 16px;
-  border-radius: 30px;
-  margin-bottom: 18px;
-  display: inline-block;
-}
-
-.cover-content .hint {
-  margin-top: 18px;
-  font-size: 0.95rem;
-  opacity: 0.95;
-}
-
-.page-content,
-.back-content {
-  width: 100%;
-  height: 100%;
-  padding: 34px 28px;
+  justify-content: space-between;
+  background:
+    radial-gradient(circle at right top, rgba(206, 169, 130, 0.08), transparent 28%),
+    linear-gradient(180deg, #fffef7 0%, #f8f3e8 100%);
 }
 
 .page-title {
   text-align: center;
-  font-size: 1.7rem;
+  font-size: 34px;
   color: #7a4c2f;
-  letter-spacing: 10px;
-  margin: 10px 0 24px;
+  letter-spacing: 14px;
+  margin: 12px 0 24px;
   font-weight: 700;
 }
 
 .compact-form {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  justify-content: center;
+  gap: 18px;
+}
+
+.compact-form-reg {
+  gap: 15px;
 }
 
 .input-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .input-group label {
   color: #7b5a46;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
 }
 
 .input-group input {
   width: 100%;
-  height: 44px;
+  height: 50px;
   border: 1px solid #d7c4a9;
-  border-radius: 10px;
+  border-radius: 12px;
   outline: none;
-  padding: 0 14px;
-  font-size: 14px;
-  background: rgba(255, 251, 242, 0.9);
+  padding: 0 16px;
+  font-size: 16px;
+  background: rgba(230, 237, 248, 0.9);
   color: #4e3728;
   transition: all 0.2s ease;
 }
@@ -649,19 +919,20 @@ onBeforeUnmount(() => {
 .input-group input:focus {
   border-color: #b9855e;
   box-shadow: 0 0 0 3px rgba(185, 133, 94, 0.15);
+  background: rgba(236, 242, 251, 0.96);
 }
 
 .btn {
   width: 100%;
-  height: 44px;
+  height: 50px;
   border: none;
-  border-radius: 12px;
+  border-radius: 14px;
   background: linear-gradient(135deg, #b8774d, #9c5c37);
   color: #fff7e6;
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 700;
   cursor: pointer;
-  margin-top: 6px;
+  margin-top: 8px;
   transition: all 0.25s ease;
 }
 
@@ -676,10 +947,10 @@ onBeforeUnmount(() => {
 }
 
 .switch-hint {
-  margin-top: 6px;
+  margin-top: 8px;
   text-align: center;
   color: #8b694f;
-  font-size: 14px;
+  font-size: 16px;
   cursor: pointer;
   user-select: none;
 }
@@ -692,48 +963,83 @@ onBeforeUnmount(() => {
 .footer-note {
   text-align: center;
   color: #a38872;
-  font-size: 13px;
-  margin-top: 6px;
-}
-
-.page-corner {
-  position: absolute;
-  right: 18px;
-  bottom: 14px;
-  color: #c4ad92;
-  font-size: 12px;
-}
-
-.back-content {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  color: #6a4935;
-  line-height: 1.9;
-}
-
-.back-content h3 {
-  text-align: center;
-  margin-bottom: 18px;
-  font-size: 1.25rem;
-}
-
-.back-content p {
   font-size: 15px;
-  text-align: center;
+  margin-top: 8px;
 }
 
-.small-text {
-  margin-top: 22px;
+.page-end {
+  background:
+    linear-gradient(135deg, #493528, #6b4a35 46%, #7d553d 100%);
+}
+
+.end-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f7e7c8;
   text-align: center;
-  color: #9e826f;
+  padding: 36px;
+}
+
+.end-inner {
+  max-width: 300px;
+}
+
+.end-badge {
+  display: inline-block;
+  margin-bottom: 18px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(255, 240, 214, 0.12);
+  border: 1px solid rgba(255, 240, 214, 0.18);
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+.end-inner h2 {
+  margin: 0 0 18px;
+  font-size: 32px;
+  line-height: 1.5;
+}
+
+.end-inner p {
+  font-size: 16px;
+  line-height: 1.8;
+  color: rgba(255, 240, 214, 0.88);
+}
+
+.page-num {
+  position: absolute;
+  bottom: 18px;
+  color: #bfa58b;
   font-size: 13px;
+  letter-spacing: 1px;
+}
+
+.page-num.left {
+  left: 18px;
+}
+
+.page-num.right {
+  right: 18px;
+}
+
+.click-hint {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  letter-spacing: 2px;
+  pointer-events: none;
+  z-index: 8;
 }
 
 .toast {
-  position: absolute;
+  position: fixed;
   left: 50%;
-  bottom: -70px;
+  bottom: 82px;
   transform: translateX(-50%);
   color: #fff;
   padding: 12px 18px;
@@ -755,16 +1061,21 @@ onBeforeUnmount(() => {
   transform: translateX(-50%) translateY(8px);
 }
 
-@media (max-width: 480px) {
-  .book {
-    width: 92vw;
-    height: 132vw;
-    max-height: 560px;
+@media (max-width: 1200px) {
+  .book-stage {
+    transform: scale(0.9);
   }
+}
 
-  .page-title {
-    font-size: 1.45rem;
-    letter-spacing: 8px;
+@media (max-width: 980px) {
+  .book-stage {
+    transform: scale(0.78);
+  }
+}
+
+@media (max-width: 820px) {
+  .book-stage {
+    transform: scale(0.66);
   }
 }
 </style>
