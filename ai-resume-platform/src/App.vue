@@ -18,7 +18,7 @@
           <img :src="JiangHuImg" class="seal-mark top-seal" />
           
           <!-- 竖排文字 -->
-          <div class="signature-vertical-text">{{ nicknameText }}</div>
+          <div class="signature-vertical-text">{{ usernameText }}</div>
           
           <!-- 下方：游客印章 -->
           <img :src="YouKeImg" class="seal-mark bottom-seal" />
@@ -74,13 +74,13 @@ export default {
     hideFloatingAvatar() {
       return this.$route.path === "/dialogue";
     },
-    nicknameText() {
+    usernameText() {
       if (this.isLogin) {
         const user = localStorage.getItem("user");
         if (user) {
           try {
             const userData = JSON.parse(user);
-            return userData.nickname;
+            return userData.username;
           } catch (e) {}
         }
       }
@@ -262,7 +262,7 @@ export default {
 .signature-vertical-text {
   writing-mode: vertical-rl;
   font-size: 16px;
-  color: #121212;
+  color: #a83b2a;
   font-family: "华文楷书", "STKaiti", "KaiTi", "楷体", serif;
   letter-spacing: 2px;
   line-height: 1.5;

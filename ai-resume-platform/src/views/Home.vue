@@ -38,21 +38,7 @@
         :style="{ left: spot.x + '%', top: spot.y + '%' }"
         @click="goRegion(spot)"
       >
-        <!-- 灯笼标记 -->
-        <div class="lantern-marker" :style="{ '--color': spot.color }">
-          <div class="lantern-head"></div>
-          <div class="lantern-content" :style="{ background: spot.lightBg }">
-            <img 
-              v-if="spot.sealImg" 
-              :src="spot.sealImg" 
-              class="lantern-seal" 
-              alt="印章"
-            />
-            <span class="lantern-name">{{ spot.name }}</span>
-          </div>
-          <div class="lantern-tassel"></div>
-        </div>
-        <div class="lantern-light" :style="{ '--color': spot.color }"></div>
+        <img v-if="spot.MapImg" :src="spot.MapImg" :alt="spot.name" />
       </div>
     </div>
     <!-- 古琴声波纹装饰 -->
@@ -66,12 +52,12 @@ import { useRouter } from "vue-router";
 import { request } from "@/utils/request";
 import bgImg from "../assets/imgs/JiangXiMap.png";
 // 导入各城市印章图片
-import sealNanchang from "../assets/seal/NanChang.png";
-import sealJiujiang from "../assets/seal/JiuJiang.png";
-import sealShangrao from "../assets/seal/ShangRao.png";
-import sealJingdezhen from "../assets/seal/JingDeZhen.png";
-import sealJian from "../assets/seal/JiAn.png";
-import sealGanzhou from "../assets/seal/GanZhou.png";
+import Nanchang from "../assets/imgs/NanChang.png";
+import Jiujiang from "../assets/imgs/JiuJiang.png";
+import Shangrao from "../assets/imgs/ShangRao.png";
+import Jingdezhen from "../assets/imgs/JingDeZhen.png";
+import Jian from "../assets/imgs/JiAn.png";
+import Ganzhou from "../assets/imgs/GanZhou.png";
 
 const router = useRouter();
 
@@ -82,40 +68,28 @@ const regionError = ref("");
 // 地区名称与地图坐标的对应关系
 const regionPositionMap = {
   南昌: { 
-    x: 49.5, y: 30.5, 
-    sealImg: sealNanchang, 
-    color: "#D92B2B",
-    lightBg: "rgba(245, 160, 160, 0.85)"  // 粉红 + 透明度
+    x: 87.55, y: 62.5, 
+    MapImg: Nanchang
   }, 
   九江: { 
-    x: 45.5, y: 19.5, 
-    sealImg: sealJiujiang, 
-    color: "#165DFF",
-    lightBg: "rgba(168, 200, 255, 0.85)"  // 浅蓝 + 透明度
+    x: 85.8, y: 58.2, 
+    MapImg: Jiujiang
   }, 
   上饶: { 
-    x: 61.5, y: 30.5, 
-    sealImg: sealShangrao, 
-    color: "#00B42A",
-    lightBg: "rgba(160, 230, 176, 0.85)"  // 浅绿 + 透明度
+    x: 91.5, y: 61.94, 
+    MapImg: Shangrao
   }, 
   景德镇: { 
-    x: 57.5, y: 23.5, 
-    sealImg: sealJingdezhen, 
-    color: "#FF7D00",
-    lightBg: "rgba(255, 209, 160, 0.85)"  // 浅橙 + 透明度
+    x: 91.35, y: 58.3, 
+    MapImg: Jingdezhen
   }, 
   吉安: { 
-    x: 42.5, y: 55.5, 
-    sealImg: sealJian, 
-    color: "#00C1D4",
-    lightBg: "rgba(160, 240, 245, 0.85)"  // 浅青 + 透明度
+    x: 84.46, y: 72.7, 
+    MapImg: Jian
   }, 
   赣州: { 
-    x: 43.5, y: 75.5, 
-    sealImg: sealGanzhou, 
-    color: "#AB2893",
-    lightBg: "rgba(229, 176, 216, 0.85)"  // 浅紫 + 透明度
+    x: 85.6, y: 79.7, 
+    MapImg: Ganzhou
   }
 };
 
@@ -317,111 +291,65 @@ onMounted(() => {
   z-index: 10;
 }
 
-/* 主体：雅致水墨挂牌 + 流苏组合 */
-.lantern-marker {
-  --color: #961e1e;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.spot img {
+  object-fit: contain;
   transition: all 0.3s ease;
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.1));
+  display: block;
+  margin: 0 auto;
+}
+.spot:has(img[alt="南昌"]) {
+  z-index: 20;
 }
 
-/* 顶部挂绳（古风画轴感） */
-.lantern-head {
-  width: 18px;
-  height: 8px;
-  background: var(--color);
-  border-radius: 50% 50% 0 0;
-  margin-bottom: 0;
+/* 南昌图片单独大小 */
+.spot img[alt="南昌"] {
+  width: 48px !important;
+  height: 48px !important;
 }
-.lantern-seal {
-  width: 20px;   
-  height: 20px;  
-  object-fit: contain; 
-  filter: sepia(0.1) contrast(1.1); 
+/* 九江图片单独大小 */
+.spot img[alt="九江"] {
+  width: 123.5px !important;
+  height: 123.5px !important;
 }
-/* 主体牌：水墨圆角长牌 */
-.lantern-content {
-  min-height: 32px;
-  padding: 8px 10px;
-  border: 1px solid var(--color);
-  border-radius: 50% 50% 40% 40%;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  position: relative;
+/* 上饶图片单独大小 */
+.spot img[alt="上饶"] {
+  width: 100px !important;
+  height: 100px !important;
 }
-
-/* 多流苏 · 轻盈飘渺 */
-.lantern-tassel {
-  width: 20px;
-  height: 24px;
-  background: linear-gradient(to bottom,
-    var(--color),
-    var(--color) 1px,
-    transparent 1px,
-    transparent 2px,
-    var(--color) 2px,
-    var(--color) 3px,
-    transparent 3px,
-    transparent 4px,
-    var(--color) 4px
-  );
-  opacity: 0.7;
-  animation: tassel-swing 3s ease-in-out infinite alternate;
+/* 景德镇图片单独大小 */
+.spot img[alt="景德镇"] {
+  width: 61px !important;
+  height: 61px !important;
+  transform: rotate(-10deg);
 }
-@keyframes tassel-swing {
-  0% { transform: rotate(-3deg); }
-  100% { transform: rotate(3deg); }
+/* 吉安图片单独大小 */
+.spot img[alt="吉安"] {
+  width: 97px !important;
+  height: 97px !important;
+}
+/* 赣州图片单独大小 */
+.spot img[alt="赣州"] {
+  width: 130px !important;
+  height: 130px !important;
 }
 
-/* 图标：篆体小印 */
-.lantern-icon {
-  font-size: 16px;
-  color: var(--color);
-  font-weight: bold;
-  font-family: "STKaiti", serif;
-  text-shadow: 0 0 1px rgba(0,0,0,0.1);
+.spot img:hover {
+  transform: scale(1.1);
 }
 
-/* 城市名：书法排版 */
-.lantern-name {
-  font-size: 14px;
-  font-family: "STKaiti", "KaiTi", serif;
-  color: #2b231c;
-  letter-spacing: 1.5px;
-  font-weight: 500;
+/* 点击按下效果 */
+.spot img:active {
+  transform: scale(0.95);
 }
 
-/* 悬浮：轻轻上浮 + 墨色加深 */
-.spot:hover .lantern-marker {
-  transform: scale(1.06) translateY(-3px);
-  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.15));
-}
-.spot:hover .lantern-content {
-  background: rgba(250, 240, 225, 0.95);
-  border-color: var(--color);
+/* 景德镇悬停：旋转+缩放 */
+.spot img[alt="景德镇"]:hover {
+  transform: rotate(-10deg) scale(1.1);
 }
 
-/* 光晕：淡墨扩散 · 不刺眼 */
-.lantern-light {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 150%;
-  height: 180%;
-  background: radial-gradient(circle, var(--color), transparent 80%);
-  opacity: 0.1;
-  border-radius: 50%;
-  pointer-events: none;
-  animation: glow 3s ease-in-out infinite alternate;
-}
-@keyframes glow {
-  0% { opacity: 0.1; transform: translate(-50%, -50%) scale(1); }
-  100% { opacity: 0.18; transform: translate(-50%, -50%) scale(1.08); }
+/* 景德镇点击按下：旋转+缩小 */
+.spot img[alt="景德镇"]:active {
+  transform: rotate(-10deg) scale(0.95);
 }
 
 /* 古琴声波纹装饰 */
@@ -444,17 +372,4 @@ onMounted(() => {
   border-radius: 4px;
 }
 
-/* 响应式 */
-@media (max-width: 500px) {
-  .lantern-name { display: none; }
-  .lantern-content { 
-    min-width: unset; 
-    padding: 6px 8px; /* 调整内边距 */
-    justify-content: center; /* 印章居中 */
-  }
-  .lantern-seal {
-    width: 18px; /* 移动端缩小印章 */
-    height: 18px;
-  }
-}
 </style>
