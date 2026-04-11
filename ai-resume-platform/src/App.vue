@@ -1,5 +1,8 @@
 <template>
   <div id="app">
+    <transition name="fade" appear>
+      <AI />
+    </transition>
     <!-- 古风落款头像 -->
     <div
       v-if="!hideFloatingAvatar"
@@ -57,17 +60,21 @@
 </template>
 
 <script>
+import AI from './components/AI.vue'
 import avatarImg from "./assets/imgs/red-soldier.png";
 import JiangHuImg from "./assets/Seal/JiangHu.png";
 import  YouKeImg  from "./assets/Seal/YouKe.png";
 export default {
+  components: {
+    AI
+  },
   data() {
     return {
       isLogin: false,
       avatarUrl: avatarImg,
       showMenu: false,
       JiangHuImg: JiangHuImg,
-      YouKeImg: YouKeImg
+      YouKeImg: YouKeImg,
     };
   },
   computed: {
@@ -148,6 +155,13 @@ export default {
 #app {
   min-height: 100vh;
   font-family: "STKaiti", "KaiTi", serif;
+}
+.fade-enter-active {
+  transition: opacity 0.5s ease;
+}
+
+.fade-enter-from {
+  opacity: 0;
 }
 
 /* 右上角漂浮 */
