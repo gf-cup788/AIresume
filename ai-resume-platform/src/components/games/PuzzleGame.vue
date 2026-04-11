@@ -1,107 +1,128 @@
 <template>
-  <div class="puzzle-grid-layout">
-    <div class="puzzle-left">
-      <div class="puzzle-stats">
-        <div class="puzzle-stat">
-          <span class="puzzle-stat-label">已放入</span>
-          <span class="puzzle-stat-value">{{ placedCount }}</span>
-        </div>
-        <div class="puzzle-stat">
-          <span class="puzzle-stat-label">总块数</span>
-          <span class="puzzle-stat-value">{{ totalPieces }}</span>
-        </div>
-        <div class="puzzle-stat">
-          <span class="puzzle-stat-label">状态</span>
-          <span class="puzzle-stat-value">{{ solved ? '已完成' : '进行中' }}</span>
-        </div>
-      </div>
-
-      <div
-        class="drop-board"
-        :style="{
-          '--board-size': boardSize + 'px',
-          '--tile-size': tileSize + 'px'
-        }"
-      >
-        <div
-          v-for="slot in slots"
-          :key="slot.id"
-          class="drop-slot"
-          :class="{
-            filled: isSlotFilled(slot.id),
-            active: hoverSlot === slot.id
-          }"
-          @dragover.prevent="onSlotDragOver(slot.id)"
-          @dragleave="onSlotDragLeave"
-          @drop.prevent="onSlotDrop(slot.id)"
-        >
-          <template v-if="placedMap[slot.id]">
-            <div
-              class="placed-piece"
-              :style="getPieceStyle(placedMap[slot.id])"
-              draggable="true"
-              @dragstart="onPieceDragStart(placedMap[slot.id], 'board', slot.id)"
-            ></div>
-          </template>
-
-          <template v-else>
-            <div class="slot-guide">{{ slot.id }}</div>
-          </template>
-        </div>
-      </div>
-
-      <div class="puzzle-actions">
-        <button class="panel-btn primary" @click="resetPuzzle">重新开始</button>
-        <button class="panel-btn" @click="shufflePool">打乱拼块</button>
-      </div>
-
-      <transition name="fade-up">
-        <div v-if="solved" class="mini-success-card">
-          <div class="mini-success-icon">🎊</div>
-          <div class="mini-success-title">拼图完成</div>
-          <div class="mini-success-desc">
-            你已经完成 {{ scenicName }} 的拼图。
+  <div class="puzzle-game">
+    <div class="game-main">
+      <!-- 左侧主拼图区 -->
+      <div class="board-section">
+        <div class="puzzle-stats">
+          <div class="puzzle-stat">
+            <span class="puzzle-stat-label">已放入</span>
+            <span class="puzzle-stat-value">{{ placedCount }}</span>
+          </div>
+          <div class="puzzle-stat">
+            <span class="puzzle-stat-label">总块数</span>
+            <span class="puzzle-stat-value">{{ totalPieces }}</span>
+          </div>
+          <div class="puzzle-stat">
+            <span class="puzzle-stat-label">状态</span>
+            <span class="puzzle-stat-value">{{ solved ? '已完成' : '进行中' }}</span>
           </div>
         </div>
-      </transition>
-    </div>
 
-    <div class="puzzle-right">
-      <div class="preview-card">
-        <div class="preview-title">完整预览</div>
-        <div class="preview-image" :style="previewStyle"></div>
-        <div class="preview-tip">可对照右侧预览完成拼图</div>
-      </div>
-
-      <div class="pieces-card">
-        <div class="preview-title">待放入拼块</div>
-
-        <div class="pieces-pool" @dragover.prevent @drop.prevent="onPoolDrop">
+        <div
+          class="drop-board"
+          :style="{
+            '--board-size': boardSize + 'px',
+            '--tile-size': tileSize + 'px',
+            '--board-count': boardCount
+          }"
+        >
           <div
-            v-for="piece in availablePieces"
-            :key="piece.id"
-            class="pool-piece"
-            :style="getPieceStyle(piece)"
-            draggable="true"
-            @dragstart="onPieceDragStart(piece, 'pool', null)"
-          ></div>
+            v-for="slot in slots"
+            :key="slot.id"
+            class="drop-slot"
+            :class="{
+              filled: isSlotFilled(slot.id),
+              active: hoverSlot === slot.id
+            }"
+            @dragover.prevent="onSlotDragOver(slot.id)"
+            @dragleave="onSlotDragLeave"
+            @drop.prevent="onSlotDrop(slot.id)"
+          >
+            <template v-if="placedMap[slot.id]">
+              <div
+                class="placed-piece"
+                :style="getPieceStyle(placedMap[slot.id], 'board')"
+                draggable="true"
+                @dragstart="onPieceDragStart(placedMap[slot.id], 'board', slot.id)"
+              ></div>
+            </template>
+
+            <template v-else>
+              <div class="slot-guide">{{ slot.id }}</div>
+            </template>
+          </div>
         </div>
 
-        <div class="pool-tip">
-          已放入的拼图也可以拖回这里重新调整。
+        <div class="puzzle-actions">
+          <button class="panel-btn primary" @click="resetPuzzle">重新开始</button>
+          <button class="panel-btn" @click="shufflePool">打乱拼块</button>
         </div>
       </div>
+
+      <!-- 右侧辅助区 -->
+      <div class="side-section">
+        <div class="preview-card">
+          <div class="card-title">完整预览</div>
+          <div class="preview-image" :style="previewStyle"></div>
+        </div>
+
+        <div class="pieces-card">
+          <div class="card-title">待放入拼块 已放入的拼图也可以拖回这里重新调整。</div>
+
+          <div class="pieces-pool" @dragover.prevent @drop.prevent="onPoolDrop">
+            <div
+              v-for="piece in availablePieces"
+              :key="piece.id"
+              class="pool-piece"
+              :style="getPieceStyle(piece, 'pool')"
+              draggable="true"
+              @dragstart="onPieceDragStart(piece, 'pool', null)"
+            ></div>
+          </div>
+        </div>
+
+        <!-- 拼图完成提示挪到右边 -->
+        <transition name="fade-up">
+          <div v-if="solved" class="mini-success-card">
+            <div class="mini-success-icon">🎉</div>
+            <div class="mini-success-title">拼图完成</div>
+            <div class="mini-success-desc">你已经完成 {{ scenicName }} 的拼图。</div>
+          </div>
+        </transition>
+      </div>
     </div>
+
+    <!-- 通关页面提示：不会关闭拼图弹窗 -->
+    <transition name="success-pop">
+      <div
+        v-if="showPageCongrats"
+        class="page-congrats-mask"
+        @click.self="closeCongrats"
+      >
+        <div class="page-congrats-card">
+          <div class="page-congrats-icon">🏆</div>
+          <div class="page-congrats-title">恭喜通关</div>
+          <div class="page-congrats-desc">
+            你已成功完成 <span>{{ scenicName }}</span> 的拼图挑战
+          </div>
+
+          <div class="page-congrats-actions">
+            <button class="congrats-btn primary" @click="closeCongrats">我知道了</button>
+            <button class="congrats-btn" @click="playAgain">再玩一次</button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 
 const props = defineProps({
   scenicName: {
     type: String,
-    default: '景点'
+    default: '三宝村'
   },
   imageUrl: {
     type: String,
@@ -113,7 +134,7 @@ const props = defineProps({
   },
   boardSize: {
     type: Number,
-    default: 330
+    default: 468
   }
 })
 
@@ -121,6 +142,7 @@ const emit = defineEmits(['success'])
 
 const totalPieces = computed(() => props.boardCount * props.boardCount)
 const tileSize = computed(() => props.boardSize / props.boardCount)
+const poolPieceSize = computed(() => 86)
 
 const slots = ref([])
 const availablePieces = ref([])
@@ -130,6 +152,8 @@ const draggingPiece = ref(null)
 const dragFrom = ref('pool')
 const dragFromSlot = ref(null)
 const solved = ref(false)
+const showPageCongrats = ref(false)
+const hasShownCongrats = ref(false)
 
 const previewStyle = computed(() => ({
   backgroundImage: `url(${props.imageUrl})`,
@@ -180,6 +204,16 @@ const resetPuzzle = () => {
   dragFromSlot.value = null
   hoverSlot.value = null
   solved.value = false
+  showPageCongrats.value = false
+  hasShownCongrats.value = false
+}
+
+const playAgain = () => {
+  resetPuzzle()
+}
+
+const closeCongrats = () => {
+  showPageCongrats.value = false
 }
 
 const shufflePool = () => {
@@ -203,11 +237,11 @@ const onSlotDragLeave = () => {
 }
 
 const removeFromPool = (pieceId) => {
-  availablePieces.value = availablePieces.value.filter(item => item.id !== pieceId)
+  availablePieces.value = availablePieces.value.filter((item) => item.id !== pieceId)
 }
 
 const putBackToPool = (piece) => {
-  if (!availablePieces.value.some(item => item.id === piece.id)) {
+  if (!availablePieces.value.some((item) => item.id === piece.id)) {
     availablePieces.value.push(piece)
   }
 }
@@ -265,20 +299,42 @@ const onPoolDrop = () => {
 }
 
 const checkSolved = () => {
-  solved.value = placedCount.value === totalPieces.value
+  const currentSolved = placedCount.value === totalPieces.value
+  solved.value = currentSolved
+
+  if (currentSolved && !hasShownCongrats.value) {
+    hasShownCongrats.value = true
+    showPageCongrats.value = true
+  }
+
+  if (!currentSolved) {
+    hasShownCongrats.value = false
+  }
 }
 
-const getPieceStyle = (piece) => {
+const getPieceStyle = (piece, mode = 'board') => {
   const correctIndex = piece.id - 1
-  const bgX = (correctIndex % props.boardCount) * tileSize.value
-  const bgY = Math.floor(correctIndex / props.boardCount) * tileSize.value
+  const row = Math.floor(correctIndex / props.boardCount)
+  const col = correctIndex % props.boardCount
+
+  if (mode === 'pool') {
+    const scale = poolPieceSize.value / tileSize.value
+    return {
+      width: `${poolPieceSize.value}px`,
+      height: `${poolPieceSize.value}px`,
+      backgroundImage: `url(${props.imageUrl})`,
+      backgroundSize: `${props.boardSize * scale}px ${props.boardSize * scale}px`,
+      backgroundPosition: `-${col * poolPieceSize.value}px -${row * poolPieceSize.value}px`,
+      backgroundRepeat: 'no-repeat'
+    }
+  }
 
   return {
     width: `${tileSize.value}px`,
     height: `${tileSize.value}px`,
     backgroundImage: `url(${props.imageUrl})`,
     backgroundSize: `${props.boardSize}px ${props.boardSize}px`,
-    backgroundPosition: `-${bgX}px -${bgY}px`,
+    backgroundPosition: `-${col * tileSize.value}px -${row * tileSize.value}px`,
     backgroundRepeat: 'no-repeat'
   }
 }
@@ -289,101 +345,96 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.puzzle-grid-layout {
+.puzzle-game {
   width: 100%;
+  color: #5e4630;
+  position: relative;
+}
+
+.game-main {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 240px;
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) 480px;
+  gap: 24px;
   align-items: start;
 }
 
-.puzzle-left {
+.board-section {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
 }
 
-.puzzle-right {
+.side-section {
+  width: 490px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
+  padding-top: 2px;
+  align-items: flex-start;
 }
 
 .puzzle-stats {
   width: 100%;
-  max-width: 330px;
+  max-width: 468px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 14px;
+  margin-bottom: 18px;
 }
 
 .puzzle-stat {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(106, 151, 71, 0.14);
-  border-radius: 14px;
-  padding: 10px 8px;
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 18px;
+  padding: 16px 10px;
   text-align: center;
-  box-shadow: 0 8px 20px rgba(120, 148, 97, 0.08);
+  box-shadow: 0 8px 24px rgba(120, 100, 70, 0.06);
 }
 
 .puzzle-stat-label {
   display: block;
-  font-size: 12px;
-  color: #75856e;
-  margin-bottom: 4px;
+  font-size: 14px;
+  color: #8c8c74;
+  margin-bottom: 8px;
 }
 
 .puzzle-stat-value {
   display: block;
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 700;
-  color: #5a6f49;
+  color: #6c7d53;
 }
 
 .drop-board {
   width: var(--board-size);
   height: var(--board-size);
   display: grid;
-  grid-template-columns: repeat(3, var(--tile-size));
-  grid-template-rows: repeat(3, var(--tile-size));
-  gap: 0;
-  border-radius: 18px;
+  grid-template-columns: repeat(var(--board-count), var(--tile-size));
+  grid-template-rows: repeat(var(--board-count), var(--tile-size));
+  border-radius: 24px;
   overflow: hidden;
-  border: 2px solid rgba(108, 146, 78, 0.18);
-  background:
-    linear-gradient(135deg, rgba(248, 243, 227, 0.96), rgba(240, 247, 233, 0.96));
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.55),
-    0 16px 36px rgba(104, 132, 84, 0.12);
+  border: 2px solid rgba(175, 189, 159, 0.55);
+  background: rgba(248, 246, 238, 0.8);
+  box-shadow: 0 14px 34px rgba(136, 121, 91, 0.08);
+  margin-left: 60px;
 }
 
 .drop-slot {
   width: var(--tile-size);
   height: var(--tile-size);
   position: relative;
-  border-right: 1px solid rgba(120, 144, 104, 0.16);
-  border-bottom: 1px solid rgba(120, 144, 104, 0.16);
-  box-sizing: border-box;
+  border-right: 1px solid rgba(175, 189, 159, 0.45);
+  border-bottom: 1px solid rgba(175, 189, 159, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.2);
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.12);
   transition: all 0.2s ease;
 }
 
-.drop-slot:nth-child(3n) {
-  border-right: none;
-}
-
-.drop-slot:nth-last-child(-n + 3) {
-  border-bottom: none;
-}
-
 .drop-slot.active {
-  background: rgba(140, 181, 111, 0.15);
-  box-shadow: inset 0 0 0 2px rgba(119, 165, 83, 0.18);
+  background: rgba(143, 181, 112, 0.16);
 }
 
 .drop-slot.filled {
@@ -393,141 +444,206 @@ onMounted(() => {
 .slot-guide {
   font-size: 18px;
   font-weight: 700;
-  color: rgba(102, 122, 88, 0.35);
+  color: rgba(140, 150, 128, 0.55);
   user-select: none;
   pointer-events: none;
 }
 
 .placed-piece,
 .pool-piece {
-  border-radius: 0;
   cursor: grab;
-  box-shadow: 0 6px 16px rgba(104, 128, 87, 0.14);
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  box-shadow: 0 6px 16px rgba(118, 103, 76, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .placed-piece:hover,
 .pool-piece:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 20px rgba(98, 126, 80, 0.18);
-}
-
-.placed-piece {
-  width: 100%;
-  height: 100%;
+  box-shadow: 0 10px 18px rgba(118, 103, 76, 0.16);
 }
 
 .puzzle-actions {
-  margin-top: 12px;
+  margin-top: 18px;
   display: flex;
-  gap: 12px;
-  justify-content: center;
+  gap: 14px;
   flex-wrap: wrap;
 }
 
 .panel-btn {
   border: none;
   border-radius: 999px;
-  padding: 10px 18px;
-  font-size: 13px;
+  padding: 13px 26px;
+  font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  color: #5f6d4e;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(118, 147, 90, 0.16);
-  box-shadow: 0 8px 20px rgba(122, 149, 100, 0.1);
-  transition: all 0.2s ease;
+  color: #6a744f;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(128, 118, 94, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .panel-btn:hover {
   transform: translateY(-1px);
+  box-shadow: 0 12px 22px rgba(128, 118, 94, 0.12);
 }
 
 .panel-btn.primary {
-  background: linear-gradient(135deg, #88b56a, #729956);
+  background: #86b35f;
   color: #fff;
-  border: none;
 }
 
 .preview-card,
-.pieces-card {
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(106, 151, 71, 0.14);
-  border-radius: 18px;
-  padding: 14px;
-  box-shadow: 0 10px 24px rgba(115, 143, 95, 0.1);
+.pieces-card,
+.mini-success-card {
+  width: 100%;
+  border-radius: 22px;
 }
 
-.preview-title {
-  font-size: 14px;
+.preview-card {
+  width: 260px;
+  height: 283.5px;
+  padding: 14px 14px 12px;
+}
+
+.pieces-card {
+  padding: 14px 14px 12px;
+  width: 490px;
+  background-color: #ffffff;
+}
+
+.card-title {
+  font-size: 18px;
   font-weight: 700;
-  color: #5d714d;
+  color: #5f6f43;
   margin-bottom: 10px;
 }
 
 .preview-image {
   width: 100%;
+  max-width: 270px;
   aspect-ratio: 1 / 1;
-  border-radius: 14px;
+  margin: 0 auto;
+  border-radius: 18px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   overflow: hidden;
-  border: 1px solid rgba(118, 145, 98, 0.16);
-  background-color: #f6f4ea;
-}
-
-.preview-tip,
-.pool-tip {
-  margin-top: 10px;
-  font-size: 12px;
-  line-height: 1.6;
-  color: #7b8870;
 }
 
 .pieces-pool {
-  max-height: 318px;
-  overflow-y: auto;
-  padding-right: 2px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 10px;
-  scrollbar-width: none;
-}
-
-.pieces-pool::-webkit-scrollbar {
-  display: none;
-}
-
-.pool-piece {
-  justify-self: center;
+  justify-items: center;
+  align-items: start;
 }
 
 .mini-success-card {
-  margin-top: 14px;
-  width: 100%;
-  max-width: 330px;
-  border-radius: 16px;
-  padding: 14px 16px;
-  background: linear-gradient(135deg, rgba(255, 251, 236, 0.95), rgba(240, 249, 232, 0.95));
-  border: 1px solid rgba(122, 166, 86, 0.18);
-  box-shadow: 0 12px 26px rgba(116, 147, 92, 0.12);
+  width: 490px;
+  margin-top: 0;
+  border-radius: 18px;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, rgba(255, 250, 239, 0.96), rgba(241, 249, 232, 0.96));
+  box-shadow: 0 10px 24px rgba(129, 120, 95, 0.08);
+  border: 1px solid rgba(166, 180, 140, 0.32);
   text-align: center;
 }
 
 .mini-success-icon {
-  font-size: 22px;
-  margin-bottom: 4px;
+  font-size: 24px;
+  margin-bottom: 6px;
 }
 
 .mini-success-title {
-  font-size: 16px;
-  font-weight: 800;
-  color: #5a7446;
+  font-size: 18px;
+  font-weight: 700;
+  color: #5e7048;
 }
 
 .mini-success-desc {
-  margin-top: 4px;
-  font-size: 13px;
-  color: #758469;
-  line-height: 1.6;
+  margin-top: 6px;
+  font-size: 14px;
+  color: #7b7a66;
+  line-height: 1.7;
+}
+
+.page-congrats-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 28, 24, 0.42);
+  backdrop-filter: blur(4px);
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.page-congrats-card {
+  width: min(420px, calc(100vw - 32px));
+  border-radius: 26px;
+  padding: 34px 26px 24px;
+  background: linear-gradient(180deg, #fffdf8 0%, #f6f1e6 100%);
+  box-shadow:
+    0 24px 60px rgba(37, 31, 23, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  text-align: center;
+  border: 1px solid rgba(146, 120, 84, 0.16);
+}
+
+.page-congrats-icon {
+  font-size: 46px;
+  margin-bottom: 10px;
+}
+
+.page-congrats-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #5d472f;
+  line-height: 1.2;
+}
+
+.page-congrats-desc {
+  margin-top: 10px;
+  font-size: 15px;
+  color: #7a6a58;
+  line-height: 1.8;
+}
+
+.page-congrats-desc span {
+  font-weight: 700;
+  color: #5e7048;
+}
+
+.page-congrats-actions {
+  margin-top: 22px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.congrats-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 12px 22px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #ffffff;
+  color: #69543b;
+  box-shadow: 0 8px 20px rgba(128, 118, 94, 0.08);
+  transition: all 0.2s ease;
+}
+
+.congrats-btn:hover {
+  transform: translateY(-1px);
+}
+
+.congrats-btn.primary {
+  background: #86b35f;
+  color: #fff;
 }
 
 .fade-up-enter-active,
@@ -541,15 +657,71 @@ onMounted(() => {
   transform: translateY(10px);
 }
 
-@media (max-width: 900px) {
-  .puzzle-grid-layout {
+.success-pop-enter-active,
+.success-pop-leave-active {
+  transition: all 0.28s ease;
+}
+
+.success-pop-enter-from,
+.success-pop-leave-to {
+  opacity: 0;
+}
+
+.success-pop-enter-from .page-congrats-card,
+.success-pop-leave-to .page-congrats-card {
+  transform: translateY(16px) scale(0.96);
+  opacity: 0;
+}
+
+.success-pop-enter-to .page-congrats-card,
+.success-pop-leave-from .page-congrats-card {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+  transition: all 0.28s ease;
+}
+
+@media (max-width: 1100px) {
+  .game-main {
     grid-template-columns: 1fr;
   }
 
-  .puzzle-right {
+  .side-section {
     width: 100%;
-    max-width: 330px;
-    margin: 0 auto;
+    max-width: 490px;
+  }
+
+  .pieces-card,
+  .mini-success-card {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .puzzle-stats {
+    max-width: 100%;
+  }
+
+  .drop-board {
+    width: min(100%, var(--board-size));
+    height: min(100vw - 48px, var(--board-size));
+    margin-left: 0;
+  }
+
+  .pieces-pool {
+    gap: 8px;
+  }
+
+  .preview-image {
+    max-width: 220px;
+  }
+
+  .preview-card {
+    width: 100%;
+    height: auto;
+  }
+
+  .page-congrats-title {
+    font-size: 24px;
   }
 }
 </style>

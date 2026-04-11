@@ -23,7 +23,7 @@
 </template>
 
 <script setup>
-const props = defineProps({
+defineProps({
   modelValue: {
     type: Boolean,
     default: false
@@ -51,59 +51,106 @@ const close = () => {
   position: fixed;
   inset: 0;
   z-index: 5000;
-  background: rgba(31, 44, 34, 0.38);
-  backdrop-filter: blur(8px);
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.08), transparent 28%),
+    radial-gradient(circle at 80% 78%, rgba(255, 255, 255, 0.06), transparent 24%),
+    rgba(20, 26, 22, 0.44);
+  backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 28px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+
+  /* 隐藏外层滚动条，但保留滚动 */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.story-overlay::-webkit-scrollbar {
+  display: none;
 }
 
 .story-modal {
   position: relative;
-  width: min(980px, calc(100vw - 48px));
-  max-height: min(86vh, 920px);
+  width: min(1040px, calc(100vw - 56px));
+  max-height: min(88vh, 940px);
   overflow: hidden;
-  border-radius: 28px;
+  border-radius: 30px;
   background:
-    linear-gradient(145deg, rgba(255, 252, 245, 0.98), rgba(247, 241, 207, 0.98));
-  border: 1px solid rgba(124, 155, 95, 0.16);
+    radial-gradient(circle at 12% 10%, rgba(71, 79, 70, 0.08), transparent 18%),
+    radial-gradient(circle at 88% 84%, rgba(86, 69, 56, 0.08), transparent 20%),
+    linear-gradient(180deg, rgba(252, 248, 238, 0.985), rgba(241, 232, 214, 0.985));
+  border: 1px solid rgba(108, 92, 70, 0.18);
   box-shadow:
-    0 28px 70px rgba(36, 52, 41, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.75);
+    0 34px 80px rgba(17, 25, 20, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    inset 0 0 0 1px rgba(148, 126, 94, 0.06);
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+}
+
+.story-modal::before {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border-radius: 24px;
+  border: 1px solid rgba(120, 101, 73, 0.14);
+  pointer-events: none;
+}
+
+.story-modal::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 11px,
+      rgba(117, 99, 72, 0.018) 12px,
+      transparent 13px
+    );
+  pointer-events: none;
+  opacity: 0.9;
 }
 
 .puzzle-modal {
-  padding: 22px 22px 20px;
+  padding: 26px 24px 22px;
 }
 
 .story-close-btn {
   position: absolute;
-  right: 16px;
-  top: 16px;
-  width: 38px;
-  height: 38px;
-  border: none;
+  right: 18px;
+  top: 18px;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(109, 89, 63, 0.18);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.84);
-  color: #66785a;
+  background: rgba(255, 251, 243, 0.92);
+  color: #6d5438;
   font-size: 24px;
   line-height: 38px;
   text-align: center;
   cursor: pointer;
-  box-shadow: 0 10px 24px rgba(94, 116, 80, 0.12);
+  box-shadow: 0 10px 24px rgba(81, 62, 40, 0.12);
   transition: all 0.22s ease;
-  z-index: 2;
+  z-index: 3;
 }
 
 .story-close-btn:hover {
   transform: scale(1.06);
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.98);
 }
 
 .story-card-head {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
   padding: 8px 52px 14px 6px;
 }
 
@@ -115,9 +162,10 @@ const close = () => {
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 1px;
-  color: #6e8758;
-  background: rgba(145, 183, 112, 0.14);
-  border: 1px solid rgba(126, 162, 96, 0.16);
+  color: #7a5b3a;
+  background: rgba(163, 128, 86, 0.1);
+  border: 1px solid rgba(126, 98, 66, 0.14);
+  white-space: nowrap;
 }
 
 .story-title {
@@ -125,7 +173,7 @@ const close = () => {
   font-size: 28px;
   line-height: 1.25;
   font-weight: 800;
-  color: #596f45;
+  color: #4f3a26;
   letter-spacing: 0.5px;
 }
 
@@ -133,17 +181,24 @@ const close = () => {
   margin-top: 8px;
   font-size: 14px;
   line-height: 1.8;
-  color: #7f8d74;
+  color: #7a6a58;
   max-width: 760px;
 }
 
 .game-body {
+  position: relative;
+  z-index: 1;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 4px 6px 10px;
+  padding: 10px 10px 14px;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+
+  /* 隐藏内部滚动条，但保留滚动 */
   scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .game-body::-webkit-scrollbar {
@@ -200,10 +255,15 @@ const close = () => {
     font-size: 13px;
     line-height: 1.7;
   }
+
+  .game-body {
+    padding: 8px 8px 12px;
+  }
 }
 
 @media (max-width: 600px) {
   .story-overlay {
+    align-items: flex-start;
     padding: 10px;
   }
 
@@ -211,6 +271,7 @@ const close = () => {
     width: calc(100vw - 12px);
     max-height: 92vh;
     border-radius: 20px;
+    margin: auto 0;
   }
 
   .puzzle-modal {
@@ -222,7 +283,7 @@ const close = () => {
     top: 10px;
     width: 34px;
     height: 34px;
-    line-height: 34px;
+    line-height: 32px;
     font-size: 22px;
   }
 
@@ -242,7 +303,7 @@ const close = () => {
   }
 
   .game-body {
-    padding: 2px 2px 8px;
+    padding: 6px 4px 10px;
   }
 }
 </style>

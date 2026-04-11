@@ -1,12 +1,15 @@
 <template>
   <div class="dialogue-page">
     <!-- 固定背景 -->
+    <div class="page-bg-base"></div>
     <div
       class="page-fixed-bg"
-      :style="{ backgroundImage: `url(${dialoguePageBg})` }"
+      :class="{ loaded: bgLoaded }"
+      :style="{ backgroundImage: `url(${currentBg})` }"
     ></div>
+    <!-- 
     <div class="page-mask"></div>
-
+   -->
     <!-- 顶部 -->
     <div class="top-bar">
       <div class="scene-chip">{{ scenicTitle }}</div>
@@ -44,7 +47,6 @@
         <div class="dialogue-card" @click="next">
           <img class="dialogue-scroll-bg" :src="juanzhouBg" alt="卷轴背景" />
 
-          <!-- 卷轴内部内容安全区 -->
           <div class="scroll-content">
             <div class="scroll-head">
               <div class="speaker-badge">
@@ -157,7 +159,7 @@
 
       <SpotDifferenceGame
         v-else-if="currentGame.type === 'spot'"
-        scenic-name="滕王阁"
+        :scenic-name="scenicName"
         @success="handleGameSuccess"
       />
     </ScenicGameModal>
@@ -220,7 +222,7 @@ import { request } from "@/utils/request";
 import defaultAvatar from "@/assets/imgs/NPC.png";
 import defaultAvatarA from "@/assets/imgs/youke.png";
 import lushanBg from "@/assets/imgs/lushan.jpg";
-import dialoguePageBg from "@/assets/imgs/duihuapg.png";
+import defaultDialoguePageBg from "@/assets/imgs/duihuapg.png";
 import juanzhouBg from "@/assets/imgs/juanzhou.png";
 
 import ScenicGameModal from "@/components/games/ScenicGameModal.vue";
@@ -239,8 +241,12 @@ const showDemoTip = ref(true);
 const scenicDetail = ref({
   name: "",
   summary: "",
-  dialogues: []
+  dialogues: [],
+  dialogueBgUrl: ""
 });
+
+const bgLoaded = ref(false);
+const currentBg = ref(defaultDialoguePageBg);
 
 const travelerNames = {
   1: "扶光",
@@ -352,6 +358,20 @@ const normalizeDialogues = (list) => {
   });
 };
 
+const preloadBackground = (url) => {
+  return new Promise((resolve) => {
+    if (!url) {
+      resolve(defaultDialoguePageBg);
+      return;
+    }
+
+    const img = new Image();
+    img.onload = () => resolve(url);
+    img.onerror = () => resolve(defaultDialoguePageBg);
+    img.src = url;
+  });
+};
+
 const fallbackDialogue = dialogues[scenicId] || dialogues[1];
 
 const dialogue = computed(() => {
@@ -388,31 +408,42 @@ const showSummaryModal = ref(false);
 const showFinishModal = ref(false);
 const finishSaved = ref(false);
 
+const gameTypeIndex = computed(() => {
+  const id = Number(scenicId) || 1;
+  return ((id - 1) % 4) + 1;
+});
+
 const gameConfig = {
   1: {
     type: "puzzle",
-    title: "庐山 · 拼图小游戏",
+    title: computed(() => `${scenicName.value} · 拼图小游戏`),
     subtitle: "将右侧拼图块拖到左边对应位置，放对后会自动吸附。",
     imageUrl: lushanBg
   },
   2: {
-    type: "memory",
-    title: "井冈山 · 翻牌消消乐",
-    subtitle: "翻开两张相同的卡片即可消除，全部消除就算成功。"
+    type: "flower",
+    title: computed(() => `${scenicName.value} · 接花小游戏`),
+    subtitle: "移动下方花篮，接住掉落的花朵，达到目标分数即可通关。"
   },
   3: {
-    type: "flower",
-    title: "婺源 · 接花小游戏",
-    subtitle: "移动下方花篮，接住掉落的花朵，达到目标分数即可通关。"
+    type: "memory",
+    title: computed(() => `${scenicName.value} · 翻牌消消乐`),
+    subtitle: "翻开两张相同的卡片即可消除，全部消除就算成功。"
   },
   4: {
     type: "spot",
-    title: "滕王阁 · 找不同",
+    title: computed(() => `${scenicName.value} · 找不同`),
     subtitle: "找出左右两幅图中的所有不同点。"
   }
 };
 
-const currentGame = computed(() => gameConfig[scenicId] || gameConfig[1]);
+const currentGame = computed(() => {
+  const game = gameConfig[gameTypeIndex.value] || gameConfig[1];
+  return {
+    ...game,
+    title: game.title?.value || `${scenicName.value} · 小游戏`
+  };
+});
 
 const clearTyping = () => {
   if (typingTimer) {
@@ -560,6 +591,8 @@ const goUserCenter = () => {
 
 const fetchDialogueDetail = async () => {
   try {
+    bgLoaded.value = false;
+
     const res = await request(`/api/scenics/${scenicId}`, {
       method: "GET"
     });
@@ -568,12 +601,29 @@ const fetchDialogueDetail = async () => {
       scenicDetail.value = {
         name: res.data.name || "",
         summary: res.data.summary || "",
-        dialogues: Array.isArray(res.data.dialogues) ? res.data.dialogues : []
+        dialogues: Array.isArray(res.data.dialogues) ? res.data.dialogues : [],
+        dialogueBgUrl: res.data.dialogueBgUrl || ""
       };
+
+      const loadedBg = await preloadBackground(res.data.dialogueBgUrl);
+      currentBg.value = loadedBg;
       index.value = 0;
+
+      requestAnimationFrame(() => {
+        bgLoaded.value = true;
+      });
+    } else {
+      currentBg.value = defaultDialoguePageBg;
+      requestAnimationFrame(() => {
+        bgLoaded.value = true;
+      });
     }
   } catch (error) {
     console.error("获取景点对话失败：", error);
+    currentBg.value = defaultDialoguePageBg;
+    requestAnimationFrame(() => {
+      bgLoaded.value = true;
+    });
   }
 };
 
@@ -631,22 +681,45 @@ onBeforeUnmount(() => {
   user-select: none;
 }
 
+.page-bg-base {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: #f3efe5 url("@/assets/imgs/duihuapg.png") center center / 100% 100% no-repeat;
+}
+
 .page-fixed-bg {
   position: fixed;
   inset: 0;
   z-index: 0;
-  background-size: cover;
+  background-size: 100% 100%;
   background-position: center;
   background-repeat: no-repeat;
+  filter: saturate(0.92) brightness(0.93);
+  opacity: 0;
+  transition: opacity 0.45s ease;
+  will-change: opacity;
 }
 
-.page-mask {
+.page-fixed-bg.loaded {
+  opacity: 1;
+}
+
+/* .page-mask {
   position: absolute;
   inset: 0;
   z-index: 1;
-  background: rgba(255, 252, 245, 0.04);
   pointer-events: none;
-}
+  background:
+    linear-gradient(
+      180deg,
+      rgba(248, 244, 236, 0.18) 0%,
+      rgba(248, 244, 236, 0.08) 22%,
+      rgba(234, 226, 214, 0.14) 55%,
+      rgba(222, 212, 198, 0.22) 100%
+    );
+  backdrop-filter: blur(1.2px) saturate(0.88);
+} */
 
 .top-bar {
   position: absolute;
@@ -772,7 +845,7 @@ onBeforeUnmount(() => {
 }
 
 .character.dim {
-  opacity: 0.42;
+  opacity: 0;
 }
 
 .character-img {
@@ -797,8 +870,7 @@ onBeforeUnmount(() => {
 .dialogue-card {
   position: relative;
   width: 100%;
-  /* aspect-ratio: 1738 / 520; */
-   height: 340px;
+  height: 340px;
   cursor: pointer;
 }
 
@@ -1028,12 +1100,9 @@ onBeforeUnmount(() => {
 .invitation-panel,
 .story-modal {
   background: url(@/assets/imgs/jieshao.png);
-  /* border: 1px solid rgba(188, 156, 114, 0.28); */
-  /* box-shadow: 0 20px 48px rgba(66, 49, 29, 0.18); */
+  background-size: 100% 100%;
+  padding: 10px;
   color: #624626;
-   /* background-size: cover; */
-   background-size: 100% 100%;
-   padding: 10px;
 }
 
 .invitation-panel {
@@ -1094,8 +1163,6 @@ onBeforeUnmount(() => {
   max-height: 88vh;
   overflow: hidden;
   border-radius: 28px;
-  
-
 }
 
 .story-close-btn {
@@ -1237,6 +1304,7 @@ onBeforeUnmount(() => {
 
   .dialogue-card {
     aspect-ratio: 1738 / 680;
+    height: auto;
   }
 
   .scroll-content {

@@ -376,8 +376,8 @@ import jinggangshan from "@/assets/imgs/jinggangshan.jpg";
 import wuyuan from "@/assets/imgs/wuyuan.jpg";
 import twangge from "@/assets/imgs/tenwangge.jpg";
 import sanqingshan from "@/assets/imgs/sanqingsan.jpg";
-import yun1 from "@/assets/imgs/yun2.png";
-import yun2 from "@/assets/imgs/yun2.png";
+import yun1 from "@/assets/imgs/yun.png";
+import yun2 from "@/assets/imgs/yun.png";
 
 const router = useRouter();
 const route = useRoute();
