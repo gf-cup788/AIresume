@@ -54,7 +54,7 @@
 
       <div v-if="!started && !gameOver" class="game-mask">
         <div class="game-mask-card">
-          <div class="mask-title">婺源 · 接花小游戏</div>
+          <div class="mask-title"> 接花小游戏</div>
           <div class="mask-desc">
             移动下方花篮，接住掉落的花朵。达到目标分数即可通关。
           </div>
