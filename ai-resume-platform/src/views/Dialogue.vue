@@ -150,6 +150,8 @@
 
       <MemoryMatchGame
         v-else-if="currentGame.type === 'memory'"
+        :scenic-name="scenicName"
+        :scenic-id="scenicId"
         :pair-count="8"
         @success="handleGameSuccess"
       />

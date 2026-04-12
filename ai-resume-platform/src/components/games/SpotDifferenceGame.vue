@@ -143,6 +143,35 @@ const gameData = ref(null)
 const loading = ref(true)
 const leftImageUrl = ref('')
 const rightImageUrl = ref('')
+const imageWidth = ref(800)
+const imageHeight = ref(800)
+
+// 差异点列表
+const diffs = ref([])
+
+// 解析 diffPoints 字符串
+const parseDiffPoints = (diffPointsStr) => {
+  if (!diffPointsStr) return []
+  try {
+    // 尝试解析 JSON 字符串
+    const points = JSON.parse(diffPointsStr)
+    if (Array.isArray(points)) {
+      return points.map((point, index) => ({
+        id: index + 1,
+        leftX: point.left?.x || 0,
+        leftY: point.left?.y || 0,
+        rightX: point.right?.x || 0,
+        rightY: point.right?.y || 0,
+        r: point.r || 30,
+        label: `差异点${index + 1}`
+      }))
+    }
+    return []
+  } catch (error) {
+    console.error('解析 diffPoints 失败:', error)
+    return []
+  }
+}
 
 // 获取找不同游戏数据
 const fetchGameData = async () => {
@@ -156,7 +185,24 @@ const fetchGameData = async () => {
       gameData.value = res.data
       leftImageUrl.value = res.data.leftImageUrl || ''
       rightImageUrl.value = res.data.rightImageUrl || ''
+      imageWidth.value = res.data.imageWidth || 800
+      imageHeight.value = res.data.imageHeight || 800
+      
+      // 解析 diffPoints 获取差异点坐标
+      const parsedDiffs = parseDiffPoints(res.data.diffPoints)
+      if (parsedDiffs.length > 0) {
+        diffs.value = parsedDiffs
+      } else {
+        // 如果没有 diffPoints，使用默认坐标（保底）
+        diffs.value = [
+          { id: 1, leftX: 705, leftY: 682, rightX: 709, rightY: 698, r: 30, label: '差异点1' },
+          { id: 2, leftX: 105, leftY: 352, rightX: 109, rightY: 374, r: 30, label: '差异点2' },
+          { id: 3, leftX: 401, leftY: 547, rightX: 411, rightY: 560, r: 30, label: '差异点3' }
+        ]
+      }
+      
       console.log('找不同游戏数据获取成功:', gameData.value)
+      console.log('解析后的差异点:', diffs.value)
     } else {
       console.error('获取找不同游戏数据失败')
     }
@@ -182,31 +228,6 @@ const rightBoardStyle = computed(() => ({
   backgroundRepeat: 'no-repeat'
 }))
 
-// 差异点坐标（新坐标）
-const diffs = ref([
-  { 
-    id: 1, 
-    leftX: 705, leftY: 682,
-    rightX: 709, rightY: 698,
-    r: 30, 
-    label: '差异点1' 
-  },
-  { 
-    id: 2, 
-    leftX: 105, leftY: 352,
-    rightX: 109, rightY: 374,
-    r: 30, 
-    label: '差异点2' 
-  },
-  { 
-    id: 3, 
-    leftX: 401, leftY: 547,
-    rightX: 411, rightY: 560,
-    r: 30, 
-    label: '差异点3' 
-  }
-])
-
 const foundIds = ref([])
 const clickMessage = ref('')
 const clickType = ref('ok')
@@ -216,7 +237,7 @@ let messageTimer = null
 
 const totalDiffs = computed(() => diffs.value.length)
 const foundCount = computed(() => foundIds.value.length)
-const finished = computed(() => foundCount.value === totalDiffs.value)
+const finished = computed(() => foundCount.value === totalDiffs.value && totalDiffs.value > 0)
 
 const clearMessage = () => {
   if (messageTimer) {
@@ -238,13 +259,13 @@ const setMessage = (text, type = 'ok') => {
 const markerStyle = (diff, side) => {
   if (side === 'left') {
     return {
-      left: `${(diff.leftX / 800) * 100}%`,
-      top: `${(diff.leftY / 800) * 100}%`
+      left: `${(diff.leftX / imageWidth.value) * 100}%`,
+      top: `${(diff.leftY / imageHeight.value) * 100}%`
     }
   } else {
     return {
-      left: `${(diff.rightX / 800) * 100}%`,
-      top: `${(diff.rightY / 800) * 100}%`
+      left: `${(diff.rightX / imageWidth.value) * 100}%`,
+      top: `${(diff.rightY / imageHeight.value) * 100}%`
     }
   }
 }
@@ -252,20 +273,19 @@ const markerStyle = (diff, side) => {
 const hintStyle = (diff, side) => {
   if (side === 'left') {
     return {
-      left: `${(diff.leftX / 800) * 100}%`,
-      top: `${(diff.leftY / 800) * 100}%`
+      left: `${(diff.leftX / imageWidth.value) * 100}%`,
+      top: `${(diff.leftY / imageHeight.value) * 100}%`
     }
   } else {
     return {
-      left: `${(diff.rightX / 800) * 100}%`,
-      top: `${(diff.rightY / 800) * 100}%`
+      left: `${(diff.rightX / imageWidth.value) * 100}%`,
+      top: `${(diff.rightY / imageHeight.value) * 100}%`
     }
   }
 }
 
 const getClickPercent = (event, boardEl) => {
   const rect = boardEl.getBoundingClientRect()
-  // 获取实际图片尺寸相对于容器的比例
   const boardWidth = rect.width
   const boardHeight = rect.height
   const x = ((event.clientX - rect.left) / boardWidth) * 100
@@ -282,9 +302,8 @@ const findHitDiff = (x, y, side) => {
     const targetY = side === 'left' ? diff.leftY : diff.rightY
     
     // 将百分比坐标转换为相对于图片原始尺寸的坐标
-    // 假设图片原始尺寸为 800x800（根据坐标范围推测）
-    const clickX = (x / 100) * 800
-    const clickY = (y / 100) * 800
+    const clickX = (x / 100) * imageWidth.value
+    const clickY = (y / 100) * imageHeight.value
     
     const dx = clickX - targetX
     const dy = clickY - targetY

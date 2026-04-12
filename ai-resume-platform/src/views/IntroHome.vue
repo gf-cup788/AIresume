@@ -14,11 +14,11 @@
 
       <!-- 标题 -->
       <div class="hero-content" :style="titleStyle">
-        <div class="title-en fade-up delay-1">Jiangxi Cultural Travel</div>
+        <!-- <div class="title-en fade-up delay-1">Jiangxi Cultural Travel</div> -->
 
-        <div class="title-badge fade-up delay-2">赣鄱风华</div>
+        <div class="title-badge fade-up delay-2">诗画新生</div>
 
-        <h1 class="title-main fade-up delay-3">云游江西</h1>
+        <h1 class="title-main fade-up delay-3">云游赣鄱</h1>
 
         <div class="title-sub fade-up delay-4">山水入画，烟火入城，人文入心</div>
 
@@ -376,7 +376,7 @@ watch(
 .hero-content {
   position: absolute;
   left: 50%;
-  top: 40%;
+  top: 35%;
   transform: translate(-50%, -50%);
   text-align: center;
   z-index: 20;
@@ -410,7 +410,7 @@ watch(
 .title-main {
   margin: 0;
   color: #8b3f2c;
-  font-size: clamp(58px, 9vw, 118px);
+  font-size: clamp(48px, 7.7vw, 98px);
   font-weight: 700;
   letter-spacing: 10px;
   line-height: 1.08;

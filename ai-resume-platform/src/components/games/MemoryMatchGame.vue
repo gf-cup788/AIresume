@@ -20,7 +20,13 @@
       <button class="game-btn" @click="shuffleGame">重新洗牌</button>
     </div>
 
-    <div class="memory-grid">
+    <!-- 加载状态 -->
+    <div v-if="isLoading" class="loading-state">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">加载游戏中...</div>
+    </div>
+
+    <div v-else class="memory-grid">
       <div
         v-for="card in cards"
         :key="card.id"
@@ -37,7 +43,16 @@
           </div>
 
           <div class="card-face card-front">
-            <div class="card-front-inner">{{ card.content }}</div>
+            <div class="card-front-inner">
+              <img 
+                v-if="card.imageUrl" 
+                :src="card.imageUrl" 
+                class="card-image"
+                alt="card"
+                @error="handleImageError(card)"
+              />
+              <span v-else>{{ card.content }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -45,7 +60,7 @@
 
     <!-- 游戏内成功提示 -->
     <transition name="fade-up">
-      <div v-if="finished" class="success-card">
+      <div v-if="finished && !isLoading" class="success-card">
         <div class="success-icon">🎉</div>
         <div class="success-title">恭喜完成</div>
         <div class="success-desc">
@@ -54,23 +69,23 @@
       </div>
     </transition>
 
-    <!-- 通关弹窗 -->
+    <!-- 通关弹窗（内部弹窗，不关闭父组件弹窗） -->
     <transition name="success-pop">
       <div
         v-if="showSuccessModal"
-        class="success-modal-mask"
+        class="page-congrats-mask"
         @click.self="closeSuccessModal"
       >
-        <div class="success-modal-card">
-          <div class="success-modal-icon">🏆</div>
-          <div class="success-modal-title">恭喜通关</div>
-          <div class="success-modal-desc">
+        <div class="page-congrats-card">
+          <div class="page-congrats-icon">🏆</div>
+          <div class="page-congrats-title">恭喜通关</div>
+          <div class="page-congrats-desc">
             你已成功完成记忆配对挑战，共用了 <span>{{ successSteps }}</span> 步。
           </div>
           
-          <div class="success-modal-actions">
-            <button class="modal-btn primary" @click="closeSuccessModal">我知道了</button>
-            <button class="modal-btn" @click="playAgain">再玩一次</button>
+          <div class="page-congrats-actions">
+            <button class="congrats-btn primary" @click="closeSuccessModal">我知道了</button>
+            <button class="congrats-btn" @click="playAgain">再玩一次</button>
           </div>
         </div>
       </div>
@@ -79,7 +94,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+
+// 导入 request 工具函数
+import { request } from '@/utils/request'
 
 const props = defineProps({
   pairCount: {
@@ -89,8 +107,21 @@ const props = defineProps({
   symbols: {
     type: Array,
     default: () => ['🌸', '🏔️', '🍵', '🎋', '🦋', '🌈', '🍃', '🌻', '🏞️', '⭐', '🍑', '🎐']
+  },
+  // 景点ID，用于获取接口图片
+  scenicId: {
+    type: Number,
+    default: null
+  },
+  // 景点名称
+  scenicName: {
+    type: String,
+    default: ''
   }
 })
+
+// 注意：不再使用 emit('success') 来自动关闭弹窗
+// const emit = defineEmits(['success'])
 
 const cards = ref([])
 const firstCard = ref(null)
@@ -103,7 +134,161 @@ const showSuccessModal = ref(false)
 const successSteps = ref(0)
 const hasShownModal = ref(false)
 
-const totalPairs = computed(() => props.pairCount)
+// 存储从接口获取的图片URL列表
+const imageUrls = ref([])
+// 存储从接口获取的order数组（配对规则）
+const orderArray = ref([])
+// 是否正在加载
+const isLoading = ref(false)
+// 是否已加载过接口数据
+const hasLoaded = ref(false)
+
+const totalPairs = computed(() => {
+  // 如果有接口数据，使用实际配对数
+  if (imageUrls.value.length > 0 && orderArray.value.length > 0) {
+    const pairIdSet = new Set()
+    for (let i = 0; i < orderArray.value.length; i++) {
+      const imgIndex = orderArray.value[i] - 1
+      if (imgIndex >= 0 && imgIndex < imageUrls.value.length) {
+        pairIdSet.add(imgIndex)
+      }
+    }
+    return pairIdSet.size
+  }
+  return props.pairCount
+})
+
+// 获取游戏数据（根据scenicId）
+const fetchGameData = async () => {
+  if (!props.scenicId) {
+    console.log('未提供scenicId，使用默认符号')
+    return false
+  }
+  
+  if (hasLoaded.value) {
+    return true
+  }
+  
+  isLoading.value = true
+  
+  try {
+    console.log('开始请求游戏接口，scenicId:', props.scenicId)
+    
+    const res = await request(`/api/games/start?scenicId=${props.scenicId}`, {
+      method: 'GET'
+    })
+    
+    console.log('游戏接口返回:', res)
+    
+    if (res?.code === 200 && res?.data) {
+      const data = res.data
+      
+      if (data.images && Array.isArray(data.images) && data.images.length > 0) {
+        imageUrls.value = data.images
+        console.log('获取到图片列表:', imageUrls.value)
+      } else {
+        console.log('接口未返回图片，使用默认符号')
+        return false
+      }
+      
+      if (data.order && Array.isArray(data.order) && data.order.length > 0) {
+        orderArray.value = data.order
+        console.log('获取到order数组:', orderArray.value)
+      } else {
+        console.log('接口未返回order数组，使用默认配对规则')
+        return false
+      }
+      
+      hasLoaded.value = true
+      return true
+    } else {
+      console.error('获取游戏数据失败:', res?.message)
+      return false
+    }
+  } catch (error) {
+    console.error('请求游戏接口失败:', error)
+    return false
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// 从接口图片和order数组创建卡片
+const createCardsFromApi = () => {
+  if (imageUrls.value.length === 0 || orderArray.value.length === 0) {
+    return null
+  }
+  
+  const cardList = []
+  let cardIdCounter = 0
+  
+  for (let i = 0; i < orderArray.value.length; i++) {
+    const imgIndex = orderArray.value[i] - 1
+    
+    if (imgIndex < 0 || imgIndex >= imageUrls.value.length) {
+      console.warn(`无效的图片索引: ${imgIndex}, 跳过`)
+      continue
+    }
+    
+    const imageUrl = imageUrls.value[imgIndex]
+    
+    if (imageUrl) {
+      cardList.push({
+        id: `card-${cardIdCounter++}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        pairId: imgIndex,
+        content: '',
+        imageUrl: imageUrl,
+        flipped: false,
+        matched: false
+      })
+    }
+  }
+  
+  if (cardList.length === 0) {
+    return null
+  }
+  
+  return cardList
+}
+
+// 图片加载失败时的处理
+const handleImageError = (card) => {
+  console.warn('图片加载失败:', card.imageUrl)
+  card.imageUrl = null
+  card.content = '?'
+}
+
+// 创建卡片
+const createCards = () => {
+  const apiCards = createCardsFromApi()
+  
+  if (apiCards && apiCards.length > 0) {
+    cards.value = shuffleArray(apiCards)
+    return
+  }
+  
+  // 降级：使用默认symbols
+  const source = props.symbols.slice(0, props.pairCount)
+  const doubled = source.flatMap((item, index) => [
+    {
+      id: `${index}-a-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      pairId: index,
+      content: item,
+      imageUrl: null,
+      flipped: false,
+      matched: false
+    },
+    {
+      id: `${index}-b-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      pairId: index,
+      content: item,
+      imageUrl: null,
+      flipped: false,
+      matched: false
+    }
+  ])
+  cards.value = shuffleArray(doubled)
+}
 
 const shuffleArray = (arr) => {
   const copy = [...arr]
@@ -114,27 +299,6 @@ const shuffleArray = (arr) => {
   return copy
 }
 
-const createCards = () => {
-  const source = props.symbols.slice(0, props.pairCount)
-  const doubled = source.flatMap((item, index) => [
-    {
-      id: `${index}-a-${Math.random().toString(36).slice(2, 8)}`,
-      pairId: index,
-      content: item,
-      flipped: false,
-      matched: false
-    },
-    {
-      id: `${index}-b-${Math.random().toString(36).slice(2, 8)}`,
-      pairId: index,
-      content: item,
-      flipped: false,
-      matched: false
-    }
-  ])
-  cards.value = shuffleArray(doubled)
-}
-
 const resetSelection = () => {
   firstCard.value = null
   secondCard.value = null
@@ -142,14 +306,16 @@ const resetSelection = () => {
 }
 
 const checkFinished = () => {
-  if (matchedCount.value === totalPairs.value) {
+  const currentMatchedCount = cards.value.filter(card => card.matched).length / 2
+  matchedCount.value = currentMatchedCount
+  
+  if (currentMatchedCount === totalPairs.value && totalPairs.value > 0 && !finished.value) {
     finished.value = true
     successSteps.value = steps.value
     
     // 只在第一次完成时显示弹窗
     if (!hasShownModal.value) {
       hasShownModal.value = true
-      // 延迟一点显示弹窗，让最后的配对动画完成
       setTimeout(() => {
         showSuccessModal.value = true
       }, 300)
@@ -177,7 +343,6 @@ const flipCard = (card) => {
   if (firstCard.value.pairId === secondCard.value.pairId) {
     firstCard.value.matched = true
     secondCard.value.matched = true
-    matchedCount.value += 1
 
     setTimeout(() => {
       resetSelection()
@@ -215,8 +380,29 @@ const playAgain = () => {
   restartGame()
 }
 
-onMounted(() => {
+// 初始化游戏
+const initGame = async () => {
+  hasLoaded.value = false
+  imageUrls.value = []
+  orderArray.value = []
+  
+  await fetchGameData()
   createCards()
+}
+
+// 监听scenicId变化
+watch(() => props.scenicId, (newVal, oldVal) => {
+  if (newVal && newVal !== oldVal) {
+    initGame()
+  }
+}, { immediate: true })
+
+onMounted(() => {
+  if (props.scenicId && !hasLoaded.value) {
+    initGame()
+  } else if (!props.scenicId) {
+    createCards()
+  }
 })
 </script>
 
@@ -297,6 +483,33 @@ onMounted(() => {
   border: none;
 }
 
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: 16px;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(136, 181, 106, 0.2);
+  border-top-color: #88b56a;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  color: #5a6f49;
+  font-size: 14px;
+}
+
 .memory-grid {
   display: grid;
   grid-template-columns: repeat(4, 92px);
@@ -367,12 +580,25 @@ onMounted(() => {
   transform: rotateY(180deg);
   background: linear-gradient(135deg, #fffdf6, #f1f8eb);
   border: 1px solid rgba(121, 151, 97, 0.18);
+  overflow: hidden;
 }
 
 .card-front-inner {
   font-size: 42px;
   line-height: 1;
   user-select: none;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 20px;
 }
 
 .success-card {
@@ -403,8 +629,8 @@ onMounted(() => {
   line-height: 1.7;
 }
 
-/* 通关弹窗样式 */
-.success-modal-mask {
+/* 通关弹窗样式 - 与 PuzzleGame 保持一致 */
+.page-congrats-mask {
   position: fixed;
   inset: 0;
   z-index: 99999;
@@ -417,7 +643,7 @@ onMounted(() => {
   box-sizing: border-box;
 }
 
-.success-modal-card {
+.page-congrats-card {
   width: min(420px, calc(100vw - 32px));
   border-radius: 26px;
   padding: 34px 26px 24px;
@@ -441,32 +667,32 @@ onMounted(() => {
   }
 }
 
-.success-modal-icon {
+.page-congrats-icon {
   font-size: 46px;
   margin-bottom: 10px;
 }
 
-.success-modal-title {
+.page-congrats-title {
   font-size: 28px;
   font-weight: 800;
   color: #5d472f;
   line-height: 1.2;
 }
 
-.success-modal-desc {
+.page-congrats-desc {
   margin-top: 10px;
   font-size: 15px;
   color: #7a6a58;
   line-height: 1.8;
 }
 
-.success-modal-desc span {
+.page-congrats-desc span {
   font-weight: 700;
   color: #5e7048;
   font-size: 18px;
 }
 
-.success-modal-actions {
+.page-congrats-actions {
   margin-top: 22px;
   display: flex;
   justify-content: center;
@@ -474,7 +700,7 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
-.modal-btn {
+.congrats-btn {
   border: none;
   border-radius: 999px;
   padding: 12px 22px;
@@ -487,12 +713,12 @@ onMounted(() => {
   transition: all 0.2s ease;
 }
 
-.modal-btn:hover {
+.congrats-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 12px 22px rgba(128, 118, 94, 0.12);
 }
 
-.modal-btn.primary {
+.congrats-btn.primary {
   background: #86b35f;
   color: #fff;
 }
@@ -519,14 +745,14 @@ onMounted(() => {
   opacity: 0;
 }
 
-.success-pop-enter-from .success-modal-card,
-.success-pop-leave-to .success-modal-card {
+.success-pop-enter-from .page-congrats-card,
+.success-pop-leave-to .page-congrats-card {
   transform: translateY(16px) scale(0.96);
   opacity: 0;
 }
 
-.success-pop-enter-to .success-modal-card,
-.success-pop-leave-from .success-modal-card {
+.success-pop-enter-to .page-congrats-card,
+.success-pop-leave-from .page-congrats-card {
   transform: translateY(0) scale(1);
   opacity: 1;
   transition: all 0.28s ease;
@@ -561,11 +787,11 @@ onMounted(() => {
     font-size: 28px;
   }
 
-  .success-modal-title {
+  .page-congrats-title {
     font-size: 24px;
   }
   
-  .success-modal-icon {
+  .page-congrats-icon {
     font-size: 40px;
   }
 }

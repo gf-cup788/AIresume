@@ -16,15 +16,6 @@
           <img class="mist-half left front" :src="yun2" alt="云雾" />
           <img class="mist-half right front" :src="yun2" alt="云雾" />
         </div>
-<!-- 
-        <div class="mist-center-panel">
-          <div class="mist-title">{{ pageLoadingTitle }}</div>
-          <div class="mist-text">{{ pageLoadingText }}</div>
-          <div class="mist-progress-bar">
-            <div class="mist-progress-fill" :style="{ width: `${loadingProgress}%` }"></div>
-          </div>
-        </div>
-        -->
       </div>
     </transition>
 
@@ -241,7 +232,7 @@
               <p>{{ currentScenic.desc }}</p>
 
               <h3>亮点推荐</h3>
-              <ul>
+              <ul :class="highlightsGridClass">
                 <li v-for="point in currentScenic.highlights" :key="point">
                   {{ point }}
                 </li>
@@ -388,7 +379,6 @@ const activeId = ref(1);
 const pageEntering = ref(true);
 const pageLoadingTitle = ref("正在展开景点画卷");
 const pageLoadingText = ref("图片和景点数据正在准备中...");
-// const loadingProgress = ref(0);
 
 const content = ref("");
 const selectedTag = ref("");
@@ -631,6 +621,14 @@ const wheelScenicList = ref(
 );
 
 const scenicDetailMap = ref({});
+
+// 计算亮点推荐列表的样式类，根据简介字数动态调整
+const highlightsGridClass = computed(() => {
+  const desc = currentScenic.value.desc || '';
+  // 统计中文字符数（简单按长度计算，中文字符每个占1个长度）
+  const descLength = desc.length;
+  return descLength > 70 ? 'highlights-grid-two-cols' : 'highlights-grid-one-col';
+});
 
 async function fetchScenicDetail(apiId, localId = apiId) {
   if (!apiId) return;
@@ -1916,13 +1914,60 @@ function handleKeydown(e) {
   font-size: 15px;
 }
 
-.intro-text ul {
-  margin: 0;
-  padding-left: 18px;
-  color: #5c4a3d;
-  line-height: 2;
+/* 亮点推荐基础样式 - 一行一个（默认） */
+.highlights-grid-one-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 18px 0;
+  padding-left: 0;
   list-style: none;
-  padding-left: 0; 
+}
+
+.highlights-grid-one-col li {
+  color: #5c4a3d;
+  font-size: 15px;
+  line-height: 1.6;
+  padding-left: 20px;
+  position: relative;
+}
+
+.highlights-grid-one-col li::before {
+  content: "•";
+  color: #7d3421;
+  font-weight: bold;
+  font-size: 16px;
+  position: absolute;
+  left: 4px;
+  top: 0;
+}
+
+/* 亮点推荐网格布局：一行展示两个 */
+.highlights-grid-two-cols {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px 16px;
+  margin: 0 0 18px 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.highlights-grid-two-cols li {
+  color: #5c4a3d;
+  font-size: 15px;
+  line-height: 1.6;
+  padding-left: 20px;
+  position: relative;
+}
+
+.highlights-grid-two-cols li::before {
+  content: "•";
+  color: #7d3421;
+  font-weight: bold;
+  font-size: 16px;
+  position: absolute;
+  left: 4px;
+  top: 0;
 }
 
 .intro-text::-webkit-scrollbar {
