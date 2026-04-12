@@ -55,7 +55,7 @@
 
         <div class="puzzle-actions">
           <button class="panel-btn primary" @click="resetPuzzle">重新开始</button>
-          <button class="panel-btn" @click="shufflePool">打乱拼块</button>
+          <!-- <button class="panel-btn" @click="shufflePool">打乱拼块</button> -->
         </div>
       </div>
 
@@ -113,19 +113,28 @@
         </div>
       </div>
     </transition>
+
+    <!-- 加载中提示 -->
+    <div v-if="loading" class="loading-mask">
+      <div class="loading-card">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">加载拼图中...</div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { request } from '@/utils/request'
 
 const props = defineProps({
   scenicName: {
     type: String,
     default: '三宝村'
   },
-  imageUrl: {
-    type: String,
+  scenicId: {
+    type: Number,
     required: true
   },
   boardCount: {
@@ -139,6 +148,35 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['success'])
+
+// 游戏数据
+const gameData = ref(null)
+const loading = ref(true)
+const imageUrl = ref('')
+const orderArray = ref([])
+
+// 获取拼图数据
+const fetchGameData = async () => {
+  try {
+    loading.value = true
+    const res = await request(`/api/games/start?scenicId=${props.scenicId}`, {
+      method: 'GET'
+    })
+    
+    if (res?.code === 200 && res?.data) {
+      gameData.value = res.data
+      imageUrl.value = res.data.imageUrl || ''
+      orderArray.value = res.data.order || []
+      console.log('拼图数据获取成功:', gameData.value)
+    } else {
+      console.error('获取拼图数据失败')
+    }
+  } catch (error) {
+    console.error('获取拼图数据失败：', error)
+  } finally {
+    loading.value = false
+  }
+}
 
 const totalPieces = computed(() => props.boardCount * props.boardCount)
 const tileSize = computed(() => props.boardSize / props.boardCount)
@@ -156,7 +194,7 @@ const showPageCongrats = ref(false)
 const hasShownCongrats = ref(false)
 
 const previewStyle = computed(() => ({
-  backgroundImage: `url(${props.imageUrl})`,
+  backgroundImage: `url(${imageUrl.value})`,
   backgroundSize: '100% 100%',
   backgroundPosition: 'center',
   backgroundRepeat: 'no-repeat'
@@ -180,13 +218,32 @@ const createSlots = () => {
   return arr
 }
 
-const shuffleArray = (arr) => {
-  const copy = [...arr]
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[copy[i], copy[j]] = [copy[j], copy[i]]
+// 根据 order 数组打乱拼块顺序
+const shuffleArrayByOrder = (arr) => {
+  if (!orderArray.value || orderArray.value.length === 0) {
+    // 如果没有 order 数据，使用随机打乱
+    const copy = [...arr]
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[copy[i], copy[j]] = [copy[j], copy[i]]
+    }
+    return copy
   }
-  return copy
+  
+  // 根据 order 数组的顺序重新排列拼块
+  // order 数组中的数字表示拼块应该出现的顺序（1-based）
+  const orderedPieces = []
+  for (let i = 0; i < orderArray.value.length; i++) {
+    const pieceId = orderArray.value[i]
+    const piece = arr.find(p => p.id === pieceId)
+    if (piece) {
+      orderedPieces.push(piece)
+    }
+  }
+  
+  // 如果 order 数组长度不够，把剩余的拼块追加到末尾
+  const remainingPieces = arr.filter(p => !orderedPieces.some(op => op.id === p.id))
+  return [...orderedPieces, ...remainingPieces]
 }
 
 const clearPlacedMap = () => {
@@ -197,7 +254,8 @@ const clearPlacedMap = () => {
 
 const resetPuzzle = () => {
   slots.value = createSlots()
-  availablePieces.value = shuffleArray(createPieces())
+  const pieces = createPieces()
+  availablePieces.value = shuffleArrayByOrder(pieces)
   clearPlacedMap()
   draggingPiece.value = null
   dragFrom.value = 'pool'
@@ -217,7 +275,7 @@ const closeCongrats = () => {
 }
 
 const shufflePool = () => {
-  availablePieces.value = shuffleArray(availablePieces.value)
+  availablePieces.value = shuffleArrayByOrder(availablePieces.value)
 }
 
 const isSlotFilled = (slotId) => !!placedMap[slotId]
@@ -322,7 +380,7 @@ const getPieceStyle = (piece, mode = 'board') => {
     return {
       width: `${poolPieceSize.value}px`,
       height: `${poolPieceSize.value}px`,
-      backgroundImage: `url(${props.imageUrl})`,
+      backgroundImage: `url(${imageUrl.value})`,
       backgroundSize: `${props.boardSize * scale}px ${props.boardSize * scale}px`,
       backgroundPosition: `-${col * poolPieceSize.value}px -${row * poolPieceSize.value}px`,
       backgroundRepeat: 'no-repeat'
@@ -332,14 +390,15 @@ const getPieceStyle = (piece, mode = 'board') => {
   return {
     width: `${tileSize.value}px`,
     height: `${tileSize.value}px`,
-    backgroundImage: `url(${props.imageUrl})`,
+    backgroundImage: `url(${imageUrl.value})`,
     backgroundSize: `${props.boardSize}px ${props.boardSize}px`,
     backgroundPosition: `-${col * tileSize.value}px -${row * tileSize.value}px`,
     backgroundRepeat: 'no-repeat'
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await fetchGameData()
   resetPuzzle()
 })
 </script>
@@ -644,6 +703,47 @@ onMounted(() => {
 .congrats-btn.primary {
   background: #86b35f;
   color: #fff;
+}
+
+.loading-mask {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
+  border-radius: 22px;
+}
+
+.loading-card {
+  padding: 24px 32px;
+  background: linear-gradient(135deg, #fffdf8, #f6f1e6);
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.1);
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 12px;
+  border: 3px solid rgba(134, 179, 95, 0.2);
+  border-top-color: #86b35f;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  font-size: 14px;
+  color: #5e7048;
 }
 
 .fade-up-enter-active,

@@ -36,40 +36,14 @@
         <div
           ref="leftBoardRef"
           class="spot-board"
+          :style="leftBoardStyle"
           @click="handleBoardClick($event, 'left')"
         >
-          <div class="scene-bg"></div>
-          <div class="sun"></div>
-          <div class="cloud cloud-1"></div>
-          <div class="cloud cloud-2"></div>
-          <div class="mountain mountain-back"></div>
-          <div class="mountain mountain-front"></div>
-          <div class="field"></div>
-          <div class="house"></div>
-          <div class="roof"></div>
-          <div class="door"></div>
-          <div class="window"></div>
-          <div class="tree tree-left">
-            <div class="trunk"></div>
-            <div class="leaf"></div>
-          </div>
-          <div class="tree tree-right">
-            <div class="trunk"></div>
-            <div class="leaf"></div>
-          </div>
-          <div class="flower-group flower-group-left">
-            <span>🌼</span><span>🌸</span><span>🌼</span>
-          </div>
-          <div class="flower-group flower-group-right">
-            <span>🌷</span><span>🌼</span>
-          </div>
-          <div class="bird">🕊️</div>
-
           <template v-for="diff in diffs" :key="`left-marker-${diff.id}`">
             <div
               v-if="foundIds.includes(diff.id)"
               class="found-marker"
-              :style="markerStyle(diff)"
+              :style="markerStyle(diff, 'left')"
             >
               ✓
             </div>
@@ -80,7 +54,7 @@
               v-for="diff in diffs"
               :key="`left-hint-${diff.id}`"
               class="hint-dot"
-              :style="hintStyle(diff)"
+              :style="hintStyle(diff, 'left')"
             ></div>
           </template>
         </div>
@@ -91,40 +65,14 @@
         <div
           ref="rightBoardRef"
           class="spot-board"
+          :style="rightBoardStyle"
           @click="handleBoardClick($event, 'right')"
         >
-          <div class="scene-bg"></div>
-          <div class="sun diff-sun"></div>
-          <div class="cloud cloud-1 diff-cloud-1"></div>
-          <div class="cloud cloud-2"></div>
-          <div class="mountain mountain-back"></div>
-          <div class="mountain mountain-front diff-mountain-front"></div>
-          <div class="field"></div>
-          <div class="house"></div>
-          <div class="roof diff-roof"></div>
-          <div class="door"></div>
-          <div class="window diff-window"></div>
-          <div class="tree tree-left">
-            <div class="trunk"></div>
-            <div class="leaf diff-leaf-left"></div>
-          </div>
-          <div class="tree tree-right">
-            <div class="trunk"></div>
-            <div class="leaf"></div>
-          </div>
-          <div class="flower-group flower-group-left diff-flower-left">
-            <span>🌼</span><span>🌸</span>
-          </div>
-          <div class="flower-group flower-group-right">
-            <span>🌷</span><span>🌼</span>
-          </div>
-          <div class="bird diff-bird">🦋</div>
-
           <template v-for="diff in diffs" :key="`right-marker-${diff.id}`">
             <div
               v-if="foundIds.includes(diff.id)"
               class="found-marker"
-              :style="markerStyle(diff)"
+              :style="markerStyle(diff, 'right')"
             >
               ✓
             </div>
@@ -135,20 +83,20 @@
               v-for="diff in diffs"
               :key="`right-hint-${diff.id}`"
               class="hint-dot"
-              :style="hintStyle(diff)"
+              :style="hintStyle(diff, 'right')"
             ></div>
           </template>
         </div>
       </div>
     </div>
 
-   <div class="message-wrap">
-  <transition name="fade-up">
-    <div v-if="clickMessage" class="message-card" :class="{ error: clickType === 'error' }">
-      {{ clickMessage }}
+    <div class="message-wrap">
+      <transition name="fade-up">
+        <div v-if="clickMessage" class="message-card" :class="{ error: clickType === 'error' }">
+          {{ clickMessage }}
+        </div>
+      </transition>
     </div>
-  </transition>
-</div>
 
     <transition name="fade-up">
       <div v-if="finished" class="success-card">
@@ -159,16 +107,29 @@
         </div>
       </div>
     </transition>
+
+    <!-- 加载中提示 -->
+    <div v-if="loading" class="loading-mask">
+      <div class="loading-card">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">加载图片中...</div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { request } from '@/utils/request'
 
 const props = defineProps({
   scenicName: {
     type: String,
     default: '婺源'
+  },
+  scenicId: {
+    type: Number,
+    required: true
   }
 })
 
@@ -177,15 +138,73 @@ const emit = defineEmits(['success'])
 const leftBoardRef = ref(null)
 const rightBoardRef = ref(null)
 
+// 游戏数据
+const gameData = ref(null)
+const loading = ref(true)
+const leftImageUrl = ref('')
+const rightImageUrl = ref('')
+
+// 获取找不同游戏数据
+const fetchGameData = async () => {
+  try {
+    loading.value = true
+    const res = await request(`/api/games/start?scenicId=${props.scenicId}`, {
+      method: 'GET'
+    })
+    
+    if (res?.code === 200 && res?.data) {
+      gameData.value = res.data
+      leftImageUrl.value = res.data.leftImageUrl || ''
+      rightImageUrl.value = res.data.rightImageUrl || ''
+      console.log('找不同游戏数据获取成功:', gameData.value)
+    } else {
+      console.error('获取找不同游戏数据失败')
+    }
+  } catch (error) {
+    console.error('获取找不同游戏数据失败：', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 左右图背景样式
+const leftBoardStyle = computed(() => ({
+  backgroundImage: leftImageUrl.value ? `url(${leftImageUrl.value})` : 'none',
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
+  backgroundRepeat: 'no-repeat'
+}))
+
+const rightBoardStyle = computed(() => ({
+  backgroundImage: rightImageUrl.value ? `url(${rightImageUrl.value})` : 'none',
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
+  backgroundRepeat: 'no-repeat'
+}))
+
+// 差异点坐标（新坐标）
 const diffs = ref([
-  { id: 1, x: 14, y: 14, r: 9, label: '太阳位置不同' },
-  { id: 2, x: 71, y: 20, r: 9, label: '云朵形状不同' },
-  { id: 3, x: 55, y: 39, r: 10, label: '山体轮廓不同' },
-  { id: 4, x: 47, y: 52, r: 10, label: '屋顶颜色不同' },
-  { id: 5, x: 50, y: 61, r: 8, label: '窗户不同' },
-  { id: 6, x: 21, y: 60, r: 10, label: '左侧树叶不同' },
-  { id: 7, x: 24, y: 80, r: 9, label: '花朵数量不同' },
-  { id: 8, x: 77, y: 31, r: 8, label: '飞鸟变成蝴蝶' }
+  { 
+    id: 1, 
+    leftX: 705, leftY: 682,
+    rightX: 709, rightY: 698,
+    r: 30, 
+    label: '差异点1' 
+  },
+  { 
+    id: 2, 
+    leftX: 105, leftY: 352,
+    rightX: 109, rightY: 374,
+    r: 30, 
+    label: '差异点2' 
+  },
+  { 
+    id: 3, 
+    leftX: 401, leftY: 547,
+    rightX: 411, rightY: 560,
+    r: 30, 
+    label: '差异点3' 
+  }
 ])
 
 const foundIds = ref([])
@@ -215,28 +234,60 @@ const setMessage = (text, type = 'ok') => {
   }, 1200)
 }
 
-const markerStyle = (diff) => ({
-  left: `${diff.x}%`,
-  top: `${diff.y}%`
-})
+// 获取标记样式（根据左/右图返回不同的坐标）
+const markerStyle = (diff, side) => {
+  if (side === 'left') {
+    return {
+      left: `${(diff.leftX / 800) * 100}%`,
+      top: `${(diff.leftY / 800) * 100}%`
+    }
+  } else {
+    return {
+      left: `${(diff.rightX / 800) * 100}%`,
+      top: `${(diff.rightY / 800) * 100}%`
+    }
+  }
+}
 
-const hintStyle = (diff) => ({
-  left: `${diff.x}%`,
-  top: `${diff.y}%`
-})
+const hintStyle = (diff, side) => {
+  if (side === 'left') {
+    return {
+      left: `${(diff.leftX / 800) * 100}%`,
+      top: `${(diff.leftY / 800) * 100}%`
+    }
+  } else {
+    return {
+      left: `${(diff.rightX / 800) * 100}%`,
+      top: `${(diff.rightY / 800) * 100}%`
+    }
+  }
+}
 
 const getClickPercent = (event, boardEl) => {
   const rect = boardEl.getBoundingClientRect()
-  const x = ((event.clientX - rect.left) / rect.width) * 100
-  const y = ((event.clientY - rect.top) / rect.height) * 100
+  // 获取实际图片尺寸相对于容器的比例
+  const boardWidth = rect.width
+  const boardHeight = rect.height
+  const x = ((event.clientX - rect.left) / boardWidth) * 100
+  const y = ((event.clientY - rect.top) / boardHeight) * 100
   return { x, y }
 }
 
-const findHitDiff = (x, y) => {
+const findHitDiff = (x, y, side) => {
   return diffs.value.find((diff) => {
     if (foundIds.value.includes(diff.id)) return false
-    const dx = x - diff.x
-    const dy = y - diff.y
+    
+    // 根据左右图选择对应的坐标
+    const targetX = side === 'left' ? diff.leftX : diff.rightX
+    const targetY = side === 'left' ? diff.leftY : diff.rightY
+    
+    // 将百分比坐标转换为相对于图片原始尺寸的坐标
+    // 假设图片原始尺寸为 800x800（根据坐标范围推测）
+    const clickX = (x / 100) * 800
+    const clickY = (y / 100) * 800
+    
+    const dx = clickX - targetX
+    const dy = clickY - targetY
     return Math.sqrt(dx * dx + dy * dy) <= diff.r
   })
 }
@@ -248,14 +299,16 @@ const handleBoardClick = (event, side) => {
   if (!boardEl) return
 
   const { x, y } = getClickPercent(event, boardEl)
-  const hit = findHitDiff(x, y)
+  const hit = findHitDiff(x, y, side)
 
   if (hit) {
-    foundIds.value = [...foundIds.value, hit.id]
-    setMessage(`找到了：${hit.label}`)
+    if (!foundIds.value.includes(hit.id)) {
+      foundIds.value = [...foundIds.value, hit.id]
+      setMessage(`找到了：${hit.label}`)
 
-    if (foundIds.value.length === diffs.value.length) {
-      setMessage('全部找到了，太棒了！')
+      if (foundIds.value.length === diffs.value.length) {
+        setMessage('全部找到了，太棒了！')
+      }
     }
   } else {
     setMessage('这里没有不同哦，再仔细看看', 'error')
@@ -268,6 +321,9 @@ const restartGame = () => {
   clickMessage.value = ''
 }
 
+onMounted(async () => {
+  await fetchGameData()
+})
 </script>
 
 <style scoped>
@@ -277,11 +333,13 @@ const restartGame = () => {
   justify-content: center;
   align-items: center;
 }
+
 .spot-game {
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 14px;
+  position: relative;
 }
 
 .spot-topbar {
@@ -382,244 +440,8 @@ const restartGame = () => {
   overflow: hidden;
   border-radius: 18px;
   border: 1px solid rgba(118, 145, 98, 0.16);
-  background: linear-gradient(180deg, #eef8ff 0%, #f7fbff 30%, #f9f7ee 75%, #f2ecd9 100%);
   cursor: crosshair;
-}
-
-.scene-bg {
-  position: absolute;
-  inset: 0;
-}
-
-.sun {
-  position: absolute;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #fff5b7, #ffd45f 70%);
-  top: 12%;
-  left: 14%;
-  box-shadow: 0 0 24px rgba(255, 211, 91, 0.45);
-}
-
-.diff-sun {
-  top: 10%;
-  left: 10%;
-}
-
-.cloud {
-  position: absolute;
-  height: 28px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.88);
-}
-
-.cloud::before,
-.cloud::after {
-  content: '';
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.88);
-}
-
-.cloud-1 {
-  width: 90px;
-  top: 18%;
-  left: 62%;
-}
-
-.cloud-1::before {
-  width: 26px;
-  height: 26px;
-  top: -10px;
-  left: 12px;
-}
-
-.cloud-1::after {
-  width: 32px;
-  height: 32px;
-  top: -14px;
-  left: 36px;
-}
-
-.diff-cloud-1 {
-  width: 72px;
-}
-
-.cloud-2 {
-  width: 72px;
-  top: 12%;
-  left: 48%;
-}
-
-.cloud-2::before {
-  width: 24px;
-  height: 24px;
-  top: -8px;
-  left: 10px;
-}
-
-.cloud-2::after {
-  width: 28px;
-  height: 28px;
-  top: -12px;
-  left: 30px;
-}
-
-.mountain {
-  position: absolute;
-  bottom: 34%;
-  background: #8fb08d;
-  clip-path: polygon(0% 100%, 28% 48%, 45% 66%, 60% 38%, 100% 100%);
-}
-
-.mountain-back {
-  left: 0;
-  width: 70%;
-  height: 32%;
-  background: #aac5a1;
-}
-
-.mountain-front {
-  right: 0;
-  width: 72%;
-  height: 38%;
-  background: #88a97d;
-}
-
-.diff-mountain-front {
-  clip-path: polygon(0% 100%, 24% 42%, 43% 66%, 67% 31%, 100% 100%);
-}
-
-.field {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 34%;
-  background: linear-gradient(180deg, #9cc774, #7db258);
-}
-
-.house {
-  position: absolute;
-  width: 88px;
-  height: 72px;
-  background: #fffdf6;
-  left: 41%;
-  bottom: 20%;
-  border-radius: 4px;
-  box-shadow: inset 0 0 0 1px rgba(80, 80, 80, 0.08);
-}
-
-.roof {
-  position: absolute;
-  width: 104px;
-  height: 32px;
-  background: #5f5a53;
-  left: calc(41% - 8px);
-  bottom: calc(20% + 60px);
-  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
-}
-
-.diff-roof {
-  background: #7b5a4f;
-}
-
-.door {
-  position: absolute;
-  width: 18px;
-  height: 34px;
-  background: #9b6e4a;
-  left: calc(41% + 35px);
-  bottom: 20%;
-  border-radius: 3px 3px 0 0;
-}
-
-.window {
-  position: absolute;
-  width: 16px;
-  height: 16px;
-  background: #9dd7ef;
-  left: calc(41% + 12px);
-  bottom: calc(20% + 28px);
-  border: 2px solid #edf5f8;
-}
-
-.diff-window {
-  width: 12px;
-  height: 20px;
-}
-
-.tree {
-  position: absolute;
-  width: 64px;
-  height: 110px;
-  bottom: 18%;
-}
-
-.tree-left {
-  left: 16%;
-}
-
-.tree-right {
-  right: 14%;
-}
-
-.trunk {
-  position: absolute;
-  width: 12px;
-  height: 42px;
-  background: #8f623d;
-  bottom: 0;
-  left: 26px;
-  border-radius: 4px;
-}
-
-.leaf {
-  position: absolute;
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #8cd46d, #5f9f43 72%);
-  left: 5px;
-  top: 10px;
-}
-
-.diff-leaf-left {
-  background: radial-gradient(circle at 35% 35%, #f0cc67, #d59b38 72%);
-}
-
-.flower-group {
-  position: absolute;
-  display: flex;
-  gap: 2px;
-  font-size: 20px;
-}
-
-.flower-group-left {
-  left: 18%;
-  bottom: 12%;
-}
-
-.diff-flower-left span:last-child {
-  display: none;
-}
-
-.flower-group-right {
-  right: 22%;
-  bottom: 10%;
-}
-
-.bird {
-  position: absolute;
-  right: 16%;
-  top: 30%;
-  font-size: 24px;
-}
-
-.diff-bird {
-  right: 14%;
-  top: 28%;
+  background-color: #f0f0f0;
 }
 
 .found-marker,
@@ -641,6 +463,7 @@ const restartGame = () => {
   justify-content: center;
   box-shadow: 0 8px 18px rgba(96, 145, 71, 0.22);
   pointer-events: none;
+  z-index: 10;
 }
 
 .hint-dot {
@@ -650,6 +473,7 @@ const restartGame = () => {
   background: rgba(255, 180, 88, 0.3);
   border: 2px dashed rgba(255, 140, 46, 0.65);
   pointer-events: none;
+  z-index: 10;
 }
 
 .message-card {
@@ -695,6 +519,47 @@ const restartGame = () => {
   font-size: 14px;
   color: #758469;
   line-height: 1.7;
+}
+
+.loading-mask {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
+  border-radius: 22px;
+}
+
+.loading-card {
+  padding: 24px 32px;
+  background: linear-gradient(135deg, #fffdf8, #f6f1e6);
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.1);
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 12px;
+  border: 3px solid rgba(134, 179, 95, 0.2);
+  border-top-color: #88b56a;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  font-size: 14px;
+  color: #5e7048;
 }
 
 .fade-up-enter-active,

@@ -43,12 +43,35 @@
       </div>
     </div>
 
+    <!-- 游戏内成功提示 -->
     <transition name="fade-up">
       <div v-if="finished" class="success-card">
         <div class="success-icon">🎉</div>
         <div class="success-title">恭喜完成</div>
         <div class="success-desc">
           你成功找出了全部配对，共用了 {{ steps }} 步。
+        </div>
+      </div>
+    </transition>
+
+    <!-- 通关弹窗 -->
+    <transition name="success-pop">
+      <div
+        v-if="showSuccessModal"
+        class="success-modal-mask"
+        @click.self="closeSuccessModal"
+      >
+        <div class="success-modal-card">
+          <div class="success-modal-icon">🏆</div>
+          <div class="success-modal-title">恭喜通关</div>
+          <div class="success-modal-desc">
+            你已成功完成记忆配对挑战，共用了 <span>{{ successSteps }}</span> 步。
+          </div>
+          
+          <div class="success-modal-actions">
+            <button class="modal-btn primary" @click="closeSuccessModal">我知道了</button>
+            <button class="modal-btn" @click="playAgain">再玩一次</button>
+          </div>
         </div>
       </div>
     </transition>
@@ -69,8 +92,6 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['success'])
-
 const cards = ref([])
 const firstCard = ref(null)
 const secondCard = ref(null)
@@ -78,6 +99,9 @@ const lockBoard = ref(false)
 const steps = ref(0)
 const matchedCount = ref(0)
 const finished = ref(false)
+const showSuccessModal = ref(false)
+const successSteps = ref(0)
+const hasShownModal = ref(false)
 
 const totalPairs = computed(() => props.pairCount)
 
@@ -120,7 +144,16 @@ const resetSelection = () => {
 const checkFinished = () => {
   if (matchedCount.value === totalPairs.value) {
     finished.value = true
-    setMessage('游戏成功！')
+    successSteps.value = steps.value
+    
+    // 只在第一次完成时显示弹窗
+    if (!hasShownModal.value) {
+      hasShownModal.value = true
+      // 延迟一点显示弹窗，让最后的配对动画完成
+      setTimeout(() => {
+        showSuccessModal.value = true
+      }, 300)
+    }
   }
 }
 
@@ -163,11 +196,22 @@ const restartGame = () => {
   steps.value = 0
   matchedCount.value = 0
   finished.value = false
+  showSuccessModal.value = false
+  hasShownModal.value = false
   resetSelection()
   createCards()
 }
 
 const shuffleGame = () => {
+  restartGame()
+}
+
+const closeSuccessModal = () => {
+  showSuccessModal.value = false
+}
+
+const playAgain = () => {
+  showSuccessModal.value = false
   restartGame()
 }
 
@@ -188,6 +232,7 @@ onMounted(() => {
   box-shadow:
     0 20px 48px rgba(36, 52, 41, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  position: relative;
 }
 
 .game-header {
@@ -358,6 +403,101 @@ onMounted(() => {
   line-height: 1.7;
 }
 
+/* 通关弹窗样式 */
+.success-modal-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 28, 24, 0.42);
+  backdrop-filter: blur(4px);
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.success-modal-card {
+  width: min(420px, calc(100vw - 32px));
+  border-radius: 26px;
+  padding: 34px 26px 24px;
+  background: linear-gradient(180deg, #fffdf8 0%, #f6f1e6 100%);
+  box-shadow:
+    0 24px 60px rgba(37, 31, 23, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  text-align: center;
+  border: 1px solid rgba(146, 120, 84, 0.16);
+  animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes modalPop {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.success-modal-icon {
+  font-size: 46px;
+  margin-bottom: 10px;
+}
+
+.success-modal-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #5d472f;
+  line-height: 1.2;
+}
+
+.success-modal-desc {
+  margin-top: 10px;
+  font-size: 15px;
+  color: #7a6a58;
+  line-height: 1.8;
+}
+
+.success-modal-desc span {
+  font-weight: 700;
+  color: #5e7048;
+  font-size: 18px;
+}
+
+.success-modal-actions {
+  margin-top: 22px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.modal-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 12px 22px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #ffffff;
+  color: #69543b;
+  box-shadow: 0 8px 20px rgba(128, 118, 94, 0.08);
+  transition: all 0.2s ease;
+}
+
+.modal-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px rgba(128, 118, 94, 0.12);
+}
+
+.modal-btn.primary {
+  background: #86b35f;
+  color: #fff;
+}
+
+/* 过渡动画 */
 .fade-up-enter-active,
 .fade-up-leave-active {
   transition: all 0.28s ease;
@@ -367,6 +507,29 @@ onMounted(() => {
 .fade-up-leave-to {
   opacity: 0;
   transform: translateY(10px);
+}
+
+.success-pop-enter-active,
+.success-pop-leave-active {
+  transition: all 0.28s ease;
+}
+
+.success-pop-enter-from,
+.success-pop-leave-to {
+  opacity: 0;
+}
+
+.success-pop-enter-from .success-modal-card,
+.success-pop-leave-to .success-modal-card {
+  transform: translateY(16px) scale(0.96);
+  opacity: 0;
+}
+
+.success-pop-enter-to .success-modal-card,
+.success-pop-leave-from .success-modal-card {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+  transition: all 0.28s ease;
 }
 
 @media (max-width: 900px) {
@@ -396,6 +559,14 @@ onMounted(() => {
 
   .card-back-inner {
     font-size: 28px;
+  }
+
+  .success-modal-title {
+    font-size: 24px;
+  }
+  
+  .success-modal-icon {
+    font-size: 40px;
   }
 }
 </style>

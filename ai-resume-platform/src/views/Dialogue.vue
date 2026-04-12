@@ -7,9 +7,6 @@
       :class="{ loaded: bgLoaded }"
       :style="{ backgroundImage: `url(${currentBg})` }"
     ></div>
-    <!-- 
-    <div class="page-mask"></div>
-   -->
     <!-- 顶部 -->
     <div class="top-bar">
       <div class="scene-chip">{{ scenicTitle }}</div>
@@ -137,7 +134,7 @@
       <PuzzleGame
         v-if="currentGame.type === 'puzzle'"
         :scenic-name="scenicName"
-        :image-url="currentGame.imageUrl"
+        :scenic-id="scenicId"
         :board-count="3"
         :board-size="330"
         @success="handleGameSuccess"
@@ -160,6 +157,7 @@
       <SpotDifferenceGame
         v-else-if="currentGame.type === 'spot'"
         :scenic-name="scenicName"
+        :scenic-id="scenicId"
         @success="handleGameSuccess"
       />
     </ScenicGameModal>
@@ -192,16 +190,20 @@
         <div class="story-modal finish-modal">
           <button class="story-close-btn" @click="showFinishModal = false">×</button>
 
-          <div class="finish-icon">{{ finishSaved ? "🏮" : "✨" }}</div>
+          <div class="finish-icon">{{ finishSaved === "already" ? "🏮" : (finishSaved ? "🏮" : "✨") }}</div>
           <div class="finish-title">
-            {{ finishSaved ? "打卡完成" : "对话完成" }}
+            {{ finishSaved === "already" ? "已打卡" : (finishSaved ? "打卡完成" : "对话完成") }}
           </div>
           <div class="finish-desc">
-            {{
-              finishSaved
-                ? `你已完成 ${scenicName} 的故事体验，打卡记录已保存。`
-                : `你已完成 ${scenicName} 的故事体验，登录后可保存打卡记录。`
-            }}
+            <template v-if="finishSaved === 'already'">
+              你已经打卡过 {{ scenicName }} 了，打卡记录已保存~
+            </template>
+            <template v-else-if="finishSaved">
+              你已完成 {{ scenicName }} 的故事体验，打卡记录已保存。
+            </template>
+            <template v-else>
+              你已完成 {{ scenicName }} 的故事体验，登录后可保存打卡记录。
+            </template>
           </div>
 
           <div class="finish-actions">
@@ -406,44 +408,166 @@ let autoTimer = null;
 const showGameModal = ref(false);
 const showSummaryModal = ref(false);
 const showFinishModal = ref(false);
-const finishSaved = ref(false);
+const finishSaved = ref(false); // false: 未打卡/未登录, true: 首次打卡成功, "already": 重复打卡
+const hasCheckedIn = ref(false); // 防止重复打卡
 
-const gameTypeIndex = computed(() => {
-  const id = Number(scenicId) || 1;
-  return ((id - 1) % 4) + 1;
-});
+// ==================== 打卡接口 ====================
+const submitCheckin = async () => {
+  // 已经打卡过了，不再重复打卡
+  if (hasCheckedIn.value) return;
+  
+  // 只有登录用户才能打卡
+  const token = localStorage.getItem('token');
+  if (!token) {
+    console.log("用户未登录，跳过打卡");
+    return;
+  }
+  
+  try {
+    const requestBody = {
+      scenicId: scenicId,
+      scenicName: scenicName.value
+    };
+    
+    console.log("打卡请求参数:", requestBody);
+    
+    const res = await request("/api/checkin", {
+      method: "POST",
+      body: requestBody
+    });
+    
+    if (res?.code === 200) {
+      console.log("打卡成功:", scenicName.value);
+      hasCheckedIn.value = true;
+      finishSaved.value = true;
+    } else {
+      // 检查是否是重复打卡的情况
+      if (res?.message && (res.message.includes("今天已经打卡过") || res.message.includes("已打卡"))) {
+        console.log("今天已经打卡过该景点:", scenicName.value);
+        hasCheckedIn.value = true;
+        finishSaved.value = "already";
+      } else {
+        console.error("打卡失败:", res?.message);
+        finishSaved.value = false;
+      }
+    }
+  } catch (error) {
+    console.error("打卡请求失败:", error);
+    if (error.message && (error.message.includes("今天已经打卡过") || error.message.includes("已打卡"))) {
+      console.log("今天已经打卡过该景点（catch）:", scenicName.value);
+      hasCheckedIn.value = true;
+      finishSaved.value = "already";
+    } else {
+      finishSaved.value = false;
+    }
+  }
+};
+// ==================== 打卡接口结束 ====================
 
-const gameConfig = {
-  1: {
-    type: "puzzle",
-    title: computed(() => `${scenicName.value} · 拼图小游戏`),
-    subtitle: "将右侧拼图块拖到左边对应位置，放对后会自动吸附。",
-    imageUrl: lushanBg
-  },
-  2: {
-    type: "flower",
-    title: computed(() => `${scenicName.value} · 接花小游戏`),
-    subtitle: "移动下方花篮，接住掉落的花朵，达到目标分数即可通关。"
-  },
-  3: {
-    type: "memory",
-    title: computed(() => `${scenicName.value} · 翻牌消消乐`),
-    subtitle: "翻开两张相同的卡片即可消除，全部消除就算成功。"
-  },
-  4: {
-    type: "spot",
-    title: computed(() => `${scenicName.value} · 找不同`),
-    subtitle: "找出左右两幅图中的所有不同点。"
+// ==================== 游戏接口相关 ====================
+const gameData = ref(null);
+const loadingGame = ref(false);
+
+// 游戏类型映射（接口返回的gameType -> 前端组件使用的类型）
+const gameTypeMap = {
+  'puzzle': 'puzzle',
+  'flower': 'flower',
+  'match': 'memory',
+  'spot_diff': 'spot'
+};
+
+// 获取游戏数据（只获取游戏类型）
+const fetchGameData = async () => {
+  try {
+    loadingGame.value = true;
+    const res = await request(`/api/games?scenicId=${scenicId}`, {
+      method: 'GET'
+    });
+    
+    if (res?.code === 200 && res?.data) {
+      gameData.value = res.data;
+      console.log('游戏类型获取成功:', gameData.value);
+    } else {
+      console.error('获取游戏类型失败');
+      gameData.value = null;
+    }
+  } catch (error) {
+    console.error('获取游戏类型失败：', error);
+    gameData.value = null;
+  } finally {
+    loadingGame.value = false;
   }
 };
 
+// 当前游戏类型（根据接口返回的gameType）
+const currentGameType = computed(() => {
+  if (!gameData.value?.gameType) return null;
+  return gameTypeMap[gameData.value.gameType] || null;
+});
+
+// 游戏配置（根据接口返回的gameType判断游戏类型，只传scenicId，不传图片）
 const currentGame = computed(() => {
-  const game = gameConfig[gameTypeIndex.value] || gameConfig[1];
+  const gameType = currentGameType.value;
+  
+  if (!gameType) {
+    // 默认配置，防止报错
+    return {
+      type: 'puzzle',
+      title: `${scenicName.value} · 小游戏`,
+      subtitle: '完成游戏可获得打卡奖励',
+      imageUrl: lushanBg
+    };
+  }
+  
+  // 拼图游戏
+  if (gameType === 'puzzle') {
+    return {
+      type: 'puzzle',
+      title: `${scenicName.value} · 拼图小游戏`,
+      subtitle: '将右侧拼图块拖到左边对应位置，放对后会自动吸附。',
+      imageUrl: lushanBg
+    };
+  }
+  
+  // 接花游戏
+  if (gameType === 'flower') {
+    return {
+      type: 'flower',
+      title: `${scenicName.value} · 接花小游戏`,
+      subtitle: '移动下方花篮，接住掉落的花朵，达到目标分数即可通关。',
+      imageUrl: ''
+    };
+  }
+  
+  // 翻牌消消乐
+  if (gameType === 'memory') {
+    return {
+      type: 'memory',
+      title: `${scenicName.value} · 翻牌消消乐`,
+      subtitle: '翻开两张相同的卡片即可消除，全部消除就算成功。',
+      imageUrl: ''
+    };
+  }
+  
+  // 找不同游戏
+  if (gameType === 'spot') {
+    return {
+      type: 'spot',
+      title: `${scenicName.value} · 找不同`,
+      subtitle: '找出左右两幅图中的所有不同点。',
+      imageUrl: ''
+    };
+  }
+  
+  // 默认返回拼图
   return {
-    ...game,
-    title: game.title?.value || `${scenicName.value} · 小游戏`
+    type: 'puzzle',
+    title: `${scenicName.value} · 小游戏`,
+    subtitle: '完成游戏可获得打卡奖励',
+    imageUrl: lushanBg
   };
 });
+// ==================== 游戏接口相关结束 ====================
 
 const clearTyping = () => {
   if (typingTimer) {
@@ -549,14 +673,25 @@ const skipToStory = () => {
   showSummaryModal.value = true;
 };
 
-const closeSummaryModal = () => {
+const closeSummaryModal = async () => {
   showSummaryModal.value = false;
+  
+  // 关闭故事总结后，调用打卡接口
+  await submitCheckin();
+  
   showFinishModal.value = true;
   const user = localStorage.getItem("user");
-  finishSaved.value = !!user;
+  // 如果用户未登录，finishSaved 保持 false
+  if (!user) {
+    finishSaved.value = false;
+  }
 };
 
-const openGameModal = () => {
+const openGameModal = async () => {
+  // 如果游戏数据还没加载，先加载
+  if (!gameData.value) {
+    await fetchGameData();
+  }
   showGameModal.value = true;
 };
 
@@ -663,6 +798,7 @@ onMounted(async () => {
   }
 
   await fetchDialogueDetail();
+  await fetchGameData(); // 获取游戏类型
 });
 
 onBeforeUnmount(() => {
@@ -704,22 +840,6 @@ onBeforeUnmount(() => {
 .page-fixed-bg.loaded {
   opacity: 1;
 }
-
-/* .page-mask {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background:
-    linear-gradient(
-      180deg,
-      rgba(248, 244, 236, 0.18) 0%,
-      rgba(248, 244, 236, 0.08) 22%,
-      rgba(234, 226, 214, 0.14) 55%,
-      rgba(222, 212, 198, 0.22) 100%
-    );
-  backdrop-filter: blur(1.2px) saturate(0.88);
-} */
 
 .top-bar {
   position: absolute;
