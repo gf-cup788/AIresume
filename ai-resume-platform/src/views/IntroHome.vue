@@ -18,7 +18,9 @@
 
         <div class="title-badge fade-up delay-2">诗画新生</div>
 
-        <h1 class="title-main fade-up delay-3">云游赣鄱</h1>
+        <div class="title-main fade-up delay-3">
+          <img :src="titleImg" alt="云游赣鄱" class="title-main-img" />
+        </div>
 
         <div class="title-sub fade-up delay-4">山水入画，烟火入城，人文入心</div>
 
@@ -78,6 +80,7 @@ import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Home from './Home.vue'
 import shanImg from '@/assets/imgs/shan.png'
+import titleImg from '@/assets/imgs/biaoti.png'
 
 const route = useRoute()
 
@@ -409,23 +412,28 @@ watch(
 
 .title-main {
   margin: 0;
-  color: #8b3f2c;
-  font-size: clamp(48px, 7.7vw, 98px);
-  font-weight: 700;
-  letter-spacing: 10px;
-  line-height: 1.08;
-  font-family: 'STKaiti', 'KaiTi', '华文楷体', serif;
-  text-shadow: 0 10px 22px rgba(190, 162, 138, 0.2);
+  text-align: center;
+}
+
+.title-main-img {
+  display: block;
+  margin: 0 auto;
+  height: auto;
+  width: auto;
+  max-width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 22px rgba(190, 162, 138, 0.2));
   animation: titleBreath 4.5s ease-in-out infinite;
 }
 
 @keyframes titleBreath {
   0%, 100% {
-    text-shadow: 0 10px 22px rgba(190, 162, 138, 0.2);
+    filter: drop-shadow(0 10px 22px rgba(190, 162, 138, 0.2));
     transform: scale(1);
   }
   50% {
-    text-shadow: 0 14px 30px rgba(190, 162, 138, 0.3);
+    filter: drop-shadow(0 14px 30px rgba(190, 162, 138, 0.3));
     transform: scale(1.015);
   }
 }
@@ -735,8 +743,8 @@ watch(
     top: 40%;
   }
 
-  .title-main {
-    letter-spacing: 4px;
+  .title-main-img {
+    max-height: 80px;
   }
 
   .title-sub {
