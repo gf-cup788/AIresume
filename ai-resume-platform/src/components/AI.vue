@@ -493,8 +493,13 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 12px;
+   scrollbar-width: none;       /* Firefox */
+  -ms-overflow-style: none;  
 }
 
+.chat-messages::-webkit-scrollbar {
+  display: none;
+}
 .message-item {
   display: flex;
   gap: 10px;
