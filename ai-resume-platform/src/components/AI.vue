@@ -371,13 +371,13 @@ export default {
 /* 小映形象容器 - 从右侧滑入的动画 */
 .xiaoying-character {
   position: fixed;
-  right: -175px;
-  bottom: 10px;
+  right: -40px;
+  bottom: 30px;
   cursor: pointer;
   pointer-events: auto;
   transition: all 0.3s ease;
   z-index: 1000;
-  transform: rotate(15deg);
+  transform: rotate(22deg);
   transform-origin: top center;
 }
 
@@ -388,17 +388,17 @@ export default {
 
 @keyframes slideFromRight {
   0% {
-    transform: translateX(100%) rotate(15deg);
+    transform: translateX(100%) rotate(22deg);
     opacity: 0;
   }
   100% {
-    transform: translateX(0) rotate(15deg);
+    transform: translateX(0) rotate(22deg);
     opacity: 1;
   }
 }
 
 .xiaoying-image {
-  width: 275px;
+  width: 125px;
   height: auto;
   transition: all 0.3s ease;
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));
@@ -411,13 +411,13 @@ export default {
 
 @keyframes shake {
   0%, 100% {
-    transform: rotate(15deg);
+    transform: rotate(22deg);
   }
   25% {
-    transform: rotate(10deg);   /* 向左摆 */
+    transform: rotate(17deg);   /* 向左摆 */
   }
   75% {
-    transform: rotate(20deg);   /* 向右摆 */
+    transform: rotate(27deg);   /* 向右摆 */
   }
 }
 

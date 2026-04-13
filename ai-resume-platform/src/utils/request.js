@@ -19,8 +19,14 @@ export async function request(url, options = {}) {
   } = options
 
   const finalHeaders = {
-    'Content-Type': 'application/json',
     ...headers
+  }
+
+  // 判断是否是 FormData
+  const isFormData = body instanceof FormData
+
+  if (!isFormData) {
+    finalHeaders['Content-Type'] = 'application/json'
   }
 
   if (withToken) {
@@ -37,7 +43,7 @@ export async function request(url, options = {}) {
     const response = await fetch(`${BASE_URL}${url}`, {
       method,
       headers: finalHeaders,
-      body: body ? JSON.stringify(body) : undefined,
+      body: isFormData ? body : (body ? JSON.stringify(body) : undefined),
       signal: controller.signal
     })
 
