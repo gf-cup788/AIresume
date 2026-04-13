@@ -61,7 +61,7 @@
           <h2 class="module-title">旧迹</h2>
         </div>
         <div class="module-content">
-          <ul v-if="checkins.length" class="list no-scrollbar">
+          <ul v-if="checkins.length" class="list">
             <li v-for="(item, index) in checkins" :key="item.id || index" class="list-item">
               <span class="item-name">{{ item.scenicName || '未知景点' }}</span>
               <span class="item-detail">{{ formatDate(item.checkinDate) }}</span>
@@ -632,19 +632,47 @@ onMounted(() => {
   width: calc(100% + 275px);
   height: calc(100% + 175px);
 }
+.module-wrapper-comments .scroll-area {
+  max-height: 220px;   
+  overflow-y: auto;    
+}
 
 .module-wrapper-checkin {
-  height: 200px;
-  width: 250px;
+  height: auto;
+  min-height: 350px;
+  width: 300px;
   padding: 10px 10px;
   bottom: 6%;
-  left: 14%;
+  left: 12%;
 }
 .module-wrapper-checkin .border-img{
   top: -60px;
   left: -100px;
   width: calc(100% + 200px);
   height: calc(100% + 120px);
+}
+.module-wrapper-checkin .module-content {
+  max-height: 280px;  
+  overflow-y: auto;    
+  padding-right: 5px;  
+}
+
+/* 滚动条美化（与现有样式保持一致） */
+.module-wrapper-checkin .module-content::-webkit-scrollbar,
+.module-wrapper-comments .scroll-area::-webkit-scrollbar {
+  width: 4px;
+}
+
+.module-wrapper-checkin .module-content::-webkit-scrollbar-track,
+.module-wrapper-comments .scroll-area::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+}
+
+.module-wrapper-checkin .module-content::-webkit-scrollbar-thumb,
+.module-wrapper-comments .scroll-area::-webkit-scrollbar-thumb {
+  background: #c9aa5f;
+  border-radius: 3px;
 }
 .module-wrapper-actions {
   height: 225px;
@@ -1114,10 +1142,15 @@ onMounted(() => {
 /* 弹窗3：往言边框样式 */
 .comments-modal-wrapper {
   width: 520px;
+  max-height: 80vh;
 }
 .comments-modal-content {
   border-radius: 30px;
   z-index: 8;
+  display: flex;
+  flex-direction: column;
+  max-height: 70vh;  
+  overflow: hidden;
 }
 
 .comments-border-img {
@@ -1133,8 +1166,10 @@ onMounted(() => {
 /* 列表详情弹窗样式 */
 .modal-body-list {
   padding: 20px 30px;
-  max-height: 500px;
-  overflow-y: auto;
+  flex: 1;
+  overflow-y: auto;  
+  max-height: 415px;
+  min-height: 400px;
 }
 
 .comments-list {
