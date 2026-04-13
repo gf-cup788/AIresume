@@ -1,77 +1,103 @@
 <template>
-  <div class="intro-page" ref="pageRef" @scroll="handleScroll">
-    <!-- 开场页 -->
-    <section class="hero-section">
-      <!-- 背景 -->
-      <div class="bg-layer">
-        <div class="bg-image breathing-bg"></div>
-        <div class="bg-mask"></div>
-        <div class="bg-light light-breath"></div>
-        <div class="mist mist-1 mist-move-1"></div>
-        <div class="mist mist-2 mist-move-2"></div>
-        <div class="mist mist-3 mist-move-3"></div>
-      </div>
+  <div class="intro-home-wrapper">
 
-      <!-- 标题 -->
-      <div class="hero-content" :style="titleStyle">
-        <!-- <div class="title-en fade-up delay-1">Jiangxi Cultural Travel</div> -->
+    <!-- 🎬 开场视频 -->
+    <div
+      v-if="showVideo"
+      class="video-container"
+      :class="{ freeze: videoEnded, fadeOut: videoFadeOut }"
+    >
+      <video
+        ref="videoRef"
+        class="opening-video"
+        autoplay
+        muted
+        playsinline
+        @ended="handleVideoEnd"
+      >
+        <source src="@/assets/imgs/open.mp4" type="video/mp4" />
+      </video>
 
-        <div class="title-badge fade-up delay-2">诗画新生</div>
+      <div class="blur-mask" :class="{ active: videoEnded }"></div>
+      <div class="skip-btn" @click="skipVideo">跳过 >></div>
+    </div>
 
-        <div class="title-main fade-up delay-3">
-          <img :src="titleImg" alt="云游赣鄱" class="title-main-img" />
-        </div>
+    <!-- 页面内容 -->
+    <div
+      class="page-content"
+      :class="{ show: pageVisible, preShow: showVideo }"
+    >
+      <div class="intro-page" ref="pageRef" @scroll="handleScroll">
 
-        <div class="title-sub fade-up delay-4">山水入画，烟火入城，人文入心</div>
+        <!-- 开场页 -->
+        <section class="hero-section">
+          <div class="bg-layer">
+            <div class="bg-image breathing-bg"></div>
+            <div class="bg-mask"></div>
+            <div class="bg-light light-breath"></div>
+            <div class="mist mist-1 mist-move-1"></div>
+            <div class="mist mist-2 mist-move-2"></div>
+            <div class="mist mist-3 mist-move-3"></div>
+          </div>
 
-        <div class="intro-text fade-up delay-5">
-          从滕王阁的千古风流，到婺源的粉墙黛瓦；<br />
-          从景德镇的窑火不息，到庐山云海的诗意流转。
-        </div>
+          <div class="hero-content" :style="titleStyle">
+            <div class="title-badge fade-up delay-2">诗画新生</div>
 
-        <div class="scroll-tip fade-up delay-6" @click="scrollToHomeSmooth">
-          <div class="sunset-wrapper" :style="sunsetStyle">
-            <div class="sunset-circle">
-              <div class="sun-core"></div>
-              <div class="sun-halo"></div>
-              <div class="ripple ripple-1"></div>
-              <div class="ripple ripple-2"></div>
-              <div class="ripple ripple-3"></div>
+            <div class="title-main fade-up delay-3">
+              <img :src="titleImg" class="title-main-img" />
+            </div>
+
+            <div class="title-sub fade-up delay-4">
+              山水入画，烟火入城，人文入心
+            </div>
+
+            <div class="intro-text fade-up delay-5">
+              从滕王阁的千古风流，到婺源的粉墙黛瓦；<br />
+              从景德镇的窑火不息，到庐山云海的诗意流转。
+            </div>
+
+            <div class="scroll-tip fade-up delay-6" @click="scrollToHomeSmooth">
+              <div class="sunset-wrapper" :style="sunsetStyle">
+                <div class="sunset-circle">
+                  <div class="sun-core"></div>
+                  <div class="sun-halo"></div>
+                  <div class="ripple ripple-1"></div>
+                  <div class="ripple ripple-2"></div>
+                  <div class="ripple ripple-3"></div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+
+          <!-- 山 -->
+          <div class="mountain-layer">
+            <div class="mountain left back" :style="leftBackStyle">
+              <img :src="shanImg" />
+            </div>
+
+            <div class="mountain left front" :style="leftFrontStyle">
+              <img :src="shanImg" />
+            </div>
+
+            <div class="mountain right back" :style="rightBackStyle">
+              <img :src="shanImg" />
+            </div>
+
+            <div class="mountain right front" :style="rightFrontStyle">
+              <img :src="shanImg" />
+            </div>
+
+            <div class="bottom-mask"></div>
+          </div>
+        </section>
+
+        <!-- 第二屏 -->
+        <section class="home-section">
+          <Home />
+        </section>
+
       </div>
-
-      <!-- 山体 -->
-      <div class="mountain-layer">
-        <!-- 左后 -->
-        <div class="mountain left back mountain-float-slow" :style="leftBackStyle">
-          <img :src="shanImg" alt="山" />
-        </div>
-
-        <!-- 左前 -->
-        <div class="mountain left front mountain-float" :style="leftFrontStyle">
-          <img :src="shanImg" alt="山" />
-        </div>
-
-        <!-- 右后 -->
-        <div class="mountain right back mountain-float-slow" :style="rightBackStyle">
-          <img :src="shanImg" alt="山" />
-        </div>
-
-        <!-- 右前 -->
-        <div class="mountain right front mountain-float" :style="rightFrontStyle">
-          <img :src="shanImg" alt="山" />
-        </div>
-
-        <div class="bottom-mask"></div>
-      </div>
-    </section>
-
-    <!-- 第二屏 -->
-    <section class="home-section">
-      <Home />
-    </section>
+    </div>
   </div>
 </template>
 
@@ -97,7 +123,6 @@ const progress = computed(() => {
   return Math.min(scrollTop.value / h, 1)
 })
 
-/* 标题动画 */
 const titleStyle = computed(() => {
   const p = progress.value
   return {
@@ -106,7 +131,6 @@ const titleStyle = computed(() => {
   }
 })
 
-// 落日动画
 const sunsetStyle = computed(() => {
   const p = progress.value
   return {
@@ -114,89 +138,192 @@ const sunsetStyle = computed(() => {
     opacity: 1 - p * 0.8
   }
 })
-/* 四座山分开动画 */
-const leftBackStyle = computed(() => {
-  const p = progress.value
-  return {
-    transform: `translateX(-${p * 240}px)`
-  }
-})
 
-const leftFrontStyle = computed(() => {
-  const p = progress.value
-  return {
-    transform: `translateX(-${p * 350}px)`
-  }
-})
+const leftBackStyle = computed(() => ({
+  transform: `translateX(-${progress.value * 240}px)`
+}))
+const leftFrontStyle = computed(() => ({
+  transform: `translateX(-${progress.value * 350}px)`
+}))
+const rightBackStyle = computed(() => ({
+  transform: `translateX(${progress.value * 240}px)`
+}))
+const rightFrontStyle = computed(() => ({
+  transform: `translateX(${progress.value * 350}px)`
+}))
 
-const rightBackStyle = computed(() => {
-  const p = progress.value
-  return {
-    transform: `translateX(${p * 240}px)`
-  }
-})
-
-const rightFrontStyle = computed(() => {
-  const p = progress.value
-  return {
-    transform: `translateX(${p * 350}px)`
-  }
-})
-
-/* 平滑滚到第二屏：IntroHome 内部点击时用 */
 const scrollToHomeSmooth = () => {
-  if (!pageRef.value) return
-  pageRef.value.scrollTo({
+  pageRef.value?.scrollTo({
     top: window.innerHeight,
     behavior: 'smooth'
   })
 }
 
-/* 瞬间到第二屏：其他页面跳过来时用 */
-const scrollToHomeInstant = () => {
-  if (!pageRef.value) return
-
-  pageRef.value.style.scrollBehavior = 'auto'
-  pageRef.value.scrollTop = window.innerHeight
-
-  setTimeout(() => {
-    pageRef.value.style.scrollBehavior = 'smooth'
-  }, 0)
-}
-
-/* 当前页顶部按钮：保留滚动动画 */
-const goSecondScreenSmooth = () => {
-  scrollToHomeSmooth()
-}
-
-/* 根据路由参数决定进入时的位置 */
 const handleRouteTarget = async () => {
   await nextTick()
   if (!pageRef.value) return
-
   if (route.query.target === 'home') {
-    scrollToHomeInstant()
-  } else {
-    pageRef.value.scrollTo({
-      top: 0,
-      behavior: 'auto'
-    })
+    pageRef.value.scrollTop = window.innerHeight
   }
+}
+
+/* ===== 视频逻辑 ===== */
+const showVideo = ref(true)
+const videoEnded = ref(false)
+const videoFadeOut = ref(false)
+const pageVisible = ref(false)
+const videoRef = ref(null)
+let speedUpTimer = null
+
+const handleVideoEnd = () => {
+  videoEnded.value = true
+  setTimeout(startTransition, 600)
+}
+
+const skipVideo = () => {
+  videoEnded.value = true
+  startTransition()
+}
+
+const startTransition = () => {
+  pageVisible.value = true
+  setTimeout(() => (videoFadeOut.value = true), 200)
+  setTimeout(() => (showVideo.value = false), 1000)
+}
+
+// 视频加速逻辑：在播放到 85% 时，将播放速率提高到 1.15 倍，实现“快一点点”
+const setupSpeedUp = () => {
+  const video = videoRef.value
+  if (!video) return
+  
+  const checkProgress = () => {
+    if (!video || videoEnded.value) return
+    const progressPercent = video.currentTime / video.duration
+    // 当播放进度达到 85% 且尚未加速时，加快播放速度
+    if (progressPercent >= 0.85 && video.playbackRate === 1.0) {
+      video.playbackRate = 1.15
+      // 可选：清除定时器，避免重复检查
+      if (speedUpTimer) clearInterval(speedUpTimer)
+    }
+  }
+  
+  // 监听 timeupdate 事件，实时检查进度
+  video.addEventListener('timeupdate', checkProgress)
+  // 清理事件的函数（可选，但不必须，因为视频结束后组件可能销毁）
+  // 为了稳妥，在组件卸载时移除
+  const cleanup = () => {
+    video.removeEventListener('timeupdate', checkProgress)
+    if (speedUpTimer) clearInterval(speedUpTimer)
+  }
+  // 将清理函数存储以便在 onBeforeUnmount 中调用
+  return cleanup
 }
 
 onMounted(() => {
   handleRouteTarget()
+  // 等待视频元素加载并开始播放
+  const video = videoRef.value
+  if (video) {
+    video.play().catch(() => {})
+    // 设置加速监听
+    const cleanup = setupSpeedUp()
+    // 如果需要在组件卸载时清理事件，可以存储 cleanup
+    // 但当前没有 onBeforeUnmount，可以忽略或添加
+  }
 })
 
-watch(
-  () => route.query.target,
-  () => {
-    handleRouteTarget()
-  }
-)
+watch(() => route.query.target, handleRouteTarget)
 </script>
 
 <style scoped>
+.intro-home-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ===== 视频 ===== */
+.video-container {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  transition: all 1s ease;
+}
+.video-container.freeze {
+  transform: scale(1.05);
+}
+.video-container.fadeOut {
+  opacity: 0;
+}
+.opening-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 模糊 */
+.blur-mask {
+  position: absolute;
+  inset: 0;
+  backdrop-filter: blur(0);
+  transition: all 0.8s;
+}
+.blur-mask.active {
+  backdrop-filter: blur(10px);
+}
+
+/* 页面过渡 */
+.page-content {
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transform: scale(1.02);
+  filter: blur(10px);
+  transition: all 1.2s ease;
+}
+.page-content.preShow {
+  opacity: 0.15;
+}
+.page-content.show {
+  opacity: 1;
+  transform: scale(1);
+  filter: blur(0);
+}
+
+/* 跳过 */
+.skip-btn {
+  position: absolute;
+  top: 30px;
+  right: 30px;
+  color: white;
+  cursor: pointer;
+}
+
+/* ===== 下面全部是你原来的样式（未改动） ===== */
+
+.intro-page {
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  background: #f4eee5;
+  scrollbar-width: none;
+}
+.intro-page::-webkit-scrollbar {
+  display: none;
+}
+.hero-section,
+.home-section {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+}
+.hero-section {
+  overflow: hidden;
+  background: url("@/assets/imgs/tenwangge.jpg") center/cover no-repeat;
+}
+
 .intro-page {
   height: 100vh;
   overflow-y: auto;
@@ -791,4 +918,5 @@ watch(
     font-size: 12px;
   }
 }
+
 </style>
