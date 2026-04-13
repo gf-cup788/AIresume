@@ -27,7 +27,7 @@
       >
         <!-- 可拖拽标题栏 -->
         <div class="dialog-header" @mousedown="startDrag" @touchstart="startDrag">
-          <span class="dialog-title">🌸 小映 </span>
+          <span class="dialog-title">🌸 小映</span>
           <button class="close-btn" @click.stop="closeDialog">×</button>
         </div>
         
@@ -77,289 +77,328 @@
       </div>
     </transition>
   </Teleport>
+
+  <XiaoyingTips
+    :disabled="tipsDisabled"
+    :max-tips-per-day="5"
+    :inactive-threshold="120000"
+    :random-interval="420000"
+    @tip-shown="handleTipShown"
+    @tip-clicked="handleTipClick"
+  />
 </template>
 
-<script>
-import xiaoyingImg from '../assets/imgs/xiaoying.png' // 图片
-import xiaoying1Img from '../assets/imgs/xiaoying1.png'
+<script setup>
+import { ref, onMounted, onBeforeUnmount, nextTick,computed } from 'vue'
+import xiaoyingImg from '../assets/imgs/xiaoying.png'
 import { aiChat } from '../api/index'
 import { marked } from 'marked'
+import XiaoyingTips from './AITips.vue'
 
-export default {
-  name: 'AI',
-  data() {
-    return {
-      marked,
-      xiaoyingImg,
-      isHovering: false,
-      isHidden: false,       // 小映是否隐藏（点击弹出对话框时隐藏）
-      hasSlidIn: false,      // 是否已经执行过滑入动画（避免重复）
-      showDialog: false,
-      inputMessage: '',
-      messages: [],
-      isLoading: false,
-      sessionId: null,
-      // 对话框位置和大小
-      dialogLeft: null,
-      dialogTop: null,
-      dialogWidth: 800,
-      dialogHeight: 800,
-      isCustomPosition: false,
-      // 拖拽
-      isDragging: false,
-      dragStartX: 0,
-      dragStartY: 0,
-      dragStartLeft: 0,
-      dragStartTop: 0,
-      // 调整大小
-      isResizing: false,
-      resizeDirection: null,
-      resizeStartX: 0,
-      resizeStartY: 0,
-      resizeStartWidth: 0,
-      resizeStartHeight: 0,
-      resizeStartLeft: 0,
-      resizeStartTop: 0
+// ========== 图片资源 ==========
+const xiaoyingImage = xiaoyingImg
+
+// ========== 状态变量 ==========
+const isHovering = ref(false)
+const isHidden = ref(false)
+const hasSlidIn = ref(false)
+const showDialog = ref(false)
+const inputMessage = ref('')
+const messages = ref([])
+const isLoading = ref(false)
+const sessionId = ref(null)
+
+// 对话框位置和大小
+const dialogLeft = ref(null)
+const dialogTop = ref(null)
+const dialogWidth = ref(650)
+const dialogHeight = ref(650)
+const isCustomPosition = ref(false)
+
+// 拖拽相关
+const isDragging = ref(false)
+const dragStartX = ref(0)
+const dragStartY = ref(0)
+const dragStartLeft = ref(0)
+const dragStartTop = ref(0)
+
+// 调整大小相关
+const isResizing = ref(false)
+const resizeDirection = ref(null)
+const resizeStartX = ref(0)
+const resizeStartY = ref(0)
+const resizeStartWidth = ref(0)
+const resizeStartHeight = ref(0)
+const resizeStartLeft = ref(0)
+const resizeStartTop = ref(0)
+
+// DOM 引用
+const dialogContainer = ref(null)
+const messagesContainer = ref(null)
+
+// ========== 计算属性 ==========
+const dialogStyle = computed(() => {
+  return {
+    left: isCustomPosition.value ? (dialogLeft.value + 'px') : '50%',
+    top: isCustomPosition.value ? (dialogTop.value + 'px') : '50%',
+    transform: isCustomPosition.value ? 'none' : 'translate(-50%, -50%)',
+    width: dialogWidth.value + 'px',
+    height: dialogHeight.value + 'px'
+  }
+})
+
+// ========== 工具函数 ==========
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (messagesContainer.value) {
+      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
     }
-  },
-  computed: {
-    dialogStyle() {
-      return {
-        left: this.isCustomPosition ? (this.dialogLeft + 'px') : '50%',
-        top: this.isCustomPosition ? (this.dialogTop + 'px') : '50%',
-        transform: this.isCustomPosition ? 'none' : 'translate(-50%, -50%)',
-        width: this.dialogWidth + 'px',
-        height: this.dialogHeight + 'px'
-      }
-    }
-  },
-  mounted() {
-    this.messages.push({
-      role: 'assistant',
-      content: '你好呀～我是小映！江西的红土孕育了我，关于江西旅游的任何问题都可以问我哟！'
-    })
-    // 监听全局鼠标事件
-    window.addEventListener('mousemove', this.onDragMove)
-    window.addEventListener('mouseup', this.stopDrag)
-    window.addEventListener('mousemove', this.onResizeMove)
-    window.addEventListener('mouseup', this.stopResize)
-    
-    // 组件挂载后，延迟一小段时间确保动画触发，同时标记已滑入
-    setTimeout(() => {
-      this.hasSlidIn = true
-    }, 500)
-  },
-  beforeDestroy() {
-    window.removeEventListener('mousemove', this.onDragMove)
-    window.removeEventListener('mouseup', this.stopDrag)
-    window.removeEventListener('mousemove', this.onResizeMove)
-    window.removeEventListener('mouseup', this.stopResize)
-  },
-  methods: {
-    // 拖拽相关
-    startDrag(e) {
-      e.preventDefault()
-      this.isDragging = true
-      const rect = this.$refs.dialogContainer.getBoundingClientRect()
-      this.dragStartX = e.clientX
-      this.dragStartY = e.clientY
-      this.dragStartLeft = rect.left
-      this.dragStartTop = rect.top
-      
-      if (!this.isCustomPosition) {
-        this.dialogLeft = rect.left
-        this.dialogTop = rect.top
-        this.isCustomPosition = true
-      }
-    },
-    onDragMove(e) {
-      if (!this.isDragging) return
-      e.preventDefault()
-      const dx = e.clientX - this.dragStartX
-      const dy = e.clientY - this.dragStartY
-      this.dialogLeft = this.dragStartLeft + dx
-      this.dialogTop = this.dragStartTop + dy
-      this.dialogLeft = Math.max(-this.dialogWidth + 50, Math.min(window.innerWidth - 50, this.dialogLeft))
-      this.dialogTop = Math.max(0, Math.min(window.innerHeight - 50, this.dialogTop))
-    },
-    stopDrag() {
-      this.isDragging = false
-    },
-    
-    // 缩放相关
-    startResize(e, direction) {
-      e.preventDefault()
-      this.isResizing = true
-      this.resizeDirection = direction
-      const rect = this.$refs.dialogContainer.getBoundingClientRect()
-      this.resizeStartX = e.clientX
-      this.resizeStartY = e.clientY
-      this.resizeStartWidth = rect.width
-      this.resizeStartHeight = rect.height
-      this.resizeStartLeft = rect.left
-      this.resizeStartTop = rect.top
-      
-      if (!this.isCustomPosition) {
-        this.dialogLeft = rect.left
-        this.dialogTop = rect.top
-        this.isCustomPosition = true
-      }
-    },
-    onResizeMove(e) {
-      if (!this.isResizing) return
-      e.preventDefault()
-      const dx = e.clientX - this.resizeStartX
-      const dy = e.clientY - this.resizeStartY
-      
-      let newWidth = this.resizeStartWidth
-      let newHeight = this.resizeStartHeight
-      let newLeft = this.resizeStartLeft
-      let newTop = this.resizeStartTop
-      
-      switch (this.resizeDirection) {
-        case 'e': newWidth = Math.max(300, this.resizeStartWidth + dx); break
-        case 'w': 
-          newWidth = Math.max(300, this.resizeStartWidth - dx)
-          newLeft = this.resizeStartLeft + (this.resizeStartWidth - newWidth)
-          break
-        case 's': newHeight = Math.max(400, this.resizeStartHeight + dy); break
-        case 'n': 
-          newHeight = Math.max(400, this.resizeStartHeight - dy)
-          newTop = this.resizeStartTop + (this.resizeStartHeight - newHeight)
-          break
-        case 'se': 
-          newWidth = Math.max(300, this.resizeStartWidth + dx)
-          newHeight = Math.max(400, this.resizeStartHeight + dy)
-          break
-        case 'sw': 
-          newWidth = Math.max(300, this.resizeStartWidth - dx)
-          newHeight = Math.max(400, this.resizeStartHeight + dy)
-          newLeft = this.resizeStartLeft + (this.resizeStartWidth - newWidth)
-          break
-        case 'ne': 
-          newWidth = Math.max(300, this.resizeStartWidth + dx)
-          newHeight = Math.max(400, this.resizeStartHeight - dy)
-          newTop = this.resizeStartTop + (this.resizeStartHeight - newHeight)
-          break
-        case 'nw': 
-          newWidth = Math.max(300, this.resizeStartWidth - dx)
-          newHeight = Math.max(400, this.resizeStartHeight - dy)
-          newLeft = this.resizeStartLeft + (this.resizeStartWidth - newWidth)
-          newTop = this.resizeStartTop + (this.resizeStartHeight - newHeight)
-          break
-      }
-      
-      this.dialogWidth = newWidth
-      this.dialogHeight = newHeight
-      this.dialogLeft = newLeft
-      this.dialogTop = newTop
-    },
-    stopResize() {
-      this.isResizing = false
-      this.resizeDirection = null
-    },
-    
-    handleMouseEnter() {
-      if (!this.isHidden) {
-        this.isHovering = true
-      }
-    },
-    handleMouseLeave() {
-      this.isHovering = false
-    },
-    handleClick() {
-      if (!this.isHidden) {
-        // 点击后：隐藏小映，弹出对话框
-        this.isHidden = true
-        this.showDialog = true
-      }
-    },
-    closeDialog() {
-      this.showDialog = false
-      // 关闭对话框后，重置隐藏状态，小映会再次滑入
-      setTimeout(() => {
-        this.resetXiaoying()
-        // 重置位置和大小
-        this.isCustomPosition = false
-        this.dialogWidth = 800
-        this.dialogHeight = 800
-      }, 300)
-    },
-    resetXiaoying() {
-      this.isHidden = false
-      this.isHovering = false
-      this.hasSlidIn = false  // 重置滑入标记，以便重新触发滑入动画
-      // 下一帧重新标记滑入完成
-      this.$nextTick(() => {
-        setTimeout(() => {
-          this.hasSlidIn = true
-        }, 500)
-      })
-    },
-    async sendMessage() {
-      const message = this.inputMessage.trim()
-      if (!message) return
-    
-      this.messages.push({
-        role: 'user',
-        content: message
-      })
-      this.inputMessage = ''
-      
-      this.$nextTick(() => {
-        this.scrollToBottom()
-      })
-    
-      this.isLoading = true
-    
-      try {
-        const requestData = { message }
-        if (this.sessionId) {
-          requestData.sessionId = this.sessionId
-        }
-        
-        const result = await aiChat(requestData)
-        
-        if (result.code === 200 && result.data) {
-          this.messages.push({
-            role: 'assistant',
-            content: result.data.answer
-          })
-          
-          if (result.data.sessionId) {
-            this.sessionId = result.data.sessionId
-          }
-        } else {
-          throw new Error(result.message || '请求失败')
-        }
-        
-        this.$nextTick(() => {
-          this.scrollToBottom()
-        })
-      } catch (error) {
-        console.error('AI对话错误:', error)
-        this.messages.push({
-          role: 'assistant',
-          content: '哎呀，小映有点累了😵，请稍后再试试吧～'
-        })
-      } finally {
-        this.isLoading = false
-      }
-    },
-    scrollToBottom() {
-      const container = this.$refs.messagesContainer
-      if (container) {
-        container.scrollTop = container.scrollHeight
-      }
-    },
-    afterDialogClose() {
-      // 可选：对话框完全关闭后的回调
-    }
+  })
+}
+
+// ========== 拖拽相关 ==========
+const startDrag = (e) => {
+  e.preventDefault()
+  isDragging.value = true
+  const rect = dialogContainer.value.getBoundingClientRect()
+  dragStartX.value = e.clientX
+  dragStartY.value = e.clientY
+  dragStartLeft.value = rect.left
+  dragStartTop.value = rect.top
+  
+  if (!isCustomPosition.value) {
+    dialogLeft.value = rect.left
+    dialogTop.value = rect.top
+    isCustomPosition.value = true
   }
 }
+
+const onDragMove = (e) => {
+  if (!isDragging.value) return
+  e.preventDefault()
+  const dx = e.clientX - dragStartX.value
+  const dy = e.clientY - dragStartY.value
+  dialogLeft.value = dragStartLeft.value + dx
+  dialogTop.value = dragStartTop.value + dy
+  dialogLeft.value = Math.max(-dialogWidth.value + 50, Math.min(window.innerWidth - 50, dialogLeft.value))
+  dialogTop.value = Math.max(0, Math.min(window.innerHeight - 50, dialogTop.value))
+}
+
+const stopDrag = () => {
+  isDragging.value = false
+}
+
+// ========== 缩放相关 ==========
+const startResize = (e, direction) => {
+  e.preventDefault()
+  isResizing.value = true
+  resizeDirection.value = direction
+  const rect = dialogContainer.value.getBoundingClientRect()
+  resizeStartX.value = e.clientX
+  resizeStartY.value = e.clientY
+  resizeStartWidth.value = rect.width
+  resizeStartHeight.value = rect.height
+  resizeStartLeft.value = rect.left
+  resizeStartTop.value = rect.top
+  
+  if (!isCustomPosition.value) {
+    dialogLeft.value = rect.left
+    dialogTop.value = rect.top
+    isCustomPosition.value = true
+  }
+}
+
+const onResizeMove = (e) => {
+  if (!isResizing.value) return
+  e.preventDefault()
+  const dx = e.clientX - resizeStartX.value
+  const dy = e.clientY - resizeStartY.value
+  
+  let newWidth = resizeStartWidth.value
+  let newHeight = resizeStartHeight.value
+  let newLeft = resizeStartLeft.value
+  let newTop = resizeStartTop.value
+  
+  switch (resizeDirection.value) {
+    case 'e': newWidth = Math.max(300, resizeStartWidth.value + dx); break
+    case 'w': 
+      newWidth = Math.max(300, resizeStartWidth.value - dx)
+      newLeft = resizeStartLeft.value + (resizeStartWidth.value - newWidth)
+      break
+    case 's': newHeight = Math.max(400, resizeStartHeight.value + dy); break
+    case 'n': 
+      newHeight = Math.max(400, resizeStartHeight.value - dy)
+      newTop = resizeStartTop.value + (resizeStartHeight.value - newHeight)
+      break
+    case 'se': 
+      newWidth = Math.max(300, resizeStartWidth.value + dx)
+      newHeight = Math.max(400, resizeStartHeight.value + dy)
+      break
+    case 'sw': 
+      newWidth = Math.max(300, resizeStartWidth.value - dx)
+      newHeight = Math.max(400, resizeStartHeight.value + dy)
+      newLeft = resizeStartLeft.value + (resizeStartWidth.value - newWidth)
+      break
+    case 'ne': 
+      newWidth = Math.max(300, resizeStartWidth.value + dx)
+      newHeight = Math.max(400, resizeStartHeight.value - dy)
+      newTop = resizeStartTop.value + (resizeStartHeight.value - newHeight)
+      break
+    case 'nw': 
+      newWidth = Math.max(300, resizeStartWidth.value - dx)
+      newHeight = Math.max(400, resizeStartHeight.value - dy)
+      newLeft = resizeStartLeft.value + (resizeStartWidth.value - newWidth)
+      newTop = resizeStartTop.value + (resizeStartHeight.value - newHeight)
+      break
+  }
+  
+  dialogWidth.value = newWidth
+  dialogHeight.value = newHeight
+  dialogLeft.value = newLeft
+  dialogTop.value = newTop
+}
+
+const stopResize = () => {
+  isResizing.value = false
+  resizeDirection.value = null
+}
+
+// ========== 小映交互 ==========
+const handleMouseEnter = () => {
+  if (!isHidden.value) {
+    isHovering.value = true
+  }
+}
+
+const handleMouseLeave = () => {
+  isHovering.value = false
+}
+
+const handleClick = () => {
+  if (!isHidden.value) {
+    isHidden.value = true
+    showDialog.value = true
+  }
+}
+
+const resetXiaoying = () => {
+  isHidden.value = false
+  isHovering.value = false
+  hasSlidIn.value = false
+  nextTick(() => {
+    setTimeout(() => {
+      hasSlidIn.value = true
+    }, 500)
+  })
+}
+
+const closeDialog = () => {
+  showDialog.value = false
+  setTimeout(() => {
+    resetXiaoying()
+    isCustomPosition.value = false
+    dialogWidth.value = 800
+    dialogHeight.value = 800
+  }, 300)
+}
+
+const afterDialogClose = () => {
+  // 可选：对话框完全关闭后的回调
+}
+
+// ========== 聊天功能 ==========
+const sendMessage = async () => {
+  const message = inputMessage.value.trim()
+  if (!message) return
+
+  messages.value.push({
+    role: 'user',
+    content: message
+  })
+  inputMessage.value = ''
+  
+  scrollToBottom()
+
+  isLoading.value = true
+
+  try {
+    const requestData = { message }
+    if (sessionId.value) {
+      requestData.sessionId = sessionId.value
+    }
+    
+    const result = await aiChat(requestData)
+    
+    if (result.code === 200 && result.data) {
+      messages.value.push({
+        role: 'assistant',
+        content: result.data.answer
+      })
+      
+      if (result.data.sessionId) {
+        sessionId.value = result.data.sessionId
+      }
+    } else {
+      throw new Error(result.message || '请求失败')
+    }
+    
+    scrollToBottom()
+  } catch (error) {
+    console.error('AI对话错误:', error)
+    messages.value.push({
+      role: 'assistant',
+      content: '哎呀，小映有点累了😵，请稍后再试试吧～'
+    })
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// 控制提示组件是否启用（对话框打开时禁用）
+const tipsDisabled = computed(() => showDialog.value)
+
+// 处理提示点击（打开对话框）
+const handleTipClick = (tipInfo) => {
+  if (!showDialog.value) {
+    handleClick()  // 打开对话框
+  }
+}
+
+// 处理提示显示
+const handleTipShown = (tipInfo) => {
+  console.log('小映提示:', tipInfo.message)
+}
+
+// ========== 生命周期 ==========
+onMounted(() => {
+  // 初始欢迎语
+  messages.value.push({
+    role: 'assistant',
+    content: '你好呀～我是小映！江西的红土孕育了我，关于江西旅游的任何问题都可以问我哟！'
+  })
+  
+  // 监听全局鼠标事件
+  window.addEventListener('mousemove', onDragMove)
+  window.addEventListener('mouseup', stopDrag)
+  window.addEventListener('mousemove', onResizeMove)
+  window.addEventListener('mouseup', stopResize)
+  
+  // 延迟触发滑入动画
+  setTimeout(() => {
+    hasSlidIn.value = true
+  }, 500)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('mousemove', onDragMove)
+  window.removeEventListener('mouseup', stopDrag)
+  window.removeEventListener('mousemove', onResizeMove)
+  window.removeEventListener('mouseup', stopResize)
+})
 </script>
 
 <style scoped>
+/* 样式保持不变，直接复制原来的样式即可 */
 .ying-shan-hong-container {
   position: fixed;
   right: 0;
@@ -414,10 +453,10 @@ export default {
     transform: rotate(22deg);
   }
   25% {
-    transform: rotate(17deg);   /* 向左摆 */
+    transform: rotate(17deg);
   }
   75% {
-    transform: rotate(27deg);   /* 向右摆 */
+    transform: rotate(27deg);
   }
 }
 
@@ -493,13 +532,14 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 12px;
-   scrollbar-width: none;       /* Firefox */
-  -ms-overflow-style: none;  
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .chat-messages::-webkit-scrollbar {
   display: none;
 }
+
 .message-item {
   display: flex;
   gap: 10px;
