@@ -565,7 +565,7 @@ onMounted(async () => {
 }
 
 .pieces-card {
-  padding: 14px 14px 12px;
+  padding: 14px 8px;
   width: 490px;
   background-color: #ffffff;
 }

@@ -22,13 +22,21 @@
     <div
       ref="gameAreaRef"
       class="game-area"
+      :style="gameAreaStyle"
       tabindex="0"
       @mousemove="handleMouseMove"
       @touchmove.prevent="handleTouchMove"
     >
-      <div class="sky-decor sky-1"></div>
+      <div class="game-bg-mask"></div>
+
+      <!-- <div class="sky-decor sky-1"></div>
       <div class="sky-decor sky-2"></div>
-      <div class="sky-decor sky-3"></div>
+      <div class="sky-decor sky-3"></div> -->
+
+      <div v-if="loadingBg" class="bg-loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">正在加载游戏背景...</div>
+      </div>
 
       <transition-group name="flower-drop" tag="div">
         <div
@@ -54,7 +62,7 @@
 
       <div v-if="!started && !gameOver" class="game-mask">
         <div class="game-mask-card">
-          <div class="mask-title"> 接花小游戏</div>
+          <div class="mask-title">{{ scenicName }} · 接花小游戏</div>
           <div class="mask-desc">
             移动下方花篮，接住掉落的花朵。达到目标分数即可通关。
           </div>
@@ -100,9 +108,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
+import { request } from '@/utils/request'
+import defaultFlowerBg from '@/assets/imgs/duihuapg.png'
 
 const props = defineProps({
+  scenicId: {
+    type: Number,
+    default: null
+  },
   scenicName: {
     type: String,
     default: '婺源'
@@ -122,11 +136,11 @@ const emit = defineEmits(['success'])
 const gameAreaRef = ref(null)
 
 const gameWidth = ref(640)
-const gameHeight = ref(420)
+const gameHeight = ref(520)
 
-const basketWidth = 96
-const basketHeight = 56
-const flowerSize = 28
+const basketWidth = 108
+const basketHeight = 60
+const flowerSize = 30
 
 const basketX = ref(260)
 
@@ -139,11 +153,21 @@ const paused = ref(false)
 const gameOver = ref(false)
 const success = ref(false)
 
+const bgImageUrl = ref('')
+const loadingBg = ref(false)
+
 let animationTimer = null
 let spawnTimer = null
 let flowerId = 1
 
 const random = (min, max) => Math.random() * (max - min) + min
+
+const gameAreaStyle = computed(() => {
+  const bg = bgImageUrl.value || defaultFlowerBg
+  return {
+    backgroundImage: `url(${bg})`
+  }
+})
 
 const clampBasket = (x) => {
   const maxX = Math.max(gameWidth.value - basketWidth, 0)
@@ -161,16 +185,58 @@ const updateGameSize = async () => {
   basketX.value = clampBasket(basketX.value)
 }
 
+const preloadImage = (url) => {
+  return new Promise((resolve) => {
+    if (!url) {
+      resolve('')
+      return
+    }
+    const img = new Image()
+    img.onload = () => resolve(url)
+    img.onerror = () => resolve('')
+    img.src = url
+  })
+}
+
+const fetchGameBg = async () => {
+  if (!props.scenicId) {
+    bgImageUrl.value = ''
+    return
+  }
+
+  loadingBg.value = true
+  try {
+    const res = await request(`/api/games/start?scenicId=${props.scenicId}`, {
+      method: 'GET'
+    })
+
+    if (res?.code === 200 && res?.data) {
+      const remoteBg = res.data.bgImageUrl || ''
+      const loadedUrl = await preloadImage(remoteBg)
+      bgImageUrl.value = loadedUrl
+      console.log('接花游戏背景加载成功:', loadedUrl)
+    } else {
+      bgImageUrl.value = ''
+      console.error('获取接花游戏背景失败:', res?.message)
+    }
+  } catch (error) {
+    bgImageUrl.value = ''
+    console.error('获取接花游戏背景失败:', error)
+  } finally {
+    loadingBg.value = false
+  }
+}
+
 const createFlower = () => {
   const x = random(8, Math.max(gameWidth.value - flowerSize - 8, 8))
   return {
     id: flowerId++,
     x,
     y: -30,
-    speed: random(2.2, 4.4),
+    speed: random(2.4, 4.8),
     rotate: random(-25, 25),
-    drift: random(-0.6, 0.6),
-    scale: random(0.95, 1.2)
+    drift: random(-0.7, 0.7),
+    scale: random(0.95, 1.22)
   }
 }
 
@@ -202,7 +268,7 @@ const startLoop = () => {
   spawnTimer = setInterval(() => {
     if (!started.value || paused.value || gameOver.value || success.value) return
     flowers.value.push(createFlower())
-  }, 650)
+  }, 620)
 
   const tick = () => {
     if (!started.value || paused.value || gameOver.value || success.value) {
@@ -210,7 +276,7 @@ const startLoop = () => {
       return
     }
 
-    const basketTop = gameHeight.value - basketHeight - 14
+    const basketTop = gameHeight.value - basketHeight - 18
     const basketLeft = basketX.value
     const basketRight = basketX.value + basketWidth
 
@@ -226,8 +292,8 @@ const startLoop = () => {
       const caught =
         flowerBottomY >= basketTop &&
         flowerBottomY <= basketTop + basketHeight + 10 &&
-        flowerCenterX >= basketLeft + 6 &&
-        flowerCenterX <= basketRight - 6
+        flowerCenterX >= basketLeft + 8 &&
+        flowerCenterX <= basketRight - 8
 
       if (caught) {
         score.value += 1
@@ -331,8 +397,22 @@ const emitSuccess = () => {
   emit('success')
 }
 
+watch(
+  () => props.scenicId,
+  async (newVal, oldVal) => {
+    if (newVal && newVal !== oldVal) {
+      clearTimers()
+      resetState()
+      await fetchGameBg()
+      await updateGameSize()
+    }
+  },
+  { immediate: true }
+)
+
 onMounted(async () => {
   await updateGameSize()
+  await fetchGameBg()
   window.addEventListener('resize', updateGameSize)
   window.addEventListener('keydown', handleKeydown)
 })
@@ -349,20 +429,20 @@ onBeforeUnmount(() => {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .flower-topbar {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+  gap: 12px;
 }
 
 .flower-stat {
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(106, 151, 71, 0.14);
-  border-radius: 14px;
-  padding: 10px 8px;
+  border-radius: 16px;
+  padding: 12px 8px;
   text-align: center;
   box-shadow: 0 8px 20px rgba(120, 148, 97, 0.08);
 }
@@ -384,15 +464,61 @@ onBeforeUnmount(() => {
 .game-area {
   position: relative;
   width: 100%;
-  height: 420px;
+  height: 540px;
   overflow: hidden;
-  border-radius: 22px;
+  border-radius: 24px;
   border: 2px solid rgba(108, 146, 78, 0.18);
-  background:
-    linear-gradient(180deg, #eef8ff 0%, #f3fbff 28%, #f8f7eb 72%, #f2eedf 100%);
+  background-color: #eef5ea;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.55),
     0 16px 36px rgba(104, 132, 84, 0.12);
+}
+
+.game-bg-mask {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(246, 241, 228, 0.18)),
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 55%);
+  pointer-events: none;
+}
+
+.bg-loading {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 3;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(108, 146, 78, 0.16);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 8px 18px rgba(91, 120, 72, 0.08);
+}
+
+.loading-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(136, 181, 106, 0.2);
+  border-top-color: #88b56a;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.loading-text {
+  font-size: 12px;
+  color: #5a6f49;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .sky-decor {
@@ -400,6 +526,7 @@ onBeforeUnmount(() => {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.72);
   filter: blur(0.2px);
+  z-index: 1;
 }
 
 .sky-1 {
@@ -425,21 +552,22 @@ onBeforeUnmount(() => {
 
 .flower-item {
   position: absolute;
-  width: 28px;
-  height: 28px;
-  font-size: 24px;
-  line-height: 28px;
+  width: 30px;
+  height: 30px;
+  font-size: 26px;
+  line-height: 30px;
   text-align: center;
   user-select: none;
   pointer-events: none;
   text-shadow: 0 6px 10px rgba(140, 90, 120, 0.16);
+  z-index: 2;
 }
 
 .basket {
   position: absolute;
-  bottom: 14px;
-  width: 96px;
-  height: 56px;
+  bottom: 18px;
+  width: 108px;
+  height: 60px;
   border-radius: 18px 18px 24px 24px;
   background: linear-gradient(180deg, #ba8657, #9f6b3f);
   box-shadow:
@@ -448,6 +576,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 2;
 }
 
 .basket::before {
@@ -472,21 +601,22 @@ onBeforeUnmount(() => {
 .game-mask {
   position: absolute;
   inset: 0;
-  background: rgba(247, 244, 234, 0.62);
+  background: rgba(247, 244, 234, 0.56);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
+  z-index: 4;
 }
 
 .game-mask-card {
-  width: min(420px, 100%);
+  width: min(440px, 100%);
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.94);
   border: 1px solid rgba(116, 150, 92, 0.16);
   box-shadow: 0 18px 42px rgba(111, 136, 89, 0.16);
-  padding: 26px 24px;
+  padding: 28px 24px;
   text-align: center;
 }
 
@@ -520,8 +650,8 @@ onBeforeUnmount(() => {
 .action-btn {
   border: none;
   border-radius: 999px;
-  padding: 10px 18px;
-  font-size: 13px;
+  padding: 11px 20px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   color: #5f6d4e;
@@ -546,18 +676,19 @@ onBeforeUnmount(() => {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: min(360px, calc(100% - 32px));
-  border-radius: 20px;
-  padding: 24px 22px;
+  width: min(420px, calc(100% - 36px));
+  border-radius: 22px;
+  padding: 24px 20px;
   background: linear-gradient(135deg, rgba(255, 251, 236, 0.97), rgba(240, 249, 232, 0.97));
   border: 1px solid rgba(122, 166, 86, 0.18);
-  box-shadow: 0 18px 40px rgba(116, 147, 92, 0.16);
+  box-shadow: 0 12px 26px rgba(116, 147, 92, 0.12);
   text-align: center;
+  z-index: 5;
 }
 
 .success-icon {
-  font-size: 28px;
-  margin-bottom: 6px;
+  font-size: 30px;
+  margin-bottom: 8px;
 }
 
 .success-title {
@@ -570,17 +701,7 @@ onBeforeUnmount(() => {
   margin-top: 8px;
   font-size: 14px;
   color: #758469;
-  line-height: 1.8;
-}
-
-.flower-drop-enter-active,
-.flower-drop-leave-active {
-  transition: opacity 0.2s ease;
-}
-
-.flower-drop-enter-from,
-.flower-drop-leave-to {
-  opacity: 0;
+  line-height: 1.7;
 }
 
 .fade-up-enter-active,
@@ -591,7 +712,7 @@ onBeforeUnmount(() => {
 .fade-up-enter-from,
 .fade-up-leave-to {
   opacity: 0;
-  transform: translate(-50%, calc(-50% + 10px));
+  transform: translate(-50%, calc(-50% + 12px));
 }
 
 @media (max-width: 900px) {
@@ -600,28 +721,40 @@ onBeforeUnmount(() => {
   }
 
   .game-area {
-    height: 380px;
+    height: 500px;
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 640px) {
+  .flower-topbar {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
   .game-area {
-    height: 340px;
+    height: 440px;
     border-radius: 18px;
+  }
+
+  .basket {
+    width: 92px;
+    height: 54px;
+  }
+
+  .flower-item {
+    font-size: 22px;
   }
 
   .game-mask-card {
     padding: 22px 18px;
-    border-radius: 18px;
   }
 
   .mask-title {
     font-size: 20px;
   }
 
-  .basket {
-    width: 88px;
-    height: 52px;
+  .action-btn {
+    width: 100%;
   }
 }
 </style>

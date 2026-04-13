@@ -1,9 +1,8 @@
 <template>
   <div class="intro-home-wrapper">
-
-    <!-- 🎬 开场视频 -->
+    <!-- 🎬 开场视频 - 仅在根路径 '/' 且无 target 参数时显示 -->
     <div
-      v-if="showVideo"
+      v-if="showVideo && shouldShowVideo"
       class="video-container"
       :class="{ freeze: videoEnded, fadeOut: videoFadeOut }"
     >
@@ -25,10 +24,18 @@
     <!-- 页面内容 -->
     <div
       class="page-content"
-      :class="{ show: pageVisible, preShow: showVideo }"
+      :class="{
+      show: pageVisible,
+      preShow: showVideo && shouldShowVideo,
+      'direct-show': isTargetHome
+      }"
     >
-      <div class="intro-page" ref="pageRef" @scroll="handleScroll">
-
+      <div
+        class="intro-page"
+        :class="{ 'no-smooth-scroll': isTargetHome }"
+        ref="pageRef"
+        @scroll="handleScroll"
+      >
         <!-- 开场页 -->
         <section class="hero-section">
           <div class="bg-layer">
@@ -91,18 +98,17 @@
           </div>
         </section>
 
-        <!-- 第二屏 -->
+        <!-- 第二屏 - Home 组件 -->
         <section class="home-section">
           <Home />
         </section>
-
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Home from './Home.vue'
 import shanImg from '@/assets/imgs/shan.png'
@@ -112,6 +118,8 @@ const route = useRoute()
 
 const pageRef = ref(null)
 const scrollTop = ref(0)
+
+const isTargetHome = computed(() => route.query.target === 'home')
 
 const handleScroll = () => {
   if (!pageRef.value) return
@@ -153,27 +161,24 @@ const rightFrontStyle = computed(() => ({
 }))
 
 const scrollToHomeSmooth = () => {
-  pageRef.value?.scrollTo({
+  if (!pageRef.value) return
+  pageRef.value.scrollTo({
     top: window.innerHeight,
     behavior: 'smooth'
   })
 }
 
-const handleRouteTarget = async () => {
-  await nextTick()
-  if (!pageRef.value) return
-  if (route.query.target === 'home') {
-    pageRef.value.scrollTop = window.innerHeight
-  }
-}
-
 /* ===== 视频逻辑 ===== */
+const shouldShowVideo = computed(() => {
+  return route.path === '/' && !route.query.target
+})
+
 const showVideo = ref(true)
 const videoEnded = ref(false)
 const videoFadeOut = ref(false)
 const pageVisible = ref(false)
 const videoRef = ref(null)
-let speedUpTimer = null
+let timeUpdateCleanup = null
 
 const handleVideoEnd = () => {
   videoEnded.value = true
@@ -187,52 +192,108 @@ const skipVideo = () => {
 
 const startTransition = () => {
   pageVisible.value = true
-  setTimeout(() => (videoFadeOut.value = true), 200)
-  setTimeout(() => (showVideo.value = false), 1000)
+  setTimeout(() => {
+    videoFadeOut.value = true
+  }, 200)
+  setTimeout(() => {
+    showVideo.value = false
+  }, 1000)
 }
 
-// 视频加速逻辑：在播放到 85% 时，将播放速率提高到 1.15 倍，实现“快一点点”
 const setupSpeedUp = () => {
   const video = videoRef.value
-  if (!video) return
-  
+  if (!video) return null
+
   const checkProgress = () => {
-    if (!video || videoEnded.value) return
+    if (!video || videoEnded.value || !video.duration) return
     const progressPercent = video.currentTime / video.duration
-    // 当播放进度达到 85% 且尚未加速时，加快播放速度
     if (progressPercent >= 0.85 && video.playbackRate === 1.0) {
       video.playbackRate = 1.15
-      // 可选：清除定时器，避免重复检查
-      if (speedUpTimer) clearInterval(speedUpTimer)
     }
   }
-  
-  // 监听 timeupdate 事件，实时检查进度
+
   video.addEventListener('timeupdate', checkProgress)
-  // 清理事件的函数（可选，但不必须，因为视频结束后组件可能销毁）
-  // 为了稳妥，在组件卸载时移除
-  const cleanup = () => {
+  return () => {
     video.removeEventListener('timeupdate', checkProgress)
-    if (speedUpTimer) clearInterval(speedUpTimer)
   }
-  // 将清理函数存储以便在 onBeforeUnmount 中调用
-  return cleanup
 }
 
-onMounted(() => {
-  handleRouteTarget()
-  // 等待视频元素加载并开始播放
-  const video = videoRef.value
-  if (video) {
+/**
+ * target=home 时，直接瞬间定位到第二屏
+ * 但保留第一屏，这样用户还能往上滚回 IntroHome
+ */
+const jumpToHomeImmediately = () => {
+  if (!pageRef.value) return
+  const targetTop = window.innerHeight
+
+  pageRef.value.scrollTop = targetTop
+
+  requestAnimationFrame(() => {
+    if (pageRef.value) {
+      pageRef.value.scrollTop = targetTop
+    }
+  })
+
+  setTimeout(() => {
+    if (pageRef.value) {
+      pageRef.value.scrollTop = targetTop
+    }
+  }, 0)
+
+  setTimeout(() => {
+    if (pageRef.value) {
+      pageRef.value.scrollTop = targetTop
+    }
+  }, 16)
+
+  setTimeout(() => {
+    if (pageRef.value) {
+      pageRef.value.scrollTop = targetTop
+    }
+  }, 60)
+}
+
+watch(
+  () => route.query.target,
+  async () => {
+    await nextTick()
+
+    if (isTargetHome.value) {
+      pageVisible.value = true
+      showVideo.value = false
+      videoFadeOut.value = false
+      jumpToHomeImmediately()
+    } else {
+      if (pageRef.value) {
+        pageRef.value.scrollTop = 0
+      }
+    }
+  }
+)
+
+onMounted(async () => {
+  if (shouldShowVideo.value && videoRef.value) {
+    const video = videoRef.value
     video.play().catch(() => {})
-    // 设置加速监听
-    const cleanup = setupSpeedUp()
-    // 如果需要在组件卸载时清理事件，可以存储 cleanup
-    // 但当前没有 onBeforeUnmount，可以忽略或添加
+    timeUpdateCleanup = setupSpeedUp()
+  } else {
+    pageVisible.value = true
+    showVideo.value = false
+    videoFadeOut.value = false
+  }
+
+  await nextTick()
+
+  if (isTargetHome.value) {
+    jumpToHomeImmediately()
   }
 })
 
-watch(() => route.query.target, handleRouteTarget)
+onBeforeUnmount(() => {
+  if (timeUpdateCleanup) {
+    timeUpdateCleanup()
+  }
+})
 </script>
 
 <style scoped>
@@ -291,6 +352,14 @@ watch(() => route.query.target, handleRouteTarget)
   filter: blur(0);
 }
 
+/* target=home 时不要初始缩放/模糊过渡 */
+.page-content.direct-show {
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
+  transition: none !important;
+}
+
 /* 跳过 */
 .skip-btn {
   position: absolute;
@@ -298,9 +367,16 @@ watch(() => route.query.target, handleRouteTarget)
   right: 30px;
   color: white;
   cursor: pointer;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  transition: background 0.2s;
 }
-
-/* ===== 下面全部是你原来的样式（未改动） ===== */
+.skip-btn:hover {
+  background: rgba(0, 0, 0, 0.6);
+}
 
 .intro-page {
   height: 100vh;
@@ -313,28 +389,10 @@ watch(() => route.query.target, handleRouteTarget)
 .intro-page::-webkit-scrollbar {
   display: none;
 }
-.hero-section,
-.home-section {
-  position: relative;
-  width: 100%;
-  height: 100vh;
-}
-.hero-section {
-  overflow: hidden;
-  background: url("@/assets/imgs/tenwangge.jpg") center/cover no-repeat;
-}
 
-.intro-page {
-  height: 100vh;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scroll-behavior: smooth;
-  background: #f4eee5;
-  scrollbar-width: none;
-}
-
-.intro-page::-webkit-scrollbar {
-  display: none;
+/* target=home 时，初始定位不走 smooth */
+.intro-page.no-smooth-scroll {
+  scroll-behavior: auto;
 }
 
 .hero-section,
@@ -344,7 +402,6 @@ watch(() => route.query.target, handleRouteTarget)
   height: 100vh;
 }
 
-/* 背景 */
 .hero-section {
   overflow: hidden;
   background: url("@/assets/imgs/tenwangge.jpg");
@@ -353,6 +410,7 @@ watch(() => route.query.target, handleRouteTarget)
   background-repeat: no-repeat;
 }
 
+/* 背景 */
 .bg-layer {
   position: absolute;
   inset: 0;
@@ -384,7 +442,6 @@ watch(() => route.query.target, handleRouteTarget)
   filter: blur(40px);
 }
 
-/* ===== 背景呼吸 ===== */
 .breathing-bg {
   animation: bgBreath 8s ease-in-out infinite;
 }
@@ -400,7 +457,6 @@ watch(() => route.query.target, handleRouteTarget)
   }
 }
 
-/* ===== 暖光呼吸 ===== */
 .light-breath {
   animation: lightBreath 5.5s ease-in-out infinite;
 }
@@ -428,24 +484,19 @@ watch(() => route.query.target, handleRouteTarget)
 .mist-1 {
   top: 20%;
 }
-
 .mist-2 {
   top: 50%;
 }
-
 .mist-3 {
   bottom: 10%;
 }
 
-/* ===== 云雾飘动 ===== */
 .mist-move-1 {
   animation: mistDrift1 16s ease-in-out infinite alternate;
 }
-
 .mist-move-2 {
   animation: mistDrift2 20s ease-in-out infinite alternate;
 }
-
 .mist-move-3 {
   animation: mistDrift3 18s ease-in-out infinite alternate;
 }
@@ -483,25 +534,6 @@ watch(() => route.query.target, handleRouteTarget)
   }
 }
 
-/* 顶部按钮 */
-/* .top-actions {
-  position: absolute;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 25;
-}
-
-.back-btn {
-  padding: 10px 20px;
-  border-radius: 20px;
-  border: none;
-  background: white;
-  color: #8b5e3c;
-  cursor: pointer;
-  box-shadow: 0 8px 20px rgba(170, 145, 120, 0.12);
-} */
-
 /* 标题 */
 .hero-content {
   position: absolute;
@@ -512,13 +544,6 @@ watch(() => route.query.target, handleRouteTarget)
   z-index: 20;
   width: 100%;
   padding: 0 20px;
-}
-
-.title-en {
-  color: rgba(143, 106, 83, 0.78);
-  font-size: 14px;
-  letter-spacing: 4px;
-  margin-bottom: 14px;
 }
 
 .title-badge {
@@ -581,7 +606,6 @@ watch(() => route.query.target, handleRouteTarget)
   letter-spacing: 1px;
 }
 
-/* ===== 标题依次淡入 ===== */
 .fade-up {
   opacity: 0;
   transform: translateY(26px);
@@ -618,7 +642,6 @@ watch(() => route.query.target, handleRouteTarget)
   transition: transform 0.03s linear, opacity 0.03s linear;
 }
 
-/* 落日按钮容器 */
 .sunset-circle {
   width: 80px;
   height: 80px;
@@ -647,7 +670,7 @@ watch(() => route.query.target, handleRouteTarget)
       0 16px 34px rgba(186, 159, 135, 0.2);
   }
 }
-/* 落日核心（橙红渐变圆形） */
+
 .sun-core {
   position: absolute;
   inset: 0;
@@ -658,14 +681,12 @@ watch(() => route.query.target, handleRouteTarget)
     rgba(236, 113, 5, 0.7) 70%,
     rgba(253, 122, 8, 0.6) 100%
   );
-  /* 核心发光 */
-  box-shadow: 
+  box-shadow:
     inset 0 0 10px rgba(255, 120, 0, 0.9),
     0 0 40px rgba(255, 120, 0, 0.8);
   z-index: 1;
 }
 
-/* 落日光晕（外层淡色发光） */
 .sun-halo {
   position: absolute;
   inset: -10px;
@@ -680,6 +701,7 @@ watch(() => route.query.target, handleRouteTarget)
   filter: blur(15px);
   z-index: 0;
 }
+
 .ripple {
   position: absolute;
   width: 80%;
@@ -694,28 +716,17 @@ watch(() => route.query.target, handleRouteTarget)
   transition: opacity 0.3s linear, transform 0.3s linear;
   z-index: 0;
 }
-/* 第一条涟漪：无延迟（默认） */
-.ripple-1 {
-  animation-delay: 0s;
-}
 
-/* 第二条涟漪：延迟 0.6s */
-.ripple-2 {
-  animation-delay: 0.6s;
-}
+.ripple-1 { animation-delay: 0s; }
+.ripple-2 { animation-delay: 0.6s; }
+.ripple-3 { animation-delay: 1.2s; }
 
-/* 第三条涟漪：延迟 1.2s */
-.ripple-3 {
-  animation-delay: 1.2s;
-}
 @keyframes downRipple {
   0% {
-    /* 初始状态：紧贴按钮底部，完全不透明 */
     transform: translateX(-50%) scale(1);
     opacity: 1;
   }
   100% {
-    /* 结束状态：向下扩散、变淡消失 */
     transform: translateX(-50%) scale(1.5) translateY(20px);
     opacity: 0;
   }
@@ -748,34 +759,6 @@ watch(() => route.query.target, handleRouteTarget)
     contrast(0.9);
 }
 
-/* ===== 山体轻微浮动 ===== */
-.mountain-float {
-  animation: mountainFloat 6s ease-in-out infinite;
-}
-
-.mountain-float-slow {
-  animation: mountainFloatSlow 8s ease-in-out infinite;
-}
-
-/* @keyframes mountainFloat {
-  0%, 100% {
-    margin-bottom: 0;
-  }
-  50% {
-    margin-bottom: 8px;
-  }
-}
-
-@keyframes mountainFloatSlow {
-  0%, 100% {
-    margin-bottom: 0;
-  }
-  50% {
-    margin-bottom: 5px;
-  }
-} */
-
-/* 前景山 */
 .mountain.front {
   width: 32vw;
   height: 50vh;
@@ -788,7 +771,6 @@ watch(() => route.query.target, handleRouteTarget)
   opacity: 1;
 }
 
-/* 后景山 */
 .mountain.back {
   width: 26vw;
   height: 38vh;
@@ -805,7 +787,6 @@ watch(() => route.query.target, handleRouteTarget)
     contrast(0.88);
 }
 
-/* 左侧 */
 .left.front {
   left: 0;
   bottom: 0;
@@ -824,7 +805,6 @@ watch(() => route.query.target, handleRouteTarget)
   left: -8%;
 }
 
-/* 右侧 */
 .right.front {
   right: 0;
   bottom: 0;
@@ -859,7 +839,6 @@ watch(() => route.query.target, handleRouteTarget)
   );
 }
 
-/* 第二屏 */
 .home-section {
   height: 100vh;
   background: #f4eee5;
@@ -918,5 +897,4 @@ watch(() => route.query.target, handleRouteTarget)
     font-size: 12px;
   }
 }
-
 </style>

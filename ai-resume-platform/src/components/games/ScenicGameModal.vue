@@ -75,8 +75,8 @@ const close = () => {
 
 .story-modal {
   position: relative;
-  width: min(1040px, calc(100vw - 56px));
-  max-height: min(88vh, 940px);
+  width: min(1240px, calc(100vw - 40px));
+  max-height: min(94vh, 1040px);
   overflow: hidden;
   border-radius: 30px;
   background:
@@ -151,7 +151,7 @@ const close = () => {
   position: relative;
   z-index: 1;
   flex-shrink: 0;
-  padding: 8px 52px 14px 6px;
+  padding: 6px 52px 8px 6px;
 }
 
 .story-kicker {
@@ -169,8 +169,8 @@ const close = () => {
 }
 
 .story-title {
-  margin-top: 12px;
-  font-size: 28px;
+  margin-top: 10px;
+  font-size: 26px;
   line-height: 1.25;
   font-weight: 800;
   color: #4f3a26;
@@ -179,7 +179,7 @@ const close = () => {
 
 .story-subtitle {
   margin-top: 8px;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.8;
   color: #7a6a58;
   max-width: 760px;
@@ -192,7 +192,7 @@ const close = () => {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 10px 10px 14px;
+  padding: 4px 6px 8px;
   -webkit-overflow-scrolling: touch;
   box-sizing: border-box;
 

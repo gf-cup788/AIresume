@@ -142,6 +142,7 @@
 
       <FlowerCatchGame
         v-else-if="currentGame.type === 'flower'"
+        :scenic-id="scenicId"
         :scenic-name="scenicName"
         :target-score="12"
         :max-missed="6"
