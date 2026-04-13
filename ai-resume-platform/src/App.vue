@@ -1,7 +1,9 @@
 <template>
   <div id="app">
     <transition name="fade" appear>
-      <AI />
+      <div key="ai">
+        <AI />
+      </div>
     </transition>
     <!-- 古风落款头像 -->
     <div
@@ -63,7 +65,9 @@
 import AI from './components/AI.vue'
 import avatarImg from "./assets/imgs/red-soldier.png";
 import JiangHuImg from "./assets/Seal/JiangHu.png";
-import  YouKeImg  from "./assets/Seal/YouKe.png";
+import YouKeImg from "./assets/Seal/YouKe.png";
+import { GetUserProfile } from '@/api/auth.js';  
+
 export default {
   components: {
     AI
@@ -75,6 +79,7 @@ export default {
       showMenu: false,
       JiangHuImg: JiangHuImg,
       YouKeImg: YouKeImg,
+      userProfile: null,  // 存储用户详细信息
     };
   },
   computed: {
@@ -82,39 +87,78 @@ export default {
       return this.$route.path === "/dialogue";
     },
     usernameText() {
+      if (this.isLogin && this.userProfile) {
+        return this.userProfile.username || "访客";
+      }
       if (this.isLogin) {
         const user = localStorage.getItem("user");
         if (user) {
           try {
             const userData = JSON.parse(user);
-            return userData.username;
+            return userData.username || "访客";
           } catch (e) {}
         }
       }
       return "访客";
     }
   },
-  created() {
-    this.checkLogin();
+  async created() {
+    await this.checkLogin();
     window.addEventListener("click", this.handleClickOutside);
   },
   beforeDestroy() {
     window.removeEventListener("click", this.handleClickOutside);
   },
   methods: {
-    checkLogin() {
+    async checkLogin() {
       const user = localStorage.getItem("user");
       if (user) {
         this.isLogin = true;
-        try {
-          const userData = JSON.parse(user);
-          this.avatarUrl = userData.avatar || avatarImg;
-        } catch (e) {}
+        // 调用接口获取用户详细信息
+        await this.fetchUserProfile();
       } else {
         this.isLogin = false;
         this.avatarUrl = avatarImg;
+        this.userProfile = null;
       }
     },
+    
+    // 新增：获取用户详细信息
+    async fetchUserProfile() {
+      try {
+        const res = await GetUserProfile();
+        if (res.code === 200 && res.data) {
+          this.userProfile = res.data;
+          // 优先使用接口返回的头像，没有则用本地存储的，都没有则用默认
+          if (res.data.avatar) {
+            this.avatarUrl = res.data.avatar;
+          } else {
+            const user = localStorage.getItem("user");
+            if (user) {
+              try {
+                const userData = JSON.parse(user);
+                this.avatarUrl = userData.avatar || avatarImg;
+              } catch (e) {
+                this.avatarUrl = avatarImg;
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error("获取用户信息失败:", error);
+        // 接口失败时降级使用本地存储
+        const user = localStorage.getItem("user");
+        if (user) {
+          try {
+            const userData = JSON.parse(user);
+            this.avatarUrl = userData.avatar || avatarImg;
+          } catch (e) {
+            this.avatarUrl = avatarImg;
+          }
+        }
+      }
+    },
+    
     toggleMenu(e) {
       e.stopPropagation();
       this.showMenu = !this.showMenu;
@@ -130,11 +174,16 @@ export default {
       this.showMenu = false;
       this.$router.push("/login");
     },
-    logout() {
+    async logout() {
       this.showMenu = false;
       localStorage.removeItem("user");
       this.isLogin = false;
       this.avatarUrl = avatarImg;
+      this.userProfile = null;
+      // 可选：跳转到登录页或首页
+      if (this.$route.path !== "/") {
+        this.$router.push("/");
+      }
     }
   },
   watch: {

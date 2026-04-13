@@ -16,18 +16,12 @@
             <div class="page page-cover" data-density="hard">
               <div
                 class="page-content cover-page"
+                :style="{ backgroundImage: 'url(' + coverBg + ')', backgroundSize: 'cover', backgroundPosition: 'center' }"
                 @pointerdown.capture.stop.prevent
                 @mousedown.capture.stop.prevent
                 @touchstart.capture.stop.prevent
                 @click.capture.stop.prevent="handleCoverClick"
               >
-                <div class="cover-overlay"></div>
-                <div class="cover-inner">
-                  <div class="emblem">🌄</div>
-                  <h1>景 点 通 行 证</h1>
-                  <div class="stamp">✦ 景点游历 ✦</div>
-                  <div class="hint">▼ 点击翻开 ▼</div>
-                </div>
               </div>
             </div>
 
@@ -261,6 +255,10 @@ import { useRouter, useRoute } from 'vue-router'
 import { PageFlip } from 'page-flip'
 import { loginApi, registerApi } from '@/api/auth'
 import { saveLoginInfo } from '@/utils/request'
+import coverBg from '../assets/imgs/tongguanwendie.jpg'
+import bookBg1 from '../assets/imgs/login_bg1.png'
+import bookBg2 from '../assets/imgs/login_bg2.png'
+import bookBg3 from '../assets/imgs/login_bg3.png'
 
 const router = useRouter()
 const route = useRoute()
@@ -656,7 +654,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   background:
     linear-gradient(rgba(16, 12, 8, 0.28), rgba(16, 12, 8, 0.28)),
-    url("@/assets/imgs/wangxiangu.jpg") center / cover no-repeat;
+    url("@/assets/imgs/login_bg.png") center / cover no-repeat;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -720,63 +718,15 @@ onBeforeUnmount(() => {
 }
 
 .page-cover {
-  background:
-    linear-gradient(135deg, rgba(34, 20, 11, 0.06), rgba(255, 221, 161, 0.08)),
-    linear-gradient(145deg, #d8a774, #b6784a 60%, #9b6139);
+  background: transparent;
 }
 
 .cover-page {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 100%;
+  height: 100%;
   cursor: pointer;
   overflow: hidden;
-}
-
-.cover-overlay {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 30% 20%, rgba(255, 239, 193, 0.28), transparent 34%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 36%);
-}
-
-.cover-inner {
-  position: relative;
-  z-index: 1;
-  text-align: center;
-  color: #fff2c6;
-  padding: 28px;
-}
-
-.cover-inner .emblem {
-  font-size: 70px;
-  margin-bottom: 20px;
-  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.18));
-}
-
-.cover-inner h1 {
-  margin: 0 0 22px;
-  font-size: 48px;
-  letter-spacing: 8px;
-  text-shadow: 2px 2px 0 rgba(90, 46, 26, 0.7);
-}
-
-.cover-inner .stamp {
-  display: inline-block;
-  padding: 10px 24px;
-  border-radius: 999px;
-  background: rgba(255, 235, 190, 0.24);
-  border: 1px solid rgba(255, 240, 214, 0.24);
-  font-size: 18px;
-  margin-bottom: 24px;
-}
-
-.cover-inner .hint {
-  margin-top: 18px;
-  font-size: 18px;
-  opacity: 0.96;
 }
 
 .page-hard {
@@ -1006,7 +956,7 @@ onBeforeUnmount(() => {
   bottom: 28px;
   left: 50%;
   transform: translateX(-50%);
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(28, 28, 28, 0.7);
   font-size: 14px;
   letter-spacing: 2px;
   pointer-events: none;

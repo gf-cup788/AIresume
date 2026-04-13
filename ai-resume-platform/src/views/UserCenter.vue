@@ -1,210 +1,530 @@
 <template>
-  <div class="profile-page">
-    <div class="paper-board">
-      <div class="paper-top-edge"></div>
-      <div class="paper-bottom-edge"></div>
+  <div class="profile-page" :style="{ backgroundImage: `url(${bgImage})` }">
+    <!-- 页面标题 -->
+    <div class="page-header">
+      <h1 class="page-title">吾之小传</h1>
+    </div>
 
-      <div class="intro-title">INTRODUCTION</div>
-
-      <!-- 左上：个人信息 -->
-      <section class="note note-user">
-        <div class="note-pin"></div>
-        <div class="section-label"># WHO I AM</div>
-        <div class="note-icon">☕</div>
-
-        <div class="user-basic">
-          <p><strong>用户名：</strong>{{ user.name || '未命名用户' }}</p>
-          <p><strong>账号：</strong>{{ user.account || user.name || '游客' }}</p>
-          <p><strong>注册状态：</strong>{{ isLoggedIn ? '已登录' : '未登录' }}</p>
-          <p><strong>个性签名：</strong>{{ user.signature || '热爱记录每一次旅途与相遇' }}</p>
+    <!-- 左上：吾（用户信息） -->
+    <div class="module-wrapper module-wrapper-user">
+      <img :src="Border" class="border-img" />
+      <div class="module module-user" @click="showUserDetailModal = true">
+        <div class="module-header">
+          <span class="module-icon">📖</span>
+          <h2 class="module-title">吾</h2>
         </div>
-      </section>
+        <div class="module-content">
+          <div class="info-item">
+            <span class="info-label">名号</span>
+            <span class="info-value">{{ user.name || '未命名' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">手机</span>
+            <span class="info-value">{{ user.phone }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">邮箱</span>
+            <span class="info-value">{{ user.email }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
 
-      <!-- 左下：浏览记录 -->
-      <section class="note note-history">
-        <div class="note-pin"></div>
-        <div class="section-label"># HISTORY</div>
-        <div class="note-icon">⌛</div>
-
-        <div class="scroll-area history-scroll">
-          <ul v-if="browseHistory.length" class="bullet-list">
-            <li v-for="(item, index) in browseHistory.slice(0, 8)" :key="`${item.name}-${index}`">
-              <span class="item-title">{{ item.name || item.title || '未知景点' }}</span>
-              <span class="item-sub">{{ item.date || '最近浏览' }}</span>
+    <!-- 右上：往言（历史评论） -->
+    <div class="module-wrapper module-wrapper-comments">
+      <img :src="Border" class="border-img" />
+      <div class="module module-comments" @click="showCommentsModal = true">
+        <div class="module-header">
+          <span class="module-icon">💬</span>
+          <h2 class="module-title">往言</h2>
+        </div>
+        <div class="module-content scroll-area">
+          <ul v-if="myComments.length" class="list">
+            <li v-for="(item, index) in myComments.slice(0, 5)" :key="index" class="list-item">
+              <span class="item-name">{{ item.content?.slice(0, 15) }}{{ item.content?.length > 15 ? '...' : '' }}</span>
+              <span class="item-detail">
+                ❤️ {{ item.likeCount }} | {{ item.createTime }}
+              </span>
             </li>
           </ul>
-          <div v-else class="empty-text">暂时还没有浏览记录</div>
+          <div v-else class="empty-text">暂无往言</div>
         </div>
-      </section>
+      </div>
+    </div>
 
-      <!-- 中间人物 -->
-      <section class="center-figure">
-        <div class="main-title">About me</div>
-        <div class="name-cn">{{ user.name || '旅行者' }}</div>
-
-        <img :src="peopleImg" alt="人物插画" class="people-image" />
-
-        <span class="float-word word-1">INTERESTING</span>
-        <span class="float-word word-2">RECORD</span>
-        <span class="float-word word-3">INFORMATION</span>
-
-        <span class="arrow arrow-1">↷</span>
-        <span class="arrow arrow-2">↶</span>
-        <span class="arrow arrow-3">↷</span>
-
-        <div class="life-block">
-          <div class="section-label"># My Life</div>
-          <p>
-            这里记录着我的个人信息、浏览足迹和景点打卡。
-            每一次停留，都会成为旅途中独一无二的回忆。
-          </p>
+    <!-- 左下：旧迹（打卡历史） -->
+    <div class="module-wrapper module-wrapper-checkin">
+      <img :src="Border" class="border-img" />
+      <div class="module module-checkin">
+        <div class="module-header">
+          <span class="module-icon">📍</span>
+          <h2 class="module-title">旧迹</h2>
         </div>
-      </section>
-
-      <!-- 右上：打卡记录 -->
-      <section class="note note-checkin">
-        <div class="note-pin"></div>
-        <div class="small-card-title">CHECK<br />IN</div>
-        <div class="small-card-sub">-- 我的打卡记录</div>
-
-        <div class="scroll-area checkin-scroll">
-          <ul v-if="checkins.length" class="checkin-list">
-            <li v-for="(item, index) in checkins.slice(0, 10)" :key="item.id || index">
-              <span>{{ item.name || '未知景点' }}</span>
-              <em>{{ item.date || '已打卡' }}</em>
+        <div class="module-content">
+          <ul v-if="checkins.length" class="list">
+            <li v-for="(item, index) in checkins" :key="item.id || index" class="list-item">
+              <span class="item-name">{{ item.scenicName || '未知景点' }}</span>
+              <span class="item-detail">{{ formatDate(item.checkinDate) }}</span>
             </li>
           </ul>
-          <div v-else class="empty-text">还没有打卡记录</div>
+          <div v-else class="empty-text">暂无旧迹</div>
         </div>
-      </section>
+      </div>
+    </div>
 
-      <!-- 右下：按钮区 -->
-      <section class="note note-action">
-        <!-- <div class="section-label">Wonderful</div> -->
-        <div class="action-sub">#RECORD</div>
-
-        <div class="stat-lines">
-          <p>浏览记录：<strong>{{ browseHistory.length }}</strong> 条</p>
-          <p>打卡记录：<strong>{{ checkins.length }}</strong> 条</p>
-          <p>评论记录：<strong>{{ myComments.length }}</strong> 条</p>
+    <!-- 右下：操作按钮 -->
+    <div class="module-wrapper module-wrapper-actions">
+      <img :src="Border" class="border-img" />
+      <div class="module module-actions">
+        <div class="module-header">
+          <span class="module-icon">⚙️</span>
+          <h2 class="module-title">行事</h2>
         </div>
-
-        <div class="action-buttons">
-          <button class="action-btn home-btn" @click="goHome">返回首页</button>
-          <button class="action-btn logout-btn" @click="logout">退出登录</button>
+        <div class="module-content">
+          <div class="action-buttons">
+            <button class="action-btn home-btn" @click="goHome">返回首页</button>
+            <button class="action-btn logout-btn" @click="logout">退出登录</button>
+          </div>
         </div>
-      </section>
+      </div>
+    </div>
+
+    <!-- 中间：用户形象（只能从6个预设中选择） -->
+    <div class="avatar-wrapper">
+      <div class="avatar-center">
+        <div class="avatar-frame">
+          <img :src="currentProfileImage" alt="人物形象" class="avatar-img" @click="showProfileImageModal = true" />
+          <div class="avatar-hint">点击切换形象</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 弹窗1：切换用户形象（6个预设形象） -->
+    <div v-if="showProfileImageModal" class="modal-overlay" @click="showProfileImageModal = false">
+      <div class="modal-wrapper avatar-modal-wrapper">
+        <img :src="Border" class="border-img-modal avatar-border-img" />
+        <div class="modal-content avatar-modal-content" @click.stop>
+          <div class="modal-header">
+            <h3>选择人物形象</h3>
+            <button class="modal-close" @click="showProfileImageModal = false">✕</button>
+          </div>
+          <div class="modal-body">
+            <div v-for="(profile, index) in profileImageList" :key="index" class="avatar-option" @click="selectProfileImage(profile)">
+              <img :src="profile.url" :alt="profile.name" class="option-img" />
+              <span>{{ profile.name }}</span>
+              <span v-if="currentProfileImage === profile.url" class="check-mark">✓</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 弹窗2：用户详细信息（包含头像上传） -->
+    <div v-if="showUserDetailModal" class="modal-overlay" @click="showUserDetailModal = false">
+      <div class="modal-wrapper user-modal-wrapper">
+        <img :src="Border" class="border-img-modal user-border-img" />
+        <div class="modal-content user-modal-content" @click.stop>
+          <div class="modal-header">
+            <h3>吾之详情</h3>
+            <button class="modal-close" @click="showUserDetailModal = false">✕</button>
+          </div>
+          <div class="modal-body-user">
+            <div class="user-edit-form">
+              <!-- 头像区域 - 可上传图片 -->
+              <div class="avatar-section">
+                <div class="avatar-preview">
+                  <img :src="editUser.avatar || defaultAvatar" alt="头像" class="avatar-preview-img" />
+                </div>
+                <input type="file" ref="avatarInput" @change="uploadAvatar" accept="image/*" style="display: none;" />
+                <button class="upload-btn" @click="triggerAvatarUpload">上传头像</button>
+                <span class="upload-hint">建议上传1:1比例图片</span>
+              </div>
+
+              <!-- 名号 -->
+              <div class="form-group">
+                <label>名号</label>
+                <div class="input-wrapper">
+                  <input type="text" v-model="editUser.name" placeholder="请输入名号" class="edit-input" />
+                  <span class="clear-btn" @click="editUser.name = ''" v-if="editUser.name">✕</span>
+                </div>
+              </div>
+
+              <!-- 手机 -->
+              <div class="form-group">
+                <label>手机</label>
+                <div class="input-wrapper">
+                  <input type="text" v-model="editUser.phone" placeholder="请输入手机" class="edit-input" />
+                  <span class="clear-btn" @click="editUser.phone = ''" v-if="editUser.phone">✕</span>
+                </div>
+              </div>
+
+              <!-- 邮箱 -->
+              <div class="form-group">
+                <label>邮箱</label>
+                <div class="input-wrapper">
+                  <input type="email" v-model="editUser.email" placeholder="请输入邮箱" class="edit-input" />
+                  <span class="clear-btn" @click="editUser.email = ''" v-if="editUser.email">✕</span>
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button class="save-btn" @click="saveUserInfo">保存</button>
+                <button class="cancel-btn" @click="showUserDetailModal = false">取消</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 弹窗3：往言详情 -->
+    <div v-if="showCommentsModal" class="modal-overlay" @click="showCommentsModal = false">
+      <div class="modal-wrapper comments-modal-wrapper">
+        <img :src="Border" class="border-img-modal comments-border-img" />
+        <div class="modal-content comments-modal-content" @click.stop>
+          <div class="modal-header">
+            <h3>往言录</h3>
+            <button class="modal-close" @click="showCommentsModal = false">✕</button>
+          </div>
+          <div class="modal-body-list">
+            <div v-if="myComments.length" class="comments-list">
+              <div v-for="(item, index) in myComments" :key="index" class="comment-item">
+                <div class="comment-header">
+                  <span class="comment-scene">{{ item.scenicName }}</span>
+                  <span class="comment-date">{{ item.createTime }}</span>
+                </div>
+                <div class="comment-content">{{ item.content }}</div>
+                <div class="comment-footer">
+                  <span class="comment-likes">❤️ {{ item.likeCount }} 人喜欢</span>
+                </div>
+              </div>
+            </div>
+            <div v-else class="empty-text-large">暂无往言记录</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 标签 -->
+    <div class="tag left-top">
+      <img :src="Border2" class="tag-border" />
+      <div class="tag-text">
+        <span class="benwo">本我</span>
+      </div>
+    </div>
+    <div class="tag left-bottom">
+      <img :src="Border4" class="tag-border" />
+      <div class="tag-text">
+        <span class="benwo">昔迹</span>
+      </div>
+    </div>
+    <div class="tag right-top">
+      <img :src="Border4" class="tag-border" />
+      <div class="tag-text">
+        <span class="benwo">陈论</span>
+      </div>
+    </div>
+    <div class="tag right-bottom">
+      <img :src="Border2" class="tag-border" />
+      <div class="tag-text">
+        <span class="benwo">游踪</span>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, reactive, ref, onMounted, onBeforeMount } from 'vue'
+import { reactive, ref, onMounted, onBeforeMount } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
+import { GetUserProfile, UpdateUserProfile, GetCheckins, GetComments, UploadImage } from '@/api/auth.js'
+import bgImage from '@/assets/imgs/grzx_bg.jpg'
+import Border from '@/assets/imgs/border.png'
+import Border2 from '@/assets/imgs/border2.png'
+import Border3 from '@/assets/imgs/border3.png'
+import Border4 from '@/assets/imgs/border4.png'
 
 const router = useRouter()
-const peopleImg = new URL('@/assets/imgs/people.png', import.meta.url).href
+
+// 弹窗显示控制
+const showProfileImageModal = ref(false)  // 切换用户形象弹窗
+const showUserDetailModal = ref(false)
+const showCommentsModal = ref(false)
+
+// 用户形象列表（6个预设形象）
+const profileImageList = ref([
+  { name: '侠客', url: new URL('@/assets/Characters/image1.png', import.meta.url).href },
+  { name: '画师', url: new URL('@/assets/Characters/image2.png', import.meta.url).href },
+  { name: '书生', url: new URL('@/assets/Characters/image3.png', import.meta.url).href },
+  { name: '诗人', url: new URL('@/assets/Characters/image4.png', import.meta.url).href },
+  { name: '郡主', url: new URL('@/assets/Characters/image5.png', import.meta.url).href },
+  { name: '千金', url: new URL('@/assets/Characters/image6.png', import.meta.url).href },
+])
+
 const defaultAvatar = new URL('@/assets/imgs/red-soldier.png', import.meta.url).href
+const defaultProfileImage = profileImageList.value[0].url
+
+// 当前选中的用户形象（中间大图）
+const currentProfileImage = ref(defaultProfileImage)
 
 const user = reactive({
   name: '',
-  account: '',
+  avatar: '',      // 小头像（用户上传）
+  phone: '',
+  email: '',
+  profileImage: '' // 用户形象（从6个预设中选择）
+})
+
+// 编辑用的用户数据副本
+const editUser = reactive({
+  name: '',
   avatar: '',
-  signature: ''
+  phone: '',
+  email: ''
 })
 
 const checkins = ref([])
 const myComments = ref([])
-const browseHistory = ref([])
 
-const isLoggedIn = computed(() => !!localStorage.getItem('user'))
+const avatarInput = ref(null)
 
-const scenicMap = {
-  1: { name: '庐山', id: 1 },
-  2: { name: '井冈山', id: 2 },
-  3: { name: '婺源', id: 3 },
-  4: { name: '滕王阁', id: 4 },
-  5: { name: '三清山', id: 5 },
-  6: { name: '龙虎山', id: 6 }
+const formatDate = (dateStr) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
-const normalizeDate = (value) => {
-  if (value) return value
-  return new Date().toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  })
-}
-
-const loadUserComments = () => {
-  const allComments = []
-
-  Object.values(scenicMap).forEach(scene => {
-    const comments = JSON.parse(localStorage.getItem(`comments_${scene.id}`) || '[]')
-    const userComments = comments.filter(c => c.user === user.name)
-
-    userComments.forEach(c => {
-      allComments.push({
-        ...c,
-        sceneName: scene.name,
-        sceneId: scene.id,
-        date: normalizeDate(c.date)
-      })
-    })
-  })
-
-  allComments.sort((a, b) => (b.id || 0) - (a.id || 0))
-  myComments.value = allComments
-}
-
-const loadBrowseHistory = () => {
-  const rawHistory =
-    JSON.parse(localStorage.getItem('browseHistory') || '[]') ||
-    JSON.parse(localStorage.getItem('history') || '[]') ||
-    []
-
-  browseHistory.value = rawHistory
-    .map((item, index) => ({
-      id: item.id || index + 1,
-      name: item.name || item.title || '未命名内容',
-      date: normalizeDate(item.date || item.time)
-    }))
-    .reverse()
-}
-
-const loadCheckins = () => {
-  const rawCheckins = JSON.parse(localStorage.getItem('checkins') || '[]')
-
-  checkins.value = rawCheckins
-    .map((item, index) => ({
-      ...item,
-      id: item.id || index + 1,
-      name: item.name || item.title || '未知景点',
-      date: normalizeDate(item.date)
-    }))
-    .sort((a, b) => (b.id || 0) - (a.id || 0))
-}
-
-const initUser = () => {
-  const userStr = localStorage.getItem('user')
-  if (!userStr) {
-    router.replace('/login')
-    return
+const loadUserComments = async () => {
+  try {
+    const res = await GetComments()
+    if (res.code === 200 && res.data) {
+      myComments.value = res.data.map(comment => ({
+        id: comment.id,
+        content: comment.content,
+        likeCount: comment.likeCount,
+        createTime: formatDate(comment.createTime),
+        scenicName: comment.scenicName || '未知景点'
+      }))
+    }
+  } catch (error) {
+    console.error('获取评论失败:', error)
+    ElMessage.error('获取评论失败')
   }
+}
 
-  const userData = JSON.parse(userStr)
-  user.name = userData.name || '旅行者'
-  user.account = userData.account || userData.username || userData.name || '游客'
-  user.avatar = userData.avatar || defaultAvatar
-  user.signature = userData.signature || '热爱记录每一次旅途与相遇'
+const loadCheckins = async () => {
+  try {
+    const res = await GetCheckins()
+    if (res.code === 200 && res.data) {
+      checkins.value = res.data.map(item => ({
+        id: item.id,
+        scenicName: item.scenicName,
+        checkinDate: item.checkinDate
+      }))
+    }
+  } catch (error) {
+    console.error('获取打卡记录失败:', error)
+    ElMessage.error('获取打卡记录失败')
+  }
+}
+
+const initUser = async () => {
+  try {
+    const userStr = localStorage.getItem('user')
+    if (!userStr) {
+      router.replace('/login')
+      return
+    }
+    
+    const res = await GetUserProfile()
+    if (res.code === 200 && res.data) {
+      const userData = res.data
+      
+      user.name = userData.username || '旅行者'
+      user.phone = userData.phone || ''
+      user.email = userData.email || ''
+      user.avatar = userData.avatar || ''
+      user.profileImage = userData.profileImage || ''
+      
+      // 更新本地存储
+      const localUser = JSON.parse(userStr)
+      localUser.name = user.name
+      localUser.phone = user.phone
+      localUser.email = user.email
+      localStorage.setItem('user', JSON.stringify(localUser))
+      
+      // 初始化编辑数据
+      editUser.name = user.name
+      editUser.phone = user.phone
+      editUser.email = user.email
+      editUser.avatar = user.avatar
+      
+      // 设置用户形象
+      if (userData.profileImage) {
+        currentProfileImage.value = userData.profileImage
+      } else {
+        currentProfileImage.value = defaultProfileImage
+      }
+    }
+  } catch (error) {
+    console.error('获取用户信息失败:', error)
+    ElMessage.error('获取用户信息失败')
+  }
 }
 
 const initPageData = () => {
   initUser()
   loadCheckins()
   loadUserComments()
-  loadBrowseHistory()
+}
+
+// 触发头像上传
+const triggerAvatarUpload = () => {
+  avatarInput.value.click()
+}
+
+// 上传头像（调用 UploadImage 接口）
+const uploadAvatar = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+  
+  if (!file.type.startsWith('image/')) {
+    ElMessage.warning('请上传图片文件')
+    return
+  }
+  
+  if (file.size > 2 * 1024 * 1024) {
+    ElMessage.warning('图片大小不能超过2MB')
+    return
+  }
+  
+  const loading = ElLoading.service({
+    lock: true,
+    text: '上传中...',
+    background: 'rgba(0, 0, 0, 0.7)'
+  })
+  
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    
+    const res = await UploadImage(formData)
+    if (res.code === 200 && res.data && res.data.url) {
+      editUser.avatar = res.data.url
+      ElMessage.success('头像上传成功，点击保存即可更新')
+    } else {
+      ElMessage.error(res.message || '上传失败')
+    }
+  } catch (error) {
+    console.error('上传失败:', error)
+    ElMessage.error('上传失败，请重试')
+  } finally {
+    loading.close()
+  }
+  
+  event.target.value = ''
+}
+
+// 选择用户形象（先上传图片获取URL，再更新）
+const selectProfileImage = async (profile) => {
+  showProfileImageModal.value = false
+  
+  const loading = ElLoading.service({
+    lock: true,
+    text: '切换形象中...',
+    background: 'rgba(0, 0, 0, 0.7)'
+  })
+  
+  try {
+    // 将预设图片转为 File 对象并上传
+    const response = await fetch(profile.url)
+    const blob = await response.blob()
+    const file = new File([blob], `${profile.name}.png`, { type: 'image/png' })
+    
+    const formData = new FormData()
+    formData.append('file', file)
+    
+    const uploadRes = await UploadImage(formData)
+    if (uploadRes.code === 200 && uploadRes.data && uploadRes.data.url) {
+      const uploadedUrl = uploadRes.data.url
+      
+      // 更新本地显示
+      currentProfileImage.value = uploadedUrl
+      
+      // 调用更新用户信息接口
+      const updateRes = await UpdateUserProfile({
+        nickname: user.name,
+        phone: user.phone,
+        email: user.email,
+        avatar: user.avatar,
+        profileImage: uploadedUrl
+      })
+      
+      if (updateRes.code === 200) {
+        user.profileImage = uploadedUrl
+        localStorage.setItem('userProfileImage', uploadedUrl)
+        ElMessage.success('切换形象成功！')
+      } else {
+        ElMessage.error(updateRes.message || '更新失败')
+        // 恢复原来的形象
+        currentProfileImage.value = user.profileImage || defaultProfileImage
+      }
+    } else {
+      ElMessage.error(uploadRes.message || '上传形象失败')
+    }
+  } catch (error) {
+    console.error('切换形象失败:', error)
+    ElMessage.error('切换形象失败，请重试')
+  } finally {
+    loading.close()
+  }
+}
+
+// 保存用户信息（名号、手机、邮箱、头像）
+const saveUserInfo = async () => {
+  const loading = ElLoading.service({
+    lock: true,
+    text: '保存中...',
+    background: 'rgba(0, 0, 0, 0.7)'
+  })
+  
+  try {
+    const res = await UpdateUserProfile({
+      nickname: editUser.name,
+      phone: editUser.phone,
+      email: editUser.email,
+      avatar: editUser.avatar,
+      profileImage: currentProfileImage.value
+    })
+    
+    if (res.code === 200) {
+      // 更新本地存储
+      const userStr = localStorage.getItem('user')
+      if (userStr) {
+        const userData = JSON.parse(userStr)
+        userData.name = editUser.name
+        userData.phone = editUser.phone
+        userData.email = editUser.email
+        localStorage.setItem('user', JSON.stringify(userData))
+      }
+      
+      // 更新响应式数据
+      user.name = editUser.name
+      user.phone = editUser.phone
+      user.email = editUser.email
+      user.avatar = editUser.avatar
+
+      ElMessage.success('保存成功！')
+      showUserDetailModal.value = false
+    } else {
+      ElMessage.error(res.message || '保存失败')
+    }
+  } catch (error) {
+    console.error('保存失败:', error)
+    ElMessage.error('保存失败，请重试')
+  } finally {
+    loading.close()
+  }
 }
 
 const goHome = () => {
@@ -212,10 +532,16 @@ const goHome = () => {
 }
 
 const logout = () => {
-  if (confirm('确定退出登录吗？')) {
+  ElMessageBox.confirm('确定退出登录吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
     localStorage.removeItem('user')
+    localStorage.removeItem('userProfileImage')
     router.push('/login')
-  }
+    ElMessage.success('已退出登录')
+  }).catch(() => {})
 }
 
 onBeforeMount(() => {
@@ -233,451 +559,881 @@ onMounted(() => {
 <style scoped>
 .profile-page {
   width: 100%;
-  height: 100vh;
+  min-height: 100vh;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  position: relative;
+  padding: 30px 80px;
+  box-sizing: border-box;
   overflow: hidden;
-  background:
-    radial-gradient(circle at top right, rgba(214, 199, 178, 0.45), transparent 22%),
-    radial-gradient(circle at bottom left, rgba(220, 208, 189, 0.35), transparent 24%),
-    linear-gradient(180deg, #f8f6f1 0%, #efebe3 100%);
+}
+
+/* 模块添加点击光标 */
+.module {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.module:hover {
+  transform: translateY(-5px);
+  backdrop-filter: blur(8px);
+}
+
+/* 页面标题 */
+.page-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.page-title {
+  font-size: 64px;
+  font-family: 'STKaiti', 'KaiTi', serif;
+  color: #000000;
+  text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3);
+  letter-spacing: 8px;
+  margin: 0;
+  display: inline-block;
+  padding: 0 30px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+/* 模块包裹器 */
+.module-wrapper {
+  position: absolute;
+  z-index: 2;
+}
+
+.module-wrapper-user {
+  height: 225px;
+  width: 250px;
+  top: 10%;
+  left: 10%;
+  padding: 10px 10px;
+}
+.module-wrapper-user .border-img{
+  top: -60px;
+  left: -100px;
+  width: calc(100% + 200px);
+  height: calc(100% + 120px);
+}
+
+.module-wrapper-comments {
+  height: 325px;
+  width: 420px;
+  top: 12%;
+  right: 4%;
+  padding: 15px 5px;
+}
+.module-wrapper-comments .border-img{
+  top: -85px;
+  left: -135px;
+  width: calc(100% + 275px);
+  height: calc(100% + 175px);
+}
+.module-wrapper-comments .scroll-area {
+  max-height: 220px;   
+  overflow-y: auto;    
+}
+
+.module-wrapper-checkin {
+  height: auto;
+  min-height: 350px;
+  width: 300px;
+  padding: 10px 10px;
+  bottom: 6%;
+  left: 12%;
+}
+.module-wrapper-checkin .border-img{
+  top: -60px;
+  left: -100px;
+  width: calc(100% + 200px);
+  height: calc(100% + 120px);
+}
+.module-wrapper-checkin .module-content {
+  max-height: 280px;  
+  overflow-y: auto;    
+  padding-right: 5px;  
+}
+
+/* 滚动条美化（与现有样式保持一致） */
+.module-wrapper-checkin .module-content::-webkit-scrollbar,
+.module-wrapper-comments .scroll-area::-webkit-scrollbar {
+  width: 4px;
+}
+
+.module-wrapper-checkin .module-content::-webkit-scrollbar-track,
+.module-wrapper-comments .scroll-area::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+}
+
+.module-wrapper-checkin .module-content::-webkit-scrollbar-thumb,
+.module-wrapper-comments .scroll-area::-webkit-scrollbar-thumb {
+  background: #c9aa5f;
+  border-radius: 3px;
+}
+.module-wrapper-actions {
+  height: 225px;
+  width: 300px;
+  bottom: 7%;
+  right: 10%;
+  padding: 5px 5px;
+}
+.module-wrapper-actions .border-img{
+  top: -50px;
+  left: -100px;
+  width: calc(100% + 200px);
+  height: calc(100% + 100px);
+}
+
+/* 操作按钮（淡雅古风） */
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.action-btn {
+  padding: 10px 20px;
+  font-size: 16px;
+  font-family: 'STKaiti', 'KaiTi', '楷体', serif;
+  border: 1px solid #c9b896;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 2px;
+  background: transparent;
+  color: #5c4b32;
+}
+
+.action-btn:hover {
+  background: rgba(201, 170, 95, 0.15);
+  border-color: #b89850;
+  transform: translateY(-2px);
+}
+
+/* 返回首页按钮 */
+.home-btn {
+  border-color: #8b9c6e;
+  color: #6b7b4e;
+}
+
+.home-btn:hover {
+  background: rgba(107, 123, 78, 0.15);
+  border-color: #6b7b4e;
+}
+
+/* 退出登录按钮 */
+.logout-btn {
+  border-color: #c17a6e;
+  color: #a85a4e;
+}
+
+.logout-btn:hover {
+  background: rgba(168, 90, 78, 0.1);
+  border-color: #a85a4e;
+}
+
+/* 边框图片 */
+.border-img {
+  position: absolute;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* 模块内容 */
+.module {
+  position: relative;
+  padding: 20px 25px;
+  box-sizing: border-box;
+  z-index: 2;
+  transition: all 0.3s ease;
+}
+
+.module-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 18px;
-  box-sizing: border-box;
-}
-
-.paper-board {
-  position: relative;
-  width: 100%;
-  height: calc(100vh - 36px);
-  max-width: 1500px;
-  background: #f7f5f1;
-  border: 12px solid #111;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.16);
-  overflow: hidden;
-  padding: 28px 34px;
-  box-sizing: border-box;
-}
-
-.paper-board::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 12% 22%, rgba(0, 0, 0, 0.04), transparent 18%),
-    radial-gradient(circle at 86% 78%, rgba(0, 0, 0, 0.035), transparent 20%);
-  pointer-events: none;
-}
-
-.paper-top-edge,
-.paper-bottom-edge {
-  position: absolute;
-  left: 0;
-  width: 100%;
-  height: 30px;
-  z-index: 1;
-  opacity: 0.7;
-}
-
-.paper-top-edge {
-  top: 0;
-  background-image:
-    radial-gradient(circle at 10px 24px, transparent 10px, #f7f5f1 11px),
-    radial-gradient(circle at 55px 20px, transparent 14px, #f7f5f1 15px),
-    radial-gradient(circle at 112px 24px, transparent 10px, #f7f5f1 11px),
-    radial-gradient(circle at 165px 20px, transparent 16px, #f7f5f1 17px),
-    linear-gradient(#f7f5f1, #f7f5f1);
-}
-
-.paper-bottom-edge {
-  bottom: 0;
-  transform: rotate(180deg);
-  background-image:
-    radial-gradient(circle at 10px 24px, transparent 10px, #f7f5f1 11px),
-    radial-gradient(circle at 55px 20px, transparent 14px, #f7f5f1 15px),
-    radial-gradient(circle at 112px 24px, transparent 10px, #f7f5f1 11px),
-    radial-gradient(circle at 165px 20px, transparent 16px, #f7f5f1 17px),
-    linear-gradient(#f7f5f1, #f7f5f1);
-}
-
-.intro-title {
-  position: absolute;
-  top: 36px;
-  right: 44px;
-  font-size: 24px;
-  letter-spacing: 8px;
-  color: transparent;
-  -webkit-text-stroke: 1px #b7b7b7;
-  font-weight: 300;
-  z-index: 2;
-}
-
-.note {
-  position: absolute;
-  background: rgba(246, 241, 232, 0.92);
-  padding: 20px;
-  box-sizing: border-box;
-  color: #1e1e1e;
-  box-shadow:
-    0 10px 24px rgba(0, 0, 0, 0.06),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  z-index: 2;
-}
-
-.note::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.18)),
-    repeating-linear-gradient(
-      0deg,
-      transparent 0px,
-      transparent 24px,
-      rgba(0, 0, 0, 0.02) 25px
-    );
-  pointer-events: none;
-}
-
-.note-pin {
-  position: absolute;
-  width: 18px;
-  height: 18px;
-  border: 2px solid #b7b1a6;
-  border-radius: 2px;
-  top: 16px;
-  right: 14px;
-  opacity: 0.72;
-}
-
-.note-user {
-  left: 102px;
-  top: 98px;
-  width: 330px;
-  height: 260px;
-}
-
-.note-history {
-  left: 52px;
-  bottom: 96px;
-  width: 365px;
-  height: 280px;
-}
-
-.note-checkin {
-  right: 18px;
-  top: 88px;
-  width: 330px;
-  height: 320px;
-  background: rgba(239, 231, 216, 0.95);
-}
-
-.note-action {
-  right: 118px;
-  bottom: 48px;
-  width: 350px;
-  height: 300px;
-  background: rgba(246, 241, 232, 0.96);
-}
-
-.section-label {
-  font-size: 18px;
-  font-weight: 700;
-  margin-bottom: 14px;
-  letter-spacing: 1px;
-}
-
-.note-icon {
-  position: absolute;
-  top: 46px;
-  right: 22px;
-  font-size: 28px;
-  opacity: 0.75;
-}
-
-.user-basic p,
-.stat-lines p,
-.life-block p {
-  margin: 10px 0;
-  line-height: 1.8;
-  font-size: 15px;
-}
-
-.small-card-title {
-  font-size: 42px;
-  line-height: 0.95;
-  font-weight: 800;
-  letter-spacing: 2px;
+  gap: 5px;
+  padding-bottom: 10px;
   margin-bottom: 12px;
 }
 
-.small-card-sub {
+.module-icon {
   font-size: 28px;
-  font-family: 'STKaiti', 'KaiTi', serif;
-  margin-bottom: 16px;
 }
 
-.scroll-area {
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-right: 4px;
+.module-title {
+  font-size: 30px;
+  font-family: "LiSu", "隶书", serif;
+  font-weight: 700;
+  margin: 0;
+  color: #515151;
 }
 
-.history-scroll {
-  height: calc(100% - 52px);
+.module-content {
+  font-size: 14px;
+  color: #333;
 }
 
-.checkin-scroll {
-  height: calc(100% - 150px);
+/* 信息列表 */
+.info-item {
+  margin-bottom: 12px;
+  display: flex;
+  flex-wrap: wrap;
 }
 
-.bullet-list,
-.checkin-list {
+.info-label {
+  font-weight: 700;
+  width: 45px;
+  color: #555;
+}
+
+.info-value {
+  flex: 1;
+  color: #222;
+  word-break: break-word;
+}
+
+/* 通用列表样式 */
+.list {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.bullet-list li,
-.checkin-list li {
-  position: relative;
-  padding-left: 18px;
-  margin-bottom: 14px;
-  line-height: 1.6;
-  font-size: 15px;
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.08);
 }
 
-.bullet-list li::before,
-.checkin-list li::before {
-  content: '■';
-  position: absolute;
-  left: 0;
-  top: 0;
-  font-size: 10px;
+.list-item:last-child {
+  border-bottom: none;
 }
 
-.item-title {
-  display: block;
+.item-name {
   font-weight: 600;
+  color: #2c2c2c;
 }
 
-.item-sub,
-.checkin-list em {
-  display: block;
-  font-style: normal;
-  font-size: 13px;
-  color: #666;
+.item-detail {
+  font-size: 12px;
+  color: #888;
+}
+
+.scroll-area {
+  max-height: 180px;
+  overflow-y: auto;
 }
 
 .empty-text {
-  font-size: 14px;
-  color: #6b6b6b;
-  line-height: 1.7;
+  text-align: center;
+  color: #999;
+  padding: 20px 0;
+  font-size: 13px;
 }
 
-.center-figure {
+/* 中间人物形象 */
+.avatar-wrapper {
   position: absolute;
   left: 50%;
-  top: 54%;
-  width: 420px;
+  top: 60%;
   transform: translate(-50%, -50%);
+  z-index: 3;
+}
+
+.avatar-center {
+  position: relative;
   text-align: center;
   z-index: 2;
 }
 
-.main-title {
-  font-size: 66px;
-  line-height: 1;
-  font-family: 'Brush Script MT', 'Segoe Script', 'KaiTi', cursive;
-  color: #111;
-  margin-bottom: 8px;
-  transform: rotate(-3deg);
+.avatar-frame {
+  width: 350px;
+  height: auto;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 10px;
 }
 
-.name-cn {
-  font-size: 44px;
-  color: #222;
-  margin-bottom: 8px;
-  font-family: 'STKaiti', 'KaiTi', serif;
-  letter-spacing: 2px;
+.avatar-frame:hover {
+  transform: scale(1.02);
 }
 
-.people-image {
-  width: 250px;
-  max-width: 70%;
+.avatar-img {
+  width: 80%;
+  height: auto;
   object-fit: contain;
-  filter: grayscale(100%) contrast(1.08);
-  user-select: none;
 }
 
-.float-word {
-  position: absolute;
-  color: #222;
-  font-size: 18px;
-  letter-spacing: 1px;
+.avatar-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: rgba(58, 57, 57, 0.8);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-.word-1 {
-  right: -20px;
-  top: 185px;
-  transform: rotate(12deg);
-}
-
-.word-2 {
+/* 弹窗通用样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
   right: 0;
-  top: 420px;
-  transform: rotate(18deg);
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
 }
 
-.word-3 {
-  left: -20px;
-  top: 315px;
-  transform: rotate(-8deg);
+.modal-wrapper {
+  position: relative;
+  max-width: 90%;
 }
 
-.arrow {
-  position: absolute;
-  color: #111;
-  font-size: 38px;
-  opacity: 0.8;
+.modal-content {
+  position: relative;
+  background: rgba(246, 241, 232, 0.98);
+  border-radius: 8px;
+  overflow: hidden;
+  z-index: 2;
+  padding: 20px;
 }
 
-.arrow-1 {
-  right: 88px;
-  top: 120px;
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 30px 15px 30px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-.arrow-2 {
-  left: 45px;
-  top: 185px;
+.modal-header h3 {
+  margin: 0;
+  font-size: 20px;
+  color: #333;
+  font-family: 'STKaiti', 'KaiTi', serif;
 }
 
-.arrow-3 {
-  right: 70px;
-  bottom: 418px;
-}
-
-.life-block {
-  width: 300px;
-  margin: 8px auto 0;
-  text-align: left;
-  font-size: 15px;
-  line-height: 1.8;
-  color: #2e2e2e;
-}
-
-.action-sub {
-  margin-bottom: 16px;
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
   color: #666;
-  font-size: 16px;
+  transition: color 0.2s;
 }
 
-.action-buttons {
+.modal-close:hover {
+  color: #a83b2a;
+}
+
+/* 弹窗1：人物形象边框样式 */
+.avatar-modal-wrapper {
+  width: 500px;
+}
+.avatar-modal-content {
+  border-radius: 30px;
+  z-index: 8;
+}
+.avatar-border-img {
+  position: absolute;
+  top: -157px;
+  left: -210px;
+  width: calc(100% + 420px);
+  height: calc(100% + 320px);
+  z-index: 9;
+  pointer-events: none;
+}
+
+/* 弹窗2：用户信息边框样式 */
+.user-modal-wrapper {
+  width: 425px;
+  position: relative;
+}
+
+.user-modal-content {
+  padding: 0;
+  position: relative;
+  border-radius: 30px;
+  z-index: 10;
+}
+
+.user-modal-content .modal-header {
+  padding: 20px 45px;
+  border-bottom: none;
+}
+
+.user-border-img {
+  position: absolute;
+  top: -140px;
+  left: -172.5px;
+  width: calc(100% + 345px);
+  height: calc(100% + 285px);
+  z-index: 11;
+  pointer-events: none;
+}
+
+/* 用户编辑表单样式 */
+.modal-body-user {
+  padding: 20px 30px 30px 30px;
+}
+
+.user-edit-form {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  margin-top: 20px;
+  gap: 20px;
 }
 
-.action-btn {
+/* 头像区域 */
+.avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.avatar-preview {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #c9aa5f;
+  background: #f5f0e8;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-preview-img {
   width: 100%;
-  height: 46px;
-  border: 1px solid #222;
-  background: #fffdf8;
-  color: #111;
-  font-size: 16px;
+  height: 100%;
+  object-fit: cover;
+}
+
+.upload-btn {
+  padding: 6px 24px;
+  background: #c9aa5f;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
   cursor: pointer;
-  transition: all 0.25s ease;
+  font-size: 13px;
+  transition: all 0.2s;
 }
 
-.action-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+.upload-btn:hover {
+  background: #b89850;
+  transform: translateY(-1px);
 }
 
-.home-btn {
-  background: #111;
+.upload-hint {
+  font-size: 12px;
+  color: #999;
+}
+
+/* 表单项 */
+.form-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.form-group label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #555;
+  width: 45px;
+  flex-shrink: 0;
+}
+
+.input-wrapper {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.edit-input {
+  width: 100%;
+  padding: 10px 30px 10px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s;
+  background: #fafafa;
+}
+
+.edit-input:focus {
+  outline: none;
+  border-color: #c9aa5f;
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(201, 170, 95, 0.1);
+}
+
+.clear-btn {
+  position: absolute;
+  right: 10px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ccc;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.clear-btn:hover {
+  background: #999;
+}
+
+/* 按钮区域 */
+.form-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.save-btn, .cancel-btn {
+  padding: 8px 30px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.save-btn {
+  background: #c9aa5f;
   color: #fff;
 }
 
-.logout-btn {
-  background: #f1ece3;
+.save-btn:hover {
+  background: #b89850;
+  transform: translateY(-1px);
 }
 
-@media (max-width: 1280px) {
-  .profile-page {
-    height: auto;
-    overflow: auto;
-    padding: 14px;
-  }
+.cancel-btn {
+  background: #eee;
+  color: #666;
+}
 
-  .paper-board {
-    height: auto;
-    min-height: calc(100vh - 28px);
+.cancel-btn:hover {
+  background: #e0e0e0;
+  transform: translateY(-1px);
+}
+
+/* 弹窗3：往言边框样式 */
+.comments-modal-wrapper {
+  width: 520px;
+  max-height: 80vh;
+}
+.comments-modal-content {
+  border-radius: 30px;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  max-height: 70vh;  
+  overflow: hidden;
+}
+
+.comments-border-img {
+  position: absolute;
+  top: -125px;
+  left: -215px;
+  width: calc(100% + 430px);
+  height: calc(100% + 250px);
+  z-index: 9;
+  pointer-events: none;
+}
+
+/* 列表详情弹窗样式 */
+.modal-body-list {
+  padding: 20px 30px;
+  flex: 1;
+  overflow-y: auto;  
+  max-height: 415px;
+  min-height: 400px;
+}
+
+.comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.comment-item {
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  border-left: 3px solid #c9aa5f;
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.1);
+}
+
+.comment-scene {
+  font-weight: 600;
+  color: #c9aa5f;
+}
+
+.comment-date {
+  font-size: 12px;
+  color: #999;
+}
+
+.comment-content {
+  font-size: 14px;
+  color: #555;
+  line-height: 1.5;
+}
+
+.comment-footer {
+  margin-top: 8px;
+}
+
+.comment-likes {
+  font-size: 12px;
+  color: #e74c3c;
+}
+
+.empty-text-large {
+  text-align: center;
+  color: #999;
+  padding: 40px 0;
+  font-size: 14px;
+}
+
+/* 弹窗中的形象选项 */
+.modal-body {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  padding-top: 20px;
+}
+
+.avatar-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  position: relative;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.avatar-option:hover {
+  background: rgba(255, 255, 255, 0.8);
+  transform: translateY(-3px);
+}
+
+.option-img {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 50%;
+  margin-bottom: 10px;
+}
+
+.avatar-option span:first-of-type {
+  font-size: 14px;
+  color: #333;
+}
+
+.check-mark {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: #67c23a;
+  font-size: 20px;
+  font-weight: bold;
+}
+
+/* 标签 */
+.tag {
+  position: absolute;        
+  display: flex;      
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.tag.left-top {
+  width: 475px;        
+  height: 350px; 
+  top: 12%;
+  left: 23%;
+  z-index: 2;
+}
+
+.tag.left-top .tag-border {
+  transform: translate(-30%, -50%) rotate(180deg);
+}
+
+.tag.right-top {
+  width: 400px;        
+  height: 275px; 
+  top: 10%;
+  right: 25%;
+  z-index: 2;
+}
+
+.tag.right-top .tag-border {
+  transform: translate(-55%, -50%);
+}
+
+.tag.left-bottom {
+  width: 375px;        
+  height: 275px;
+  bottom: 5%;
+  left: 30%;
+  z-index: 2;
+}
+
+.tag.left-bottom .tag-border {
+  transform: translate(-44%, -50%) rotate(180deg);
+}
+
+.tag.right-bottom {
+  width: 420px;        
+  height: 300px;
+  bottom: 12%;
+  right: 25%;
+  z-index: 2;
+}
+
+.tag.right-bottom .tag-border {
+  transform: translate(-58%, -50%);
+}
+
+.tag-border {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 120px;
+  height: 60px;
+  z-index: 11;
+  pointer-events: none;
+}
+
+.tag-text {
+  font-family: '隶书','楷体';
+  font-size: 22px;
+  color: #333;
+  z-index: 11;
+}
+
+/* 滚动条美化 */
+.modal-body-list::-webkit-scrollbar,
+.scroll-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-body-list::-webkit-scrollbar-track,
+.scroll-area::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+}
+
+.modal-body-list::-webkit-scrollbar-thumb,
+.scroll-area::-webkit-scrollbar-thumb {
+  background: #c9aa5f;
+  border-radius: 3px;
+}
+
+/* 响应式布局 */
+@media (max-width: 1200px) {
+  .profile-page {
+    padding: 20px 40px;
     display: flex;
     flex-direction: column;
-    gap: 18px;
-    padding: 52px 20px 26px;
+    align-items: center;
   }
-
-  .note,
-  .center-figure {
+  
+  .module-wrapper {
     position: relative;
-    left: auto;
-    right: auto;
-    top: auto;
-    bottom: auto;
+    width: 90%;
+    max-width: 320px;
+    margin: 15px auto;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+  }
+  
+  .module {
     width: 100%;
-    height: auto;
+  }
+  
+  .avatar-wrapper {
+    position: relative;
+    margin: 30px auto;
     transform: none;
-    margin: 0;
-  }
-
-  .scroll-area,
-  .history-scroll,
-  .checkin-scroll {
-    height: auto;
-    max-height: 220px;
-  }
-
-  .center-figure {
-    order: 2;
+    left: auto;
+    top: auto;
   }
 }
 
 @media (max-width: 768px) {
-  .paper-board {
-    border-width: 8px;
-  }
-
-  .main-title {
-    font-size: 52px;
-  }
-
-  .name-cn {
+  .page-title {
     font-size: 32px;
+    letter-spacing: 4px;
   }
-
-  .people-image {
-    width: 210px;
+  
+  .avatar-frame {
+    width: 250px;
   }
-
-  .float-word,
-  .arrow {
+  
+  .modal-body {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .option-img {
+    width: 70px;
+    height: 70px;
+  }
+  
+  .avatar-modal-wrapper,
+  .user-modal-wrapper,
+  .comments-modal-wrapper {
+    width: 95%;
+  }
+  
+  .modal-body-user,
+  .modal-body-list {
+    padding: 15px;
+  }
+  
+  /* 小屏幕隐藏边框图片避免错位 */
+  .border-img,
+  .avatar-border-img,
+  .user-border-img,
+  .comments-border-img {
     display: none;
-  }
-
-  .small-card-title {
-    font-size: 48px;
-  }
-
-  .small-card-sub {
-    font-size: 22px;
-  }
-
-  .life-block {
-    width: 100%;
   }
 }
 </style>
