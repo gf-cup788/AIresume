@@ -397,7 +397,7 @@ const scenicList = [
     name: "庐山",
     img: lushan,
     gallery: [lushan, wuyuan, sanqingshan, twangge, jinggangshan],
-    poem: "飞流直下三千尺，疑是银河落九天",
+    // poem: "飞流直下三千尺，疑是银河落九天",
     desc:
       "庐山以雄、奇、险、秀闻名，山中云雾变化丰富，瀑布、峡谷、别墅群与人文历史交织，是江西非常有代表性的名山景区。",
     highlights: ["瀑布与云海景观", "避暑胜地", "山水与人文结合"],
@@ -1139,6 +1139,7 @@ function startDialogue() {
     query: {
       id: activeId.value,
       apiId: currentScenic.value.apiId || activeId.value,
+      regionId: currentScenic.value.regionId || route.query.regionId,
       demo: isLogin.value ? "false" : "true"
     }
   });

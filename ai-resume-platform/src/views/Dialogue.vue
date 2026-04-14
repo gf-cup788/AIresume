@@ -7,6 +7,7 @@
       :class="{ loaded: bgLoaded }"
       :style="{ backgroundImage: `url(${currentBg})` }"
     ></div>
+
     <!-- 顶部 -->
     <div class="top-bar">
       <div class="scene-chip">{{ scenicTitle }}</div>
@@ -102,8 +103,12 @@
 
     <!-- 右侧玩一玩 -->
     <button class="play-float-btn" @click.stop="openGameModal">
-      <span class="play-icon">✦</span>
-      <span>玩一玩</span>
+      <span class="play-btn-ripple"></span>
+      <span class="play-btn-ripple ripple-delay"></span>
+      <span class="play-btn-inner">
+        <span class="play-icon">✦</span>
+        <span class="play-text">玩一玩</span>
+      </span>
     </button>
 
     <!-- DEMO 提示 -->
@@ -232,6 +237,12 @@ import { useRoute, useRouter } from "vue-router";
 import { request } from "@/utils/request";
 
 import defaultAvatar from "@/assets/imgs/NPC.png";
+import npcNanChang from "@/assets/Characters/NPC-NanChang.png";
+import npcGanZhou from "@/assets/Characters/NPC-GanZhou.png";
+import npcShangRao from "@/assets/Characters/NPC-ShangRao.png";
+import npcJiAn from "@/assets/Characters/NPC-JiAn.png";
+import npcJiuJiang from "@/assets/Characters/NPC-JiuJiang.png";
+import npcJingDeZhen from "@/assets/Characters/NPC-JingDeZhen.png";
 import defaultAvatarA from "@/assets/imgs/youke.png";
 import lushanBg from "@/assets/imgs/lushan.jpg";
 import defaultDialoguePageBg from "@/assets/imgs/duihuapg.png";
@@ -255,11 +266,17 @@ const scenicDetail = ref({
   name: "",
   summary: "",
   dialogues: [],
-  dialogueBgUrl: ""
+  dialogueBgUrl: "",
+  regionId: null
 });
 
 const bgLoaded = ref(false);
 const currentBg = ref(defaultDialoguePageBg);
+
+/** 新增：用户信息，用 profileImage 控制游客图片 */
+const userProfile = ref({
+  profileImage: ""
+});
 
 const travelerNames = {
   1: "扶光",
@@ -313,8 +330,37 @@ const scenicNameMap = {
 };
 
 const npcName = npcConfig[scenicId]?.name || "导游";
-const npcImage = npcConfig[scenicId]?.image || defaultAvatar;
-const travelerImage = defaultAvatarA;
+
+const currentRegionId = computed(() => {
+  const queryRegionId = Number(route.query.regionId);
+  if (queryRegionId) return queryRegionId;
+  return Number(scenicDetail.value.regionId) || null;
+});
+
+const npcImage = computed(() => {
+  switch (currentRegionId.value) {
+    case 1:
+      return npcNanChang;
+    case 2:
+      return npcGanZhou;
+    case 3:
+      return npcShangRao;
+    case 4:
+      return npcJiAn;
+    case 5:
+      return npcJiuJiang;
+    case 6:
+      return npcJingDeZhen;
+    default:
+      return npcConfig[scenicId]?.image || defaultAvatar;
+  }
+});
+
+/** 新增：游客图优先取 profileImage，没有则取默认图 */
+const travelerImage = computed(() => {
+  return userProfile.value.profileImage || defaultAvatarA;
+});
+
 const npcPoem = npcConfig[scenicId]?.poem || "";
 const scenicTitle = npcConfig[scenicId]?.title || "江西风物";
 
@@ -419,40 +465,37 @@ let autoTimer = null;
 const showGameModal = ref(false);
 const showSummaryModal = ref(false);
 const showFinishModal = ref(false);
-const finishSaved = ref(false); // false: 未打卡/未登录, true: 首次打卡成功, "already": 重复打卡
-const hasCheckedIn = ref(false); // 防止重复打卡
+const finishSaved = ref(false);
+const hasCheckedIn = ref(false);
 
 // ==================== 打卡接口 ====================
 const submitCheckin = async () => {
-  // 已经打卡过了，不再重复打卡
   if (hasCheckedIn.value) return;
-  
-  // 只有登录用户才能打卡
-  const token = localStorage.getItem('token');
+
+  const token = localStorage.getItem("token");
   if (!token) {
     console.log("用户未登录，跳过打卡");
     return;
   }
-  
+
   try {
     const requestBody = {
       scenicId: scenicId,
       scenicName: scenicName.value
     };
-    
+
     console.log("打卡请求参数:", requestBody);
-    
+
     const res = await request("/api/checkin", {
       method: "POST",
       body: requestBody
     });
-    
+
     if (res?.code === 200) {
       console.log("打卡成功:", scenicName.value);
       hasCheckedIn.value = true;
       finishSaved.value = true;
     } else {
-      // 检查是否是重复打卡的情况
       if (res?.message && (res.message.includes("今天已经打卡过") || res.message.includes("已打卡"))) {
         console.log("今天已经打卡过该景点:", scenicName.value);
         hasCheckedIn.value = true;
@@ -475,118 +518,135 @@ const submitCheckin = async () => {
 };
 // ==================== 打卡接口结束 ====================
 
+// ==================== 用户头像接口 ====================
+const fetchUserProfile = async () => {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    userProfile.value.profileImage = "";
+    return;
+  }
+
+  try {
+    const res = await request("/api/user/profile", {
+      method: "GET"
+    });
+
+    if (res?.code === 200 && res?.data) {
+      userProfile.value = {
+        profileImage: res.data.profileImage || ""
+      };
+      console.log("用户资料获取成功:", userProfile.value);
+    } else {
+      userProfile.value.profileImage = "";
+      console.error("获取用户资料失败:", res?.message);
+    }
+  } catch (error) {
+    userProfile.value.profileImage = "";
+    console.error("获取用户资料失败：", error);
+  }
+};
+// ==================== 用户头像接口结束 ====================
+
 // ==================== 游戏接口相关 ====================
 const gameData = ref(null);
 const loadingGame = ref(false);
 
-// 游戏类型映射（接口返回的gameType -> 前端组件使用的类型）
 const gameTypeMap = {
-  'puzzle': 'puzzle',
-  'flower': 'flower',
-  'match': 'memory',
-  'spot_diff': 'spot',
-  'link': 'link'
+  puzzle: "puzzle",
+  flower: "flower",
+  match: "memory",
+  spot_diff: "spot",
+  link: "link"
 };
 
-// 获取游戏数据（只获取游戏类型）
 const fetchGameData = async () => {
   try {
     loadingGame.value = true;
     const res = await request(`/api/games/start?scenicId=${scenicId}`, {
-      method: 'GET'
+      method: "GET"
     });
-    
+
     if (res?.code === 200 && res?.data) {
       gameData.value = res.data;
-      console.log('游戏类型获取成功:', gameData.value);
+      console.log("游戏类型获取成功:", gameData.value);
     } else {
-      console.error('获取游戏类型失败');
+      console.error("获取游戏类型失败");
       gameData.value = null;
     }
   } catch (error) {
-    console.error('获取游戏类型失败：', error);
+    console.error("获取游戏类型失败：", error);
     gameData.value = null;
   } finally {
     loadingGame.value = false;
   }
 };
 
-// 当前游戏类型（根据接口返回的gameType）
 const currentGameType = computed(() => {
   if (!gameData.value?.gameType) return null;
   return gameTypeMap[gameData.value.gameType] || null;
 });
 
-const linkGamePairs = computed(() => {
-  const items = Array.isArray(gameData.value?.linkItems) ? gameData.value.linkItems : [];
-  return items.map((item) => ({
-    left: item?.leftContent || '',
-    right: item?.rightContent || ''
-  })).filter((item) => item.left && item.right);
-});
-
-// 游戏配置（根据接口返回的gameType判断游戏类型）
 const currentGame = computed(() => {
   const gameType = currentGameType.value;
   const apiTitle = gameData.value?.title || `${scenicName.value} · 小游戏`;
-  const apiDesc = gameData.value?.description || '完成游戏可获得打卡奖励';
+  const apiDesc = gameData.value?.description || "完成游戏可获得打卡奖励";
 
   if (!gameType) {
     return {
-      type: 'puzzle',
+      type: "puzzle",
       title: apiTitle,
       subtitle: apiDesc,
       imageUrl: lushanBg
     };
   }
 
-  if (gameType === 'puzzle') {
+  if (gameType === "puzzle") {
     return {
-      type: 'puzzle',
+      type: "puzzle",
       title: gameData.value?.title || `${scenicName.value} · 拼图小游戏`,
-      subtitle: gameData.value?.description || '将右侧拼图块拖到左边对应位置，放对后会自动吸附。',
+      subtitle: gameData.value?.description || "将右侧拼图块拖到左边对应位置，放对后会自动吸附。",
       imageUrl: lushanBg
     };
   }
 
-  if (gameType === 'flower') {
+  if (gameType === "flower") {
     return {
-      type: 'flower',
+      type: "flower",
       title: gameData.value?.title || `${scenicName.value} · 接花小游戏`,
-      subtitle: gameData.value?.description || '移动下方花篮，接住掉落的花朵，达到目标分数即可通关。',
-      imageUrl: ''
+      subtitle: gameData.value?.description || "移动下方花篮，接住掉落的花朵，达到目标分数即可通关。",
+      imageUrl: ""
     };
   }
 
-  if (gameType === 'memory') {
+  if (gameType === "memory") {
     return {
-      type: 'memory',
+      type: "memory",
       title: gameData.value?.title || `${scenicName.value} · 翻牌消消乐`,
-      subtitle: gameData.value?.description || '翻开两张相同的卡片即可消除，全部消除就算成功。',
-      imageUrl: ''
+      subtitle: gameData.value?.description || "翻开两张相同的卡片即可消除，全部消除就算成功。",
+      imageUrl: ""
     };
   }
 
-  if (gameType === 'spot') {
+  if (gameType === "spot") {
     return {
-      type: 'spot',
+      type: "spot",
       title: gameData.value?.title || `${scenicName.value} · 找不同`,
-      subtitle: gameData.value?.description || '找出左右两幅图中的所有不同点。',
-      imageUrl: ''
+      subtitle: gameData.value?.description || "找出左右两幅图中的所有不同点。",
+      imageUrl: ""
     };
   }
 
-  if (gameType === 'link') {
+  if (gameType === "link") {
     return {
-      type: 'link',
+      type: "link",
       title: gameData.value?.title || `${scenicName.value} · 连线游戏`,
-      subtitle: gameData.value?.description || '将左侧内容与右侧正确内容连起来。',
-      imageUrl: ''
+      subtitle: gameData.value?.description || "将左侧内容与右侧正确内容连起来。",
+      imageUrl: ""
     };
   }
 
   return {
-    type: 'puzzle',
+    type: "puzzle",
     title: apiTitle,
     subtitle: apiDesc,
     imageUrl: lushanBg
@@ -700,20 +760,17 @@ const skipToStory = () => {
 
 const closeSummaryModal = async () => {
   showSummaryModal.value = false;
-  
-  // 关闭故事总结后，调用打卡接口
+
   await submitCheckin();
-  
+
   showFinishModal.value = true;
   const user = localStorage.getItem("user");
-  // 如果用户未登录，finishSaved 保持 false
   if (!user) {
     finishSaved.value = false;
   }
 };
 
 const openGameModal = async () => {
-  // 如果游戏数据还没加载，先加载
   if (!gameData.value) {
     await fetchGameData();
   }
@@ -762,7 +819,8 @@ const fetchDialogueDetail = async () => {
         name: res.data.name || "",
         summary: res.data.summary || "",
         dialogues: Array.isArray(res.data.dialogues) ? res.data.dialogues : [],
-        dialogueBgUrl: res.data.dialogueBgUrl || ""
+        dialogueBgUrl: res.data.dialogueBgUrl || "",
+        regionId: res.data.regionId ?? null
       };
 
       const loadedBg = await preloadBackground(res.data.dialogueBgUrl);
@@ -822,8 +880,9 @@ onMounted(async () => {
     return;
   }
 
+  await fetchUserProfile();
   await fetchDialogueDetail();
-  await fetchGameData(); // 获取游戏类型
+  await fetchGameData();
 });
 
 onBeforeUnmount(() => {
@@ -971,18 +1030,18 @@ onBeforeUnmount(() => {
 
 .character {
   position: absolute;
-  width: min(25vw, 350px);
+  width: min(20vw, 300px);
   transition: opacity 0.25s ease;
 }
 
 .traveler-card {
   left: 3vw;
-  top: 4.5vh;
+  top: 7.5vh;
 }
 
 .npc-card {
   right: 3vw;
-  top: 4.5vh;
+  top: 7.5vh;
 }
 
 .character.active {
@@ -1210,25 +1269,144 @@ onBeforeUnmount(() => {
 
 .play-float-btn {
   position: fixed;
-  right: 0;
+  right: 16px;
   top: 58%;
   transform: translateY(-50%);
   z-index: 18;
-  height: 58px;
-  padding: 0 18px;
+  width: 84px;
+  height: 84px;
+  padding: 0;
   border: none;
-  border-radius: 18px 0 0 18px;
-  background: linear-gradient(180deg, rgba(69, 50, 31, 0.92), rgba(47, 34, 22, 0.94));
-  color: #fff1dc;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #fff1d9 0%, #d8ab6a 30%, #f7bc88 68%, #c58350 100%);
+  color: #fff6eb;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  box-shadow: 0 12px 24px rgba(40, 27, 17, 0.18);
-  font-size: 15px;
+  justify-content: center;
+  box-shadow:
+    0 14px 30px rgba(64, 40, 22, 0.24),
+    inset 0 2px 10px rgba(255, 255, 255, 0.32),
+    inset 0 -8px 14px rgba(94, 52, 22, 0.22);
+  overflow: visible;
+  isolation: isolate;
+  animation: playBtnFloat 3.2s ease-in-out infinite;
+}
+
+.play-float-btn::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 244, 225, 0.52);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.play-float-btn::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 221, 171, 0.18) 0%, rgba(255, 221, 171, 0.04) 48%, rgba(255, 221, 171, 0) 72%);
+  z-index: 0;
+  animation: playBtnGlow 2.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.play-btn-inner {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, rgba(255, 251, 242, 0.2), rgba(255, 238, 213, 0.08));
+  backdrop-filter: blur(1px);
+}
+
+.play-btn-ripple {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 236, 202, 0.55);
+  z-index: 1;
+  opacity: 0;
+  pointer-events: none;
+  animation: playBtnRipple 2.8s ease-out infinite;
+}
+
+.play-btn-ripple.ripple-delay {
+  animation-delay: 1.4s;
 }
 
 .play-icon {
+  font-size: 24px;
+  line-height: 1;
+  color: #fff9f0;
+  text-shadow: 0 2px 8px rgba(124, 71, 33, 0.32);
+  animation: playStarTwinkle 2.2s ease-in-out infinite;
+}
+
+.play-text {
   font-size: 16px;
+  line-height: 1;
+  letter-spacing: 2px;
+  font-weight: 700;
+  color: #fff7ee;
+  text-shadow: 0 1px 4px rgba(83, 47, 20, 0.28);
+}
+
+@keyframes playBtnFloat {
+  0%,
+  100% {
+    transform: translateY(-50%) translateX(0);
+  }
+  50% {
+    transform: translateY(calc(-50% - 6px)) translateX(-2px);
+  }
+}
+
+@keyframes playBtnGlow {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes playBtnRipple {
+  0% {
+    opacity: 0.65;
+    transform: scale(0.92);
+  }
+  70% {
+    opacity: 0.14;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.36);
+  }
+}
+
+@keyframes playStarTwinkle {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+  30% {
+    transform: scale(1.08) rotate(-8deg);
+  }
+  60% {
+    transform: scale(0.94) rotate(8deg);
+  }
 }
 
 .invitation-mask,
@@ -1501,9 +1679,23 @@ onBeforeUnmount(() => {
   }
 
   .play-float-btn {
-    height: 48px;
+    right: 18px;
+    width: 82px;
+    height: 82px;
+  }
+
+  .play-btn-inner {
+    width: 66px;
+    height: 66px;
+  }
+
+  .play-icon {
+    font-size: 20px;
+  }
+
+  .play-text {
     font-size: 13px;
-    padding: 0 12px;
+    letter-spacing: 1px;
   }
 }
 
@@ -1551,6 +1743,27 @@ onBeforeUnmount(() => {
 
   .dialogue-text {
     font-size: 18px;
+  }
+
+  .play-float-btn {
+    right: 12px;
+    width: 72px;
+    height: 72px;
+  }
+
+  .play-btn-inner {
+    width: 58px;
+    height: 58px;
+    gap: 2px;
+  }
+
+  .play-icon {
+    font-size: 16px;
+  }
+
+  .play-text {
+    font-size: 12px;
+    letter-spacing: 0;
   }
 }
 </style>
