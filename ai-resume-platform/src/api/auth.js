@@ -49,15 +49,8 @@ export function GetCheckins(data) {
   })
 }
 
-export function GetRegions() {
-  return request('/api/regions', {
-    method: 'get',
-    withToken: true
-  })
-}
-
-export function GetScenics(regionId) {
-  return request(`/api/scenics/${regionId}`, {
+export function GetScenics(ScenicId) {
+  return request(`/api/scenics/${ScenicId}`, {
     method: 'get',
     withToken: true
   })

@@ -83,6 +83,7 @@
     :max-tips-per-day="5"
     :inactive-threshold="120000"
     :random-interval="420000"
+    :initial-delay="6000"
     @tip-shown="handleTipShown"
     @tip-clicked="handleTipClick"
   />
@@ -410,7 +411,7 @@ onBeforeUnmount(() => {
 /* 小映形象容器 - 从右侧滑入的动画 */
 .xiaoying-character {
   position: fixed;
-  right: -40px;
+  right: -30px;
   bottom: 30px;
   cursor: pointer;
   pointer-events: auto;
@@ -726,6 +727,32 @@ onBeforeUnmount(() => {
   }
   .xiaoying-character {
     bottom: 15px;
+  }
+}
+
+@media (max-width: 768px) {
+  .ai-container {
+    /* 调整布局、字体大小等 */
+    font-size: 14px;
+    padding: 10px;
+  }
+
+  .ai-image {
+    width: 85px;
+    height: auto;
+  }
+}
+
+/* 针对大屏幕的调整 */
+@media (min-width: 1200px) {
+  .ai-container {
+    font-size: 18px;
+    padding: 20px;
+  }
+
+  .xiaoying-image {
+    width: 100px;
+    height: auto;
   }
 }
 </style>

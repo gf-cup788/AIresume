@@ -1,3 +1,4 @@
+<!-- AITips.vue - 修改后的完整代码 -->
 <template>
   <!-- 提示弹窗容器（动态添加到 body） -->
 </template>
@@ -40,6 +41,11 @@ const props = defineProps({
       backToHome: true,
       random: true
     })
+  },
+  // 页面初始延迟（用于视频播放期间禁用提示）
+  initialDelay: {
+    type: Number,
+    default: 6000  // 6秒，视频约5秒多，给一点缓冲
   }
 })
 
@@ -121,6 +127,11 @@ const tipShownCount = ref(0)
 const lastTipDate = ref('')
 const scrollTipShown = ref(false)
 
+// 提示队列管理
+const tipQueue = ref([])
+let isShowingTip = false
+let initialDelayPassed = false
+
 // ========== 工具函数 ==========
 const getTimeOfDay = () => {
   const hour = new Date().getHours()
@@ -148,6 +159,11 @@ const isLongTimeNoSee = () => {
 
 const canShowTip = () => {
   if (props.disabled) return false
+  if (!initialDelayPassed)
+  {
+    console.log('[延迟测试] initialDelay未通过，当前时间:', Date.now(), '需等待', props.initialDelay, 'ms');
+    return false
+  } 
   
   const today = new Date().toDateString()
   if (lastTipDate.value !== today) {
@@ -163,10 +179,33 @@ const getRandomMessage = (category) => {
   return messages[Math.floor(Math.random() * messages.length)]
 }
 
-// ========== 显示提示 ==========
-const showTip = (message, duration = 8000, type = 'general') => {
-  if (!canShowTip()) return false
+// ========== 提示队列处理 ==========
+const processTipQueue = () => {
+  if (isShowingTip) return
+  if (tipQueue.value.length === 0) return
+  
+  const nextTip = tipQueue.value.shift()
+  if (nextTip && canShowTip()) {
+    isShowingTip = true
+    showTipInternal(nextTip.message, nextTip.duration, nextTip.type, nextTip.onClose)
+  }
+}
+
+const enqueueTip = (message, duration = 8000, type = 'general', onClose = null) => {
   if (!message) return false
+  
+  tipQueue.value.push({ message, duration, type, onClose })
+  processTipQueue()
+  return true
+}
+
+// ========== 显示提示（内部实现） ==========
+const showTipInternal = (message, duration = 8000, type = 'general', onClose = null) => {
+  if (!canShowTip()) {
+    isShowingTip = false
+    processTipQueue()
+    return false
+  }
   
   tipShownCount.value++
   emit('tipShown', { message, type, count: tipShownCount.value })
@@ -185,7 +224,6 @@ const showTip = (message, duration = 8000, type = 'general') => {
   if (xiaoyingEl) {
     const rect = xiaoyingEl.getBoundingClientRect()
     tip.style.position = 'fixed'
-    // 气泡出现在小映左上方
     tip.style.bottom = `${window.innerHeight - rect.top - 150}px`
     tip.style.right = `${window.innerWidth - rect.left - 30}px`
   } else {
@@ -198,27 +236,39 @@ const showTip = (message, duration = 8000, type = 'general') => {
   
   // 关闭按钮
   const closeBtn = tip.querySelector('.tip-close')
+  const cleanup = () => {
+    if (tip.parentNode) tip.remove()
+    isShowingTip = false
+    if (onClose) onClose()
+    processTipQueue()
+  }
+  
   closeBtn.addEventListener('click', (e) => {
     e.stopPropagation()
-    tip.remove()
+    cleanup()
   })
   
   // 点击提示
   tip.addEventListener('click', (e) => {
     if (e.target !== closeBtn) {
       emit('tipClicked', { message, type })
-      tip.remove()
+      cleanup()
     }
   })
   
   // 自动消失
   setTimeout(() => {
-    if (tip.parentNode) tip.remove()
+    if (tip.parentNode) cleanup()
   }, duration)
   
   // 动画
   setTimeout(() => tip.classList.add('show'), 10)
   return true
+}
+
+// 外部调用接口
+const showTip = (message, duration = 8000, type = 'general') => {
+  return enqueueTip(message, duration, type)
 }
 
 // ========== 各种提示检查 ==========
@@ -227,7 +277,7 @@ const checkProfileTip = () => {
   
   const user = localStorage.getItem('user')
   if (!user) {
-    showTip(getRandomMessage('profile'), 8000, 'profile')
+    enqueueTip(getRandomMessage('profile'), 8000, 'profile')
     hasShownProfileTip.value = true
     return
   }
@@ -238,7 +288,7 @@ const checkProfileTip = () => {
     const hasName = userData.name && userData.name !== '' && userData.name !== '未命名'
     
     if (!hasAvatar || !hasName) {
-      showTip(getRandomMessage('profile'), 8000, 'profile')
+      enqueueTip(getRandomMessage('profile'), 8000, 'profile')
       hasShownProfileTip.value = true
     }
   } catch (e) {}
@@ -248,7 +298,7 @@ const checkFirstVisitTip = () => {
   if (!props.enabled.firstVisit) return
   if (isFirstVisitToday()) {
     setTimeout(() => {
-      showTip(getRandomMessage('firstVisit'), 10000, 'firstVisit')
+      enqueueTip(getRandomMessage('firstVisit'), 10000, 'firstVisit')
     }, 2000)
   }
 }
@@ -257,7 +307,7 @@ const checkLongTimeNoSeeTip = () => {
   if (!props.enabled.longTimeNoSee) return
   if (isLongTimeNoSee()) {
     setTimeout(() => {
-      showTip(getRandomMessage('longTimeNoSee'), 8000, 'longTimeNoSee')
+      enqueueTip(getRandomMessage('longTimeNoSee'), 8000, 'longTimeNoSee')
       localStorage.setItem('last_login_time', Date.now().toString())
     }, 3000)
   }
@@ -269,7 +319,7 @@ const checkTimeGreetingTip = () => {
   if (timeOfDay !== 'day' && !hasShownWelcomeTip.value) {
     setTimeout(() => {
       const greeting = getRandomMessage(timeOfDay)
-      if (greeting) showTip(greeting, 6000, 'timeGreeting')
+      if (greeting) enqueueTip(greeting, 6000, 'timeGreeting')
       hasShownWelcomeTip.value = true
     }, 4000)
   }
@@ -282,7 +332,7 @@ const checkFestivalTip = () => {
   const festivalMsg = tipMessages.festival[monthDay]
   if (festivalMsg && !localStorage.getItem(`festival_${monthDay}_shown`)) {
     setTimeout(() => {
-      showTip(festivalMsg, 10000, 'festival')
+      enqueueTip(festivalMsg, 10000, 'festival')
       localStorage.setItem(`festival_${monthDay}_shown`, 'true')
     }, 5000)
   }
@@ -294,7 +344,7 @@ const checkInactivityTip = () => {
   
   const inactiveTime = Date.now() - lastUserActivity.value
   if (inactiveTime > props.inactiveThreshold) {
-    showTip(getRandomMessage('inactive'), 8000, 'inactive')
+    enqueueTip(getRandomMessage('inactive'), 8000, 'inactive')
     hasShownInactiveTip.value = true
   }
 }
@@ -305,7 +355,7 @@ const checkScrollDepthTip = () => {
   
   const scrollPercent = (window.scrollY + window.innerHeight) / document.body.scrollHeight
   if (scrollPercent > 0.8) {
-    showTip('📜 客官看得真仔细！小映还可以给您讲更多江西的故事哦～', 6000, 'scrollDepth')
+    enqueueTip('📜 客官看得真仔细！小映还可以给您讲更多江西的故事哦～', 6000, 'scrollDepth')
     scrollTipShown.value = true
   }
 }
@@ -314,7 +364,7 @@ const checkBackToHomeTip = () => {
   if (!props.enabled.backToHome) return
   if (document.referrer && document.referrer.includes(window.location.host)) {
     setTimeout(() => {
-      showTip(getRandomMessage('backToHome'), 5000, 'backToHome')
+      enqueueTip(getRandomMessage('backToHome'), 5000, 'backToHome')
     }, 1500)
   }
 }
@@ -322,7 +372,7 @@ const checkBackToHomeTip = () => {
 const randomRecommendation = () => {
   if (!props.enabled.random) return
   if (Math.random() > 0.35) return
-  showTip(getRandomMessage('random'), 8000, 'random')
+  enqueueTip(getRandomMessage('random'), 8000, 'random')
 }
 
 // ========== 用户活动监听 ==========
@@ -385,6 +435,8 @@ const reset = () => {
   hasShownWelcomeTip.value = false
   scrollTipShown.value = false
   lastUserActivity.value = Date.now()
+  tipQueue.value = []
+  isShowingTip = false
 }
 
 // 暴露方法给父组件
@@ -397,7 +449,11 @@ defineExpose({
 
 // ========== 生命周期 ==========
 onMounted(() => {
-  start()
+  // 延迟启动，等待视频播放结束
+  setTimeout(() => {
+    initialDelayPassed = true
+    start()
+  }, props.initialDelay)
   
   // 记录登录时间
   if (!localStorage.getItem('last_login_time')) {
@@ -414,12 +470,15 @@ watch(() => props.disabled, (newVal) => {
   if (newVal) {
     stop()
   } else {
-    start()
+    if (initialDelayPassed) {
+      start()
+    }
   }
 })
 </script>
 
 <style>
+/* 样式保持不变 */
 .xiaoying-tip {
   position: fixed;
   display: flex;

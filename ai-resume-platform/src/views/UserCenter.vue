@@ -339,6 +339,7 @@ const initUser = async () => {
     const res = await GetUserProfile()
     if (res.code === 200 && res.data) {
       const userData = res.data
+      console.log('用户信息:', userData)
       
       user.name = userData.username || '旅行者'
       user.phone = userData.phone || ''
@@ -358,6 +359,7 @@ const initUser = async () => {
       editUser.phone = user.phone
       editUser.email = user.email
       editUser.avatar = user.avatar
+      console.log('编辑用户数据:', editUser)
       
       // 设置用户形象
       if (userData.profileImage) {
@@ -490,7 +492,7 @@ const saveUserInfo = async () => {
   
   try {
     const res = await UpdateUserProfile({
-      nickname: editUser.name,
+      username: editUser.name,
       phone: editUser.phone,
       email: editUser.email,
       avatar: editUser.avatar,
@@ -653,8 +655,9 @@ onMounted(() => {
 }
 .module-wrapper-checkin .module-content {
   max-height: 280px;  
-  overflow-y: auto;    
-  padding-right: 5px;  
+  overflow-y: auto; 
+  padding-right: 5px;   
+  padding-bottom: 20px;  
 }
 
 /* 滚动条美化（与现有样式保持一致） */
