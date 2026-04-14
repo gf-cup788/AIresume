@@ -354,9 +354,34 @@ const sendMessage = async () => {
     isLoading.value = false
   }
 }
+const videoReallyEnded = ref(false)
+let videoEndedCleanup = null
 
+// 监听视频结束（包括正常播放完和跳过）
+const handleVideoEnded = () => {
+  console.log('[AI] 视频已结束（正常播放或跳过）')
+  videoReallyEnded.value = true
+}
+
+// 监听视频真正结束
+const setupVideoEndedListener = () => {
+  const video = document.querySelector('.opening-video')
+  if (video && !videoReallyEnded.value) {
+    const onEnded = () => {
+      console.log('[AI] 视频真正播放结束')
+      videoReallyEnded.value = true
+    }
+    video.addEventListener('ended', onEnded)
+    return () => video.removeEventListener('ended', onEnded)
+  }
+  return null
+}
 // 控制提示组件是否启用（对话框打开时禁用）
-const tipsDisabled = computed(() => showDialog.value)
+const tipsDisabled = computed(() => {
+  if (showDialog.value) return true
+  if (!videoReallyEnded.value) return true  // 视频没结束，提示不显示
+  return false
+})
 
 // 处理提示点击（打开对话框）
 const handleTipClick = (tipInfo) => {
@@ -388,6 +413,22 @@ onMounted(() => {
   setTimeout(() => {
     hasSlidIn.value = true
   }, 500)
+
+  setTimeout(() => {
+    videoEndedCleanup = setupVideoEndedListener()
+  }, 1000)
+
+  // 监听自定义视频结束事件
+  window.addEventListener('video-ended', handleVideoEnded)
+  
+  // 同时也监听原生 ended 事件（作为备用）
+  setTimeout(() => {
+    const video = document.querySelector('.opening-video')
+    if (video) {
+      video.addEventListener('ended', handleVideoEnded)
+    }
+  }, 1000)
+
 })
 
 onBeforeUnmount(() => {
@@ -395,6 +436,15 @@ onBeforeUnmount(() => {
   window.removeEventListener('mouseup', stopDrag)
   window.removeEventListener('mousemove', onResizeMove)
   window.removeEventListener('mouseup', stopResize)
+
+  if (videoEndedCleanup) videoEndedCleanup()
+  
+  window.removeEventListener('video-ended', handleVideoEnded)
+  
+  const video = document.querySelector('.opening-video')
+  if (video) {
+    video.removeEventListener('ended', handleVideoEnded)
+  }
 })
 </script>
 

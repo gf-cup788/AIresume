@@ -65,7 +65,6 @@ const tipMessages = {
     '🎋 静坐良久，不如让小映为您推荐一处好去处？'
   ],
   random: [
-    '🏔️ 客官知道吗？庐山有"不到三叠泉，不算庐山客"的说法呢！',
     '🍵 景德镇的瓷器，每一件都有自己的故事，想听听吗？',
     '🌸 婺源的油菜花海，每年春天都美得像画一样～',
     '🏯 滕王阁上，王勃写下了"落霞与孤鹜齐飞"，客官去过吗？',
@@ -74,7 +73,6 @@ const tipMessages = {
     '🍜 南昌的拌粉瓦罐汤，客官尝过了吗？',
     '🏮 客家围屋，凝聚了客家人的智慧，小映很推荐去看看！',
     '🏔️ 三清山的云海，被称作"天下第一仙山"呢！',
-    '🌊 庐山西海的水上公路，开车像在水面上行驶～'
   ],
   night: [
     '🌙 夜深了，客官还在游历江西呢～ 注意休息哦！',
@@ -180,14 +178,28 @@ const getRandomMessage = (category) => {
 }
 
 // ========== 提示队列处理 ==========
+let lastTipEndTime = 0
+const MIN_TIP_INTERVAL = 60000 // 1分钟间隔
 const processTipQueue = () => {
   if (isShowingTip) return
   if (tipQueue.value.length === 0) return
   
+  // 检查距离上次提示结束的时间
+  const now = Date.now()
+  if (now - lastTipEndTime < MIN_TIP_INTERVAL) {
+    // 还没到时间，延迟处理
+    setTimeout(processTipQueue, MIN_TIP_INTERVAL - (now - lastTipEndTime))
+    return
+  }
+
   const nextTip = tipQueue.value.shift()
   if (nextTip && canShowTip()) {
     isShowingTip = true
-    showTipInternal(nextTip.message, nextTip.duration, nextTip.type, nextTip.onClose)
+    showTipInternal(nextTip.message, nextTip.duration, nextTip.type, () => {
+      isShowingTip = false
+      lastTipEndTime = Date.now()  // 记录结束时间
+      processTipQueue()
+    })
   }
 }
 
@@ -201,6 +213,7 @@ const enqueueTip = (message, duration = 8000, type = 'general', onClose = null) 
 
 // ========== 显示提示（内部实现） ==========
 const showTipInternal = (message, duration = 8000, type = 'general', onClose = null) => {
+  console.log('[Tips] 显示提示, duration=', duration, 'ms')
   if (!canShowTip()) {
     isShowingTip = false
     processTipQueue()
@@ -237,6 +250,7 @@ const showTipInternal = (message, duration = 8000, type = 'general', onClose = n
   // 关闭按钮
   const closeBtn = tip.querySelector('.tip-close')
   const cleanup = () => {
+    console.log('[Tips] cleanup 执行, 调用来源:', new Error().stack)
     if (tip.parentNode) tip.remove()
     isShowingTip = false
     if (onClose) onClose()
@@ -258,6 +272,7 @@ const showTipInternal = (message, duration = 8000, type = 'general', onClose = n
   
   // 自动消失
   setTimeout(() => {
+    console.log('[Tips] duration 时间到，自动消失')
     if (tip.parentNode) cleanup()
   }, duration)
   
@@ -405,14 +420,14 @@ const removeActivityTracking = () => {
 // ========== 启动/停止 ==========
 const start = () => {
   const timers = [
-    setTimeout(() => checkFirstVisitTip(), 1000),
-    setTimeout(() => checkLongTimeNoSeeTip(), 2000),
-    setTimeout(() => checkTimeGreetingTip(), 3000),
-    setTimeout(() => checkFestivalTip(), 4000),
-    setTimeout(() => checkProfileTip(), 5000),
-    setTimeout(() => checkBackToHomeTip(), 800),
-    setInterval(() => checkInactivityTip(), 60000),
-    setInterval(() => randomRecommendation(), props.randomInterval),
+    setTimeout(() => checkBackToHomeTip(), 2000),      // 2秒
+    setTimeout(() => checkFirstVisitTip(), 30000),     // 30秒后
+    setTimeout(() => checkLongTimeNoSeeTip(), 60000),  // 1分钟后
+    setTimeout(() => checkTimeGreetingTip(), 120000),  // 2分钟后
+    setTimeout(() => checkFestivalTip(), 180000),      // 3分钟后
+    setTimeout(() => checkProfileTip(), 240000),       // 4分钟后
+    setInterval(() => checkInactivityTip(), 60000),    // 每分钟
+    setInterval(() => randomRecommendation(), props.randomInterval), // 7分钟
   ]
   activeTimers.value.push(...timers)
   setupActivityTracking()

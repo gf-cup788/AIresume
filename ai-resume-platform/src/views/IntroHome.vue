@@ -185,6 +185,7 @@ let playbackCleanup = null
 const handleVideoEnd = () => {
   videoEnded.value = true
   setTimeout(startTransition, 600)
+  window.dispatchEvent(new CustomEvent('video-ended'))
 }
 
 const skipVideo = () => {
@@ -195,6 +196,7 @@ const skipVideo = () => {
     video.playbackRate = 1
   }
   startTransition()
+  window.dispatchEvent(new CustomEvent('video-ended'))
 }
 
 const startTransition = () => {
