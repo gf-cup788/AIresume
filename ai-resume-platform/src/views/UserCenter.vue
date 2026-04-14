@@ -188,9 +188,14 @@
           </div>
           <div class="modal-body-list">
             <div v-if="myComments.length" class="comments-list">
-              <div v-for="(item, index) in myComments" :key="index" class="comment-item">
+              <div 
+                v-for="(item, index) in myComments" 
+                :key="index" 
+                class="comment-item"
+                @click="goToScenicDetail(item)"
+              >
                 <div class="comment-header">
-                  <span class="comment-scene">{{ item.scenicName }}</span>
+                  <span class="comment-scene">{{ item.displayName }}</span>
                   <span class="comment-date">{{ item.createTime }}</span>
                 </div>
                 <div class="comment-content">{{ item.content }}</div>
@@ -237,7 +242,7 @@
 import { reactive, ref, onMounted, onBeforeMount } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
-import { GetUserProfile, UpdateUserProfile, GetCheckins, GetComments, UploadImage } from '@/api/auth.js'
+import { GetUserProfile, UpdateUserProfile, GetCheckins, GetComments, UploadImage, GetScenics } from '@/api/auth.js'
 import bgImage from '@/assets/imgs/grzx_bg.jpg'
 import Border from '@/assets/imgs/border.png'
 import Border2 from '@/assets/imgs/border2.png'
@@ -298,17 +303,91 @@ const loadUserComments = async () => {
   try {
     const res = await GetComments()
     if (res.code === 200 && res.data) {
-      myComments.value = res.data.map(comment => ({
-        id: comment.id,
-        content: comment.content,
-        likeCount: comment.likeCount,
-        createTime: formatDate(comment.createTime),
-        scenicName: comment.scenicName || '未知景点'
-      }))
+      const comments = res.data
+      
+      // 缓存景点信息（避免重复请求）
+      const scenicCache = new Map()
+      
+      const enrichedComments = []
+      for (const comment of comments) {
+        let regionName = '未知城市'
+        let scenicName = comment.scenicName || '未知景点'
+        
+        // 检查缓存
+        if (comment.scenicId && scenicCache.has(comment.scenicId)) {
+          regionName = scenicCache.get(comment.scenicId).regionName
+          scenicName = scenicCache.get(comment.scenicId).name
+        } 
+        // 没有缓存则请求
+        else if (comment.scenicId) {
+          try {
+            const scenicRes = await GetScenics(comment.scenicId)
+            if (scenicRes.code === 200 && scenicRes.data) {
+              regionName = scenicRes.data.regionName || '未知城市'
+              scenicName = scenicRes.data.name || scenicName
+              // 存入缓存
+              scenicCache.set(comment.scenicId, {
+                regionName: regionName,
+                name: scenicName
+              })
+            }
+          } catch (error) {
+            console.error(`获取景点 ${comment.scenicId} 详情失败:`, error)
+          }
+        }
+        
+        enrichedComments.push({
+          id: comment.id,
+          content: comment.content,
+          likeCount: comment.likeCount,
+          createTime: formatDate(comment.createTime),
+          scenicName: scenicName,
+          regionName: regionName,  // ✅ 城市信息
+          displayName: regionName !== '未知城市' ? `${regionName}——${scenicName}` : scenicName,
+          scenicId: comment.scenicId
+        })
+      }
+      
+      myComments.value = enrichedComments
     }
   } catch (error) {
     console.error('获取评论失败:', error)
     ElMessage.error('获取评论失败')
+  }
+}
+
+// 跳转到景点详情页
+// 跳转到景点详情页
+const goToScenicDetail = async (comment) => {
+  // 关闭弹窗
+  showCommentsModal.value = false
+  
+  // 需要先获取景点详情，拿到 regionId
+  try {
+    const scenicRes = await GetScenics(comment.scenicId)
+    if (scenicRes.code === 200 && scenicRes.data) {
+      const scenic = scenicRes.data
+      router.push({
+        path: '/detail',
+        query: {
+          id: comment.scenicId,      // 景点 API ID
+          regionId: scenic.regionId  // 城市 ID，用于加载同城市其他景点
+        }
+      })
+    } else {
+      // 降级：只传 id
+      router.push({
+        path: '/detail',
+        query: { id: comment.scenicId }
+      })
+    }
+  } catch (error) {
+    console.error('获取景点信息失败:', error)
+    // 降级跳转
+    router.push({
+      path: '/detail',
+      query: { id: comment.scenicId }
+    })
   }
 }
 
@@ -1186,6 +1265,13 @@ onMounted(() => {
   background: rgba(255, 255, 255, 0.5);
   border-radius: 8px;
   border-left: 3px solid #c9aa5f;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.comment-item:hover {
+  background: rgba(201, 170, 95, 0.15);
+  transform: translateX(4px);
 }
 
 .comment-header {
