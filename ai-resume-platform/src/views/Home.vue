@@ -40,6 +40,15 @@
       >
         <img v-if="spot.MapImg" :src="spot.MapImg" :alt="spot.name" />
       </div>
+
+      <!-- 静态地图 -->
+      <div class="static-maps">
+        <img :src="Map1" class="static-map map1" />
+        <img :src="Map2" class="static-map map2" />
+        <img :src="Map3" class="static-map map3" />
+        <img :src="Map4" class="static-map map4" />
+        <img :src="Map5" class="static-map map5" />
+      </div>
     </div>
     <!-- 古琴声波纹装饰 -->
     <div class="sound-wave"></div>
@@ -58,6 +67,12 @@ import Shangrao from "../assets/imgs/ShangRao.png";
 import Jingdezhen from "../assets/imgs/JingDeZhen.png";
 import Jian from "../assets/imgs/JiAn.png";
 import Ganzhou from "../assets/imgs/GanZhou.png";
+import Map1 from "../assets/imgs/Map1.png";
+import Map2 from "../assets/imgs/Map2.png";
+import Map3 from "../assets/imgs/Map3.png";
+import Map4  from "../assets/imgs/Map4.png";
+import Map5  from "../assets/imgs/Map5.png";
+
 
 const router = useRouter();
 
@@ -68,27 +83,27 @@ const regionError = ref("");
 // 地区名称与地图坐标的对应关系
 const regionPositionMap = {
   南昌: { 
-    x: 87.55, y: 62.5, 
+    x: 88.1, y: 62.9, 
     MapImg: Nanchang
   }, 
   九江: { 
-    x: 85.8, y: 58.2, 
+    x: 86.3, y: 58.4, 
     MapImg: Jiujiang
   }, 
   上饶: { 
-    x: 91.5, y: 61.94, 
+    x: 92.15, y: 62, 
     MapImg: Shangrao
   }, 
   景德镇: { 
-    x: 91.35, y: 58.3, 
+    x: 91.925, y: 58.6, 
     MapImg: Jingdezhen
   }, 
   吉安: { 
-    x: 84.46, y: 72.7, 
+    x: 84.8, y: 73.3, 
     MapImg: Jian
   }, 
   赣州: { 
-    x: 85.6, y: 79.7, 
+    x: 86.13, y: 80.4, 
     MapImg: Ganzhou
   }
 };
@@ -201,7 +216,7 @@ onMounted(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;   
-  object-position: 60% center; 
+  object-position: 58% center; 
   filter: sepia(0.15) contrast(1.05) brightness(1.02);
   transition: all 0.3s;
 }
@@ -291,48 +306,42 @@ onMounted(() => {
   z-index: 10;
 }
 
+
+
 .spot img {
   object-fit: contain;
   transition: all 0.3s ease;
   display: block;
   margin: 0 auto;
-}
-.spot:has(img[alt="南昌"]) {
-  z-index: 20;
+  height: auto;
 }
 
-/* 南昌图片单独大小 */
+/* 根据不同城市调整大小： 使用相对大小单位 */
 .spot img[alt="南昌"] {
-  width: 48px !important;
-  height: 48px !important;
-}
-/* 九江图片单独大小 */
-.spot img[alt="九江"] {
-  width: 123.5px !important;
-  height: 123.5px !important;
-}
-/* 上饶图片单独大小 */
-.spot img[alt="上饶"] {
-  width: 100px !important;
-  height: 100px !important;
-}
-/* 景德镇图片单独大小 */
-.spot img[alt="景德镇"] {
-  width: 61px !important;
-  height: 61px !important;
-  transform: rotate(-10deg);
-}
-/* 吉安图片单独大小 */
-.spot img[alt="吉安"] {
-  width: 97px !important;
-  height: 97px !important;
-}
-/* 赣州图片单独大小 */
-.spot img[alt="赣州"] {
-  width: 130px !important;
-  height: 130px !important;
+  width: 3.4vw !important; /* 改为相对单位 */
 }
 
+.spot img[alt="九江"] {
+  width: 8.7vw !important;
+}
+
+.spot img[alt="上饶"] {
+  width: 6.55vw !important;
+}
+
+.spot img[alt="景德镇"] {
+  width: 2.25vw !important;
+}
+
+.spot img[alt="吉安"] {
+  width: 6.5vw !important;
+}
+
+.spot img[alt="赣州"] {
+  width: 8.5vw !important;
+}
+
+/* 增加鼠标悬停效果 */
 .spot img:hover {
   transform: scale(1.1);
 }
@@ -342,14 +351,59 @@ onMounted(() => {
   transform: scale(0.95);
 }
 
-/* 景德镇悬停：旋转+缩放 */
-.spot img[alt="景德镇"]:hover {
-  transform: rotate(-10deg) scale(1.1);
+/* 静态地图图片容器 */
+.static-maps {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
 }
 
-/* 景德镇点击按下：旋转+缩小 */
-.spot img[alt="景德镇"]:active {
-  transform: rotate(-10deg) scale(0.95);
+.static-map {
+  position: absolute;
+  object-fit: contain;
+  transform: translate(-50%, -50%);
+}
+
+/* 右一 */
+.map1 {
+  top: 65.4%;
+  left: 91.4%;
+  width: 2.5vw; /* 使用 vw 单位，确保宽度与屏幕宽度相关 */
+  height: auto;
+}
+
+/* 左上 */
+.map2 {
+  top: 65.1%;
+  left: 85.35%;
+  width: 6.8vw; /* 使用 vw 单位 */
+  height: auto;
+}
+/* 右下 */
+.map3 {
+  top: 70%;
+  left: 89.5%;
+  width: 5.3vw; /* 使用 vw 单位 */
+  height: auto;
+}
+/* 左下 */
+.map4 {
+  top: 70.5%;
+  left: 82%;
+  width: 2.3vw; /* 使用 vw 单位 */
+  height: auto;
+}
+
+/* 中 */
+.map5 {
+  top: 68.2%;
+  left: 84.95%;
+  width: 2.6vw; /* 使用 vw 单位 */
+  height: auto;
 }
 
 /* 古琴声波纹装饰 */
@@ -371,5 +425,4 @@ onMounted(() => {
   );
   border-radius: 4px;
 }
-
 </style>
