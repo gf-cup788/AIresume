@@ -627,7 +627,7 @@ const highlightsGridClass = computed(() => {
   const desc = currentScenic.value.desc || '';
   // 统计中文字符数（简单按长度计算，中文字符每个占1个长度）
   const descLength = desc.length;
-  return descLength > 70 ? 'highlights-grid-two-cols' : 'highlights-grid-one-col';
+  return descLength > 50 ? 'highlights-grid-two-cols' : 'highlights-grid-one-col';
 });
 
 async function fetchScenicDetail(apiId, localId = apiId) {
@@ -1890,11 +1890,11 @@ function handleKeydown(e) {
 }
 .intro-text{
   background: url(@/assets/imgs/jieshao.png);
-  background-size: cover;
+  background-size: 100% 100%;
   background-position: center;
   background-attachment: local;
   padding: 35px;
-  height: 400px;           
+  height: auto;           
   overflow-y: overlay;        
   display: flex;
   flex-direction: column;

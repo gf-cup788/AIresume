@@ -1,29 +1,30 @@
 <template>
   <div class="match-line-game">
-    <div class="game-top">
-      <!-- <div class="game-title-wrap">
-        <div class="game-kicker">诗句连线</div>
-        <div class="game-title">{{ title }}</div>
-      </div> -->
-
-      <!-- <div class="game-meta">
-        <div class="meta-item">
-          <span class="meta-label">已完成</span>
-          <span class="meta-value">{{ matchedCount }}/{{ currentPairs.length }}</span>
-        </div>
-        <div class="meta-item">
-          <span class="meta-label">状态</span>
-          <span class="meta-value">{{ finished ? '已完成' : '进行中' }}</span>
-        </div>
-      </div> -->
-    </div>
+    <div class="game-top"></div>
 
     <div class="game-actions">
-      <button class="game-btn primary" @click="restartGame">重新开始</button>
-      <button class="game-btn" @click="shuffleGame">重新打乱</button>
+      <button class="game-btn primary" @click="restartGame" :disabled="loading || !currentPairs.length">
+        重新开始
+      </button>
+      <button class="game-btn" @click="shuffleGame" :disabled="loading || !currentPairs.length">
+        重新打乱
+      </button>
     </div>
 
-    <div class="game-board" ref="boardRef">
+    <div v-if="loading" class="loading-box">
+      正在加载连线游戏...
+    </div>
+
+    <div v-else-if="!currentPairs.length" class="empty-box">
+      暂无连线游戏数据
+    </div>
+
+    <div
+      v-else
+      class="game-board"
+      ref="boardRef"
+      :style="boardBgStyle"
+    >
       <div class="ink-wash ink-left"></div>
       <div class="ink-wash ink-right"></div>
 
@@ -77,7 +78,7 @@
       </div>
     </div>
 
-    <div class="tips-bar">
+    <div class="tips-bar" v-if="!loading && currentPairs.length">
       <span v-if="message" class="tip-text">{{ message }}</span>
       <span v-else class="tip-text">先点左侧上句，再点右侧对应的下句，完成诗句连线。</span>
     </div>
@@ -92,27 +93,38 @@
         <button class="game-btn primary success-btn" @click="restartGame">再玩一次</button>
       </div>
     </transition>
+
+    <transition name="success-pop">
+      <div
+        v-if="showPageCongrats"
+        class="page-congrats-mask"
+        @click.self="closeCongrats"
+      >
+        <div class="page-congrats-card">
+          <div class="page-congrats-icon">🏆</div>
+          <div class="page-congrats-title">恭喜通关</div>
+          <div class="page-congrats-desc">
+            你已成功完成 <span>{{ gameTitle }}</span> 的连线挑战
+          </div>
+
+          <div class="page-congrats-actions">
+            <button class="congrats-btn primary" @click="closeCongrats">我知道了</button>
+            <button class="congrats-btn" @click="playAgain">再玩一次</button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch } from 'vue'
+import { request } from '@/utils/request'
 
 const props = defineProps({
-  title: {
-    type: String,
-    default: '滕王阁 · 诗句连线'
-  },
-  pairs: {
-    type: Array,
-    default: () => [
-      { left: '落霞与孤鹜齐飞', right: '秋水共长天一色' },
-      { left: '渔舟唱晚', right: '响穷彭蠡之滨' },
-      { left: '雁阵惊寒', right: '声断衡阳之浦' },
-      { left: '关山难越', right: '谁悲失路之人' },
-      { left: '萍水相逢', right: '尽是他乡之客' },
-      { left: '老当益壮', right: '宁移白首之心' }
-    ]
+  scenicId: {
+    type: [String, Number],
+    required: true
   }
 })
 
@@ -127,9 +139,16 @@ const selectedRightId = ref(null)
 const wrongRightId = ref(null)
 const message = ref('')
 
+const gameTitle = ref('诗句连线')
+const bgImageUrl = ref('')
+const loading = ref(false)
+
 const currentPairs = ref([])
 const rightList = ref([])
 const matchedPairs = ref([])
+
+const showPageCongrats = ref(false)
+const hasShownCongrats = ref(false)
 
 const leftList = computed(() => {
   return currentPairs.value.map(item => ({
@@ -139,7 +158,37 @@ const leftList = computed(() => {
 })
 
 const matchedCount = computed(() => matchedPairs.value.length)
-const finished = computed(() => matchedPairs.value.length === currentPairs.value.length && currentPairs.value.length > 0)
+
+const finished = computed(() => {
+  return matchedPairs.value.length === currentPairs.value.length && currentPairs.value.length > 0
+})
+
+watch(finished, (val) => {
+  if (val && !hasShownCongrats.value) {
+    hasShownCongrats.value = true
+    showPageCongrats.value = true
+  }
+
+  if (!val) {
+    hasShownCongrats.value = false
+  }
+})
+
+const boardBgStyle = computed(() => {
+  if (!bgImageUrl.value) {
+    return {}
+  }
+
+  return {
+    backgroundImage: `
+      linear-gradient(rgba(255, 248, 238, 0.82), rgba(241, 231, 214, 0.86)),
+      url(${bgImageUrl.value})
+    `,
+    backgroundSize: '100% 100%',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat'
+  }
+})
 
 const drawnLines = computed(() => {
   if (!boardRef.value) return []
@@ -166,9 +215,79 @@ const drawnLines = computed(() => {
     .filter(Boolean)
 })
 
-const buildGameData = () => {
-  const base = props.pairs.map((item, index) => ({
-    id: index + 1,
+const shuffleArray = (arr) => {
+  const copy = [...arr]
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[copy[i], copy[j]] = [copy[j], copy[i]]
+  }
+  return copy
+}
+
+const resetGameState = () => {
+  matchedPairs.value = []
+  selectedLeftId.value = null
+  selectedRightId.value = null
+  wrongRightId.value = null
+  message.value = ''
+  showPageCongrats.value = false
+  hasShownCongrats.value = false
+  leftRefs.value = {}
+  rightRefs.value = {}
+}
+
+const setGameDataFromResponse = async (data) => {
+  gameTitle.value = data?.title || '诗句连线'
+  bgImageUrl.value = data?.bgImageUrl || ''
+
+  const linkItems = Array.isArray(data?.linkItems) ? data.linkItems : []
+
+  const base = linkItems.map((item, index) => ({
+    id: item?.pairId ?? index + 1,
+    left: item?.leftContent || '',
+    right: item?.rightContent || ''
+  }))
+
+  currentPairs.value = base
+  rightList.value = shuffleArray(
+    base.map(item => ({
+      id: item.id,
+      text: item.right
+    }))
+  )
+
+  resetGameState()
+
+  await nextTick()
+  updateBoardSize()
+}
+
+const fetchGameDetail = async () => {
+  if (!props.scenicId) return
+
+  loading.value = true
+  try {
+    const res = await request(`/api/games/start?scenicId=${props.scenicId}`, {
+      method: 'GET'
+    })
+
+    const data = res?.data || {}
+    await setGameDataFromResponse(data)
+  } catch (error) {
+    console.error('获取连线游戏数据失败：', error)
+    gameTitle.value = '诗句连线'
+    bgImageUrl.value = ''
+    currentPairs.value = []
+    rightList.value = []
+    resetGameState()
+  } finally {
+    loading.value = false
+  }
+}
+
+const rebuildGameFromCurrentPairs = () => {
+  const base = currentPairs.value.map(item => ({
+    id: item.id,
     left: item.left,
     right: item.right
   }))
@@ -181,20 +300,7 @@ const buildGameData = () => {
     }))
   )
 
-  matchedPairs.value = []
-  selectedLeftId.value = null
-  selectedRightId.value = null
-  wrongRightId.value = null
-  message.value = ''
-}
-
-const shuffleArray = (arr) => {
-  const copy = [...arr]
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[copy[i], copy[j]] = [copy[j], copy[i]]
-  }
-  return copy
+  resetGameState()
 }
 
 const isLeftMatched = (id) => {
@@ -214,13 +320,16 @@ const setRightRef = (id) => (el) => {
 }
 
 const selectLeft = (item) => {
+  if (loading.value) return
   if (isLeftMatched(item.id)) return
   selectedLeftId.value = item.id
   message.value = ''
 }
 
 const selectRight = (item) => {
+  if (loading.value) return
   if (isRightMatched(item.id)) return
+
   if (!selectedLeftId.value) {
     message.value = '请先选择左侧的上句。'
     flashMessageClear()
@@ -255,6 +364,7 @@ const selectRight = (item) => {
 }
 
 let msgTimer = null
+
 const flashMessageClear = () => {
   if (msgTimer) clearTimeout(msgTimer)
   msgTimer = setTimeout(() => {
@@ -263,21 +373,36 @@ const flashMessageClear = () => {
 }
 
 const restartGame = async () => {
-  buildGameData()
+  if (!currentPairs.value.length) return
+  rebuildGameFromCurrentPairs()
   await nextTick()
   updateBoardSize()
 }
 
 const shuffleGame = async () => {
+  if (!currentPairs.value.length) return
   rightList.value = shuffleArray([...rightList.value])
   matchedPairs.value = []
   selectedLeftId.value = null
   selectedRightId.value = null
   wrongRightId.value = null
   message.value = '已重新打乱，请重新连线。'
+  showPageCongrats.value = false
+  hasShownCongrats.value = false
   await nextTick()
   updateBoardSize()
   flashMessageClear()
+}
+
+const closeCongrats = () => {
+  showPageCongrats.value = false
+}
+
+const playAgain = async () => {
+  showPageCongrats.value = false
+  rebuildGameFromCurrentPairs()
+  await nextTick()
+  updateBoardSize()
 }
 
 const updateBoardSize = () => {
@@ -293,8 +418,16 @@ const handleResize = () => {
   updateBoardSize()
 }
 
+watch(
+  () => props.scenicId,
+  async (newVal) => {
+    if (!newVal) return
+    await fetchGameDetail()
+  }
+)
+
 onMounted(async () => {
-  buildGameData()
+  await fetchGameDetail()
   await nextTick()
   updateBoardSize()
   window.addEventListener('resize', handleResize)
@@ -311,7 +444,7 @@ onBeforeUnmount(() => {
   width: 100%;
   max-width: 1120px;
   margin: 0 auto;
-  padding: 8px 4px 0;
+  /* padding: 8px 4px 0; */
   box-sizing: border-box;
 }
 
@@ -323,69 +456,11 @@ onBeforeUnmount(() => {
   margin-bottom: 14px;
 }
 
-.game-title-wrap {
-  min-width: 0;
-}
-
-.game-kicker {
-  display: inline-flex;
-  align-items: center;
-  height: 30px;
-  padding: 0 14px;
-  border-radius: 999px;
-  background: rgba(152, 126, 88, 0.08);
-  border: 1px solid rgba(130, 107, 75, 0.14);
-  color: #7f6240;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 2px;
-}
-
-.game-title {
-  margin-top: 12px;
-  color: #4f3a26;
-  font-size: 30px;
-  line-height: 1.2;
-  font-weight: 800;
-  letter-spacing: 1px;
-}
-
-.game-meta {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.meta-item {
-  min-width: 118px;
-  padding: 10px 14px;
-  border-radius: 16px;
-  background: rgba(255, 251, 243, 0.72);
-  border: 1px solid rgba(128, 107, 79, 0.12);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
-  text-align: center;
-}
-
-.meta-label {
-  display: block;
-  font-size: 12px;
-  color: #8a775f;
-  margin-bottom: 4px;
-}
-
-.meta-value {
-  display: block;
-  font-size: 16px;
-  font-weight: 700;
-  color: #5d472f;
-}
-
 .game-actions {
   display: flex;
   justify-content: center;
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
   flex-wrap: wrap;
 }
 
@@ -405,8 +480,13 @@ onBeforeUnmount(() => {
   transition: all 0.2s ease;
 }
 
-.game-btn:hover {
+.game-btn:hover:not(:disabled) {
   transform: translateY(-1px);
+}
+
+.game-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .game-btn.primary {
@@ -418,26 +498,32 @@ onBeforeUnmount(() => {
     inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
+.loading-box,
+.empty-box {
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 24px;
+  background: rgba(255, 250, 242, 0.78);
+  border: 1px solid rgba(128, 107, 79, 0.12);
+  color: #7a6753;
+  font-size: 16px;
+}
+
 .game-board {
   position: relative;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 132px;
-  min-height: 560px;
+  min-height: 460px;
   padding: 34px 40px 28px;
   border-radius: 28px;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 15% 18%, rgba(93, 85, 73, 0.06), transparent 18%),
-    radial-gradient(circle at 85% 82%, rgba(126, 114, 97, 0.06), transparent 18%),
-    repeating-linear-gradient(
-      0deg,
-      rgba(116, 97, 72, 0.015) 0px,
-      rgba(116, 97, 72, 0.015) 1px,
-      transparent 1px,
-      transparent 14px
-    ),
-    linear-gradient(180deg, rgba(251, 246, 236, 0.98), rgba(241, 231, 214, 0.98));
+  background-color: rgba(251, 246, 236, 0.96);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   border: 1px solid rgba(122, 101, 74, 0.16);
   box-shadow:
     0 18px 42px rgba(51, 40, 27, 0.1),
@@ -657,14 +743,105 @@ onBeforeUnmount(() => {
   transform: translateY(10px);
 }
 
+.success-pop-enter-active,
+.success-pop-leave-active {
+  transition: all 0.28s ease;
+}
+
+.success-pop-enter-from,
+.success-pop-leave-to {
+  opacity: 0;
+}
+
+.success-pop-enter-from .page-congrats-card,
+.success-pop-leave-to .page-congrats-card {
+  opacity: 0;
+  transform: translateY(18px) scale(0.96);
+}
+
+.success-pop-enter-to .page-congrats-card,
+.success-pop-leave-from .page-congrats-card {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.page-congrats-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(34, 27, 20, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.page-congrats-card {
+  width: min(460px, 92vw);
+  border-radius: 24px;
+  padding: 34px 28px 28px;
+  text-align: center;
+  background:
+    linear-gradient(180deg, rgba(255, 250, 243, 0.98), rgba(245, 236, 220, 0.98));
+  border: 1px solid rgba(129, 107, 78, 0.16);
+  box-shadow:
+    0 24px 60px rgba(50, 37, 24, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  transition: all 0.28s ease;
+}
+
+.page-congrats-icon {
+  font-size: 42px;
+  margin-bottom: 12px;
+}
+
+.page-congrats-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #5d472f;
+  margin-bottom: 10px;
+}
+
+.page-congrats-desc {
+  font-size: 15px;
+  line-height: 1.9;
+  color: #7a6854;
+}
+
+.page-congrats-desc span {
+  color: #7d3421;
+  font-weight: 700;
+}
+
+.page-congrats-actions {
+  margin-top: 22px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.congrats-btn {
+  min-width: 120px;
+  border: none;
+  border-radius: 999px;
+  padding: 11px 22px;
+  font-size: 14px;
+  cursor: pointer;
+  color: #6e5440;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 8px 20px rgba(109, 82, 54, 0.08);
+}
+
+.congrats-btn.primary {
+  color: #fff;
+  background: linear-gradient(135deg, #c77755, #9f4a30);
+}
+
 @media (max-width: 900px) {
   .game-top {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .game-meta {
-    justify-content: flex-start;
   }
 
   .game-board {
@@ -681,18 +858,6 @@ onBeforeUnmount(() => {
 @media (max-width: 640px) {
   .match-line-game {
     padding: 4px 0 0;
-  }
-
-  .game-title {
-    font-size: 22px;
-  }
-
-  .game-meta {
-    flex-direction: column;
-  }
-
-  .meta-item {
-    width: 100%;
   }
 
   .game-actions {

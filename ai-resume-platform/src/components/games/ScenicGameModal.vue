@@ -151,7 +151,7 @@ const close = () => {
   position: relative;
   z-index: 1;
   flex-shrink: 0;
-  padding: 6px 52px 8px 6px;
+  padding: 6px 52px 4px 6px;
 }
 
 .story-kicker {

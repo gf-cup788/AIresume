@@ -12,6 +12,7 @@
         autoplay
         muted
         playsinline
+        preload="auto"
         @ended="handleVideoEnd"
       >
         <source src="@/assets/imgs/open.mp4" type="video/mp4" />
@@ -25,9 +26,9 @@
     <div
       class="page-content"
       :class="{
-      show: pageVisible,
-      preShow: showVideo && shouldShowVideo,
-      'direct-show': isTargetHome
+        show: pageVisible,
+        preShow: showVideo && shouldShowVideo,
+        'direct-show': isTargetHome
       }"
     >
       <div
@@ -178,7 +179,8 @@ const videoEnded = ref(false)
 const videoFadeOut = ref(false)
 const pageVisible = ref(false)
 const videoRef = ref(null)
-let timeUpdateCleanup = null
+
+let playbackCleanup = null
 
 const handleVideoEnd = () => {
   videoEnded.value = true
@@ -187,6 +189,11 @@ const handleVideoEnd = () => {
 
 const skipVideo = () => {
   videoEnded.value = true
+  const video = videoRef.value
+  if (video) {
+    video.pause()
+    video.playbackRate = 1
+  }
   startTransition()
 }
 
@@ -200,21 +207,72 @@ const startTransition = () => {
   }, 1000)
 }
 
-const setupSpeedUp = () => {
+/**
+ * 视频播放速度控制：
+ * 1. 开头前 3 秒：放慢
+ * 2. 中间：正常
+ * 3. 结尾 15%：加速
+ */
+const setupPlaybackControl = () => {
   const video = videoRef.value
   if (!video) return null
 
-  const checkProgress = () => {
-    if (!video || videoEnded.value || !video.duration) return
-    const progressPercent = video.currentTime / video.duration
-    if (progressPercent >= 0.85 && video.playbackRate === 1.0) {
-      video.playbackRate = 1.15
+  const INTRO_SLOW_SECONDS = 3
+  const INTRO_SLOW_RATE = 0.82
+
+  const END_FAST_PERCENT = 0.85
+  const END_FAST_RATE = 1.45
+
+  const NORMAL_RATE = 1
+
+  const applyPlaybackRate = () => {
+    if (!video || videoEnded.value) return
+
+    const duration = video.duration
+    const current = video.currentTime
+
+    if (!duration || Number.isNaN(duration)) {
+      return
+    }
+
+    let nextRate = NORMAL_RATE
+
+    // 开头前 3 秒放慢
+    if (current <= INTRO_SLOW_SECONDS) {
+      nextRate = INTRO_SLOW_RATE
+    }
+    // 快结束时加速
+    else if (current / duration >= END_FAST_PERCENT) {
+      nextRate = END_FAST_RATE
+    }
+
+    if (video.playbackRate !== nextRate) {
+      video.playbackRate = nextRate
     }
   }
 
-  video.addEventListener('timeupdate', checkProgress)
+  const resetPlaybackRate = () => {
+    if (video) {
+      video.playbackRate = NORMAL_RATE
+    }
+  }
+
+  video.addEventListener('loadedmetadata', applyPlaybackRate)
+  video.addEventListener('timeupdate', applyPlaybackRate)
+  video.addEventListener('seeking', applyPlaybackRate)
+  video.addEventListener('pause', resetPlaybackRate)
+
+  // 防止一开始 autoplay 时还没触发 timeupdate，先手动执行一次
+  requestAnimationFrame(() => {
+    applyPlaybackRate()
+  })
+
   return () => {
-    video.removeEventListener('timeupdate', checkProgress)
+    video.removeEventListener('loadedmetadata', applyPlaybackRate)
+    video.removeEventListener('timeupdate', applyPlaybackRate)
+    video.removeEventListener('seeking', applyPlaybackRate)
+    video.removeEventListener('pause', resetPlaybackRate)
+    video.playbackRate = NORMAL_RATE
   }
 }
 
@@ -262,6 +320,13 @@ watch(
       pageVisible.value = true
       showVideo.value = false
       videoFadeOut.value = false
+
+      const video = videoRef.value
+      if (video) {
+        video.pause()
+        video.playbackRate = 1
+      }
+
       jumpToHomeImmediately()
     } else {
       if (pageRef.value) {
@@ -272,17 +337,17 @@ watch(
 )
 
 onMounted(async () => {
+  await nextTick()
+
   if (shouldShowVideo.value && videoRef.value) {
     const video = videoRef.value
+    playbackCleanup = setupPlaybackControl()
     video.play().catch(() => {})
-    timeUpdateCleanup = setupSpeedUp()
   } else {
     pageVisible.value = true
     showVideo.value = false
     videoFadeOut.value = false
   }
-
-  await nextTick()
 
   if (isTargetHome.value) {
     jumpToHomeImmediately()
@@ -290,8 +355,14 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
-  if (timeUpdateCleanup) {
-    timeUpdateCleanup()
+  const video = videoRef.value
+
+  if (playbackCleanup) {
+    playbackCleanup()
+  }
+
+  if (video) {
+    video.playbackRate = 1
   }
 })
 </script>

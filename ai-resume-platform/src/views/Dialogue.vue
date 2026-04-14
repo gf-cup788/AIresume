@@ -163,6 +163,13 @@
         :scenic-id="scenicId"
         @success="handleGameSuccess"
       />
+
+      <MatchLineGame
+        v-else-if="currentGame.type === 'link'"
+        :scenic-name="scenicName"
+        :scenic-id="scenicId"
+        @success="handleGameSuccess"
+      />
     </ScenicGameModal>
 
     <!-- 故事总结 -->
@@ -235,6 +242,7 @@ import PuzzleGame from "@/components/games/PuzzleGame.vue";
 import FlowerCatchGame from "@/components/games/FlowerCatchGame.vue";
 import MemoryMatchGame from "@/components/games/MemoryMatchGame.vue";
 import SpotDifferenceGame from "@/components/games/SpotDifferenceGame.vue";
+import MatchLineGame from "@/components/games/MatchLineGame.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -476,14 +484,15 @@ const gameTypeMap = {
   'puzzle': 'puzzle',
   'flower': 'flower',
   'match': 'memory',
-  'spot_diff': 'spot'
+  'spot_diff': 'spot',
+  'link': 'link'
 };
 
 // 获取游戏数据（只获取游戏类型）
 const fetchGameData = async () => {
   try {
     loadingGame.value = true;
-    const res = await request(`/api/games?scenicId=${scenicId}`, {
+    const res = await request(`/api/games/start?scenicId=${scenicId}`, {
       method: 'GET'
     });
     
@@ -508,65 +517,78 @@ const currentGameType = computed(() => {
   return gameTypeMap[gameData.value.gameType] || null;
 });
 
-// 游戏配置（根据接口返回的gameType判断游戏类型，只传scenicId，不传图片）
+const linkGamePairs = computed(() => {
+  const items = Array.isArray(gameData.value?.linkItems) ? gameData.value.linkItems : [];
+  return items.map((item) => ({
+    left: item?.leftContent || '',
+    right: item?.rightContent || ''
+  })).filter((item) => item.left && item.right);
+});
+
+// 游戏配置（根据接口返回的gameType判断游戏类型）
 const currentGame = computed(() => {
   const gameType = currentGameType.value;
-  
+  const apiTitle = gameData.value?.title || `${scenicName.value} · 小游戏`;
+  const apiDesc = gameData.value?.description || '完成游戏可获得打卡奖励';
+
   if (!gameType) {
-    // 默认配置，防止报错
     return {
       type: 'puzzle',
-      title: `${scenicName.value} · 小游戏`,
-      subtitle: '完成游戏可获得打卡奖励',
+      title: apiTitle,
+      subtitle: apiDesc,
       imageUrl: lushanBg
     };
   }
-  
-  // 拼图游戏
+
   if (gameType === 'puzzle') {
     return {
       type: 'puzzle',
-      title: `${scenicName.value} · 拼图小游戏`,
-      subtitle: '将右侧拼图块拖到左边对应位置，放对后会自动吸附。',
+      title: gameData.value?.title || `${scenicName.value} · 拼图小游戏`,
+      subtitle: gameData.value?.description || '将右侧拼图块拖到左边对应位置，放对后会自动吸附。',
       imageUrl: lushanBg
     };
   }
-  
-  // 接花游戏
+
   if (gameType === 'flower') {
     return {
       type: 'flower',
-      title: `${scenicName.value} · 接花小游戏`,
-      subtitle: '移动下方花篮，接住掉落的花朵，达到目标分数即可通关。',
+      title: gameData.value?.title || `${scenicName.value} · 接花小游戏`,
+      subtitle: gameData.value?.description || '移动下方花篮，接住掉落的花朵，达到目标分数即可通关。',
       imageUrl: ''
     };
   }
-  
-  // 翻牌消消乐
+
   if (gameType === 'memory') {
     return {
       type: 'memory',
-      title: `${scenicName.value} · 翻牌消消乐`,
-      subtitle: '翻开两张相同的卡片即可消除，全部消除就算成功。',
+      title: gameData.value?.title || `${scenicName.value} · 翻牌消消乐`,
+      subtitle: gameData.value?.description || '翻开两张相同的卡片即可消除，全部消除就算成功。',
       imageUrl: ''
     };
   }
-  
-  // 找不同游戏
+
   if (gameType === 'spot') {
     return {
       type: 'spot',
-      title: `${scenicName.value} · 找不同`,
-      subtitle: '找出左右两幅图中的所有不同点。',
+      title: gameData.value?.title || `${scenicName.value} · 找不同`,
+      subtitle: gameData.value?.description || '找出左右两幅图中的所有不同点。',
       imageUrl: ''
     };
   }
-  
-  // 默认返回拼图
+
+  if (gameType === 'link') {
+    return {
+      type: 'link',
+      title: gameData.value?.title || `${scenicName.value} · 连线游戏`,
+      subtitle: gameData.value?.description || '将左侧内容与右侧正确内容连起来。',
+      imageUrl: ''
+    };
+  }
+
   return {
     type: 'puzzle',
-    title: `${scenicName.value} · 小游戏`,
-    subtitle: '完成游戏可获得打卡奖励',
+    title: apiTitle,
+    subtitle: apiDesc,
     imageUrl: lushanBg
   };
 });
