@@ -16,38 +16,46 @@
             <div class="page page-cover" data-density="hard">
               <div
                 class="page-content cover-page"
-                :style="{ backgroundImage: 'url(' + coverBg + ')', backgroundSize: 'cover', backgroundPosition: 'center' }"
+                :style="{
+                  backgroundImage: 'url(' + coverBg + ')',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center'
+                }"
                 @pointerdown.capture.stop.prevent
                 @mousedown.capture.stop.prevent
                 @touchstart.capture.stop.prevent
                 @click.capture.stop.prevent="handleCoverClick"
-              >
-              </div>
+              ></div>
             </div>
 
-            <!-- 2. 说明页 -->
+            <!-- 2. 说明页（与第3页共用背景A-左半边） -->
             <div class="page page-hard">
-              <div class="page-content intro-page">
-                <div class="intro-wrap">
-                  <div class="intro-tag">PREFACE</div>
-                  <h2>景点游览指南</h2>
-                  <p>
-                    1. 文明旅游，爱护环境<br />
-                    2. 尊重当地文化与风俗<br />
-                    3. 注意安全，合理规划路线<br />
-                    4. 保护自然景观与历史遗迹<br />
-                    5. 放慢脚步，感受旅途之美
-                  </p>
-                  <div class="small-text">江西文旅 · 游览手册</div>
+              <div
+                class="page-content intro-page spread-page spread-left"
+                :style="getSpreadStyle(bookBg1, 'left')"
+              >
+                <div class="intro-wrap intro-vertical">
+                  <div class="intro-col intro-side-note">江西文旅・游览手册</div>
+                  <div class="intro-col intro-body">
+                    文明旅游，爱护环境。尊重当地风俗，珍视一方人文。行路观景，当以安全为先。山川古迹，皆值得温柔相待。愿你放慢脚步，于旅途中看见江西之美。
+                  </div>
+                  <div class="intro-col intro-title">景点游览指南</div>
+                  <div class="intro-col intro-tag">序</div>
                 </div>
                 <span class="page-num left">01</span>
               </div>
             </div>
 
-            <!-- 3. 登录页 -->
+            <!-- 3. 登录页（与第2页共用背景A-右半边） -->
             <div class="page">
-              <div class="page-content form-page">
-                <div class="page-title">登 录</div>
+              <div
+                class="page-content form-page spread-page spread-right"
+                :style="getSpreadStyle(bookBg1, 'right')"
+              >
+                <div class="page-title-wrap">
+                  <div class="page-title-seal">印</div>
+                  <div class="page-title">登录</div>
+                </div>
 
                 <div class="compact-form">
                   <div class="input-group">
@@ -108,29 +116,34 @@
               </div>
             </div>
 
-            <!-- 4. 说明页 -->
+            <!-- 4. 说明页（与第5页共用背景B-左半边） -->
             <div class="page page-hard">
-              <div class="page-content intro-page intro-page-mid">
-                <div class="intro-wrap">
-                  <div class="intro-tag">NOTICE</div>
-                  <h2>登录后可体验</h2>
-                  <p>
-                    1. 浏览江西各地景点内容<br />
-                    2. 参与互动故事与小游戏<br />
-                    3. 收藏喜欢的旅游路线<br />
-                    4. 查看景区特色文化与美食<br />
-                    5. 开启沉浸式游玩体验
-                  </p>
-                  <div class="small-text">山水有相逢 · 风景有故事</div>
+              <div
+                class="page-content intro-page intro-page-mid spread-page spread-left"
+                :style="getSpreadStyle(bookBg2, 'left')"
+              >
+                <div class="intro-wrap intro-vertical">
+                  <div class="intro-col intro-side-note">山水有相逢・风景有故事</div>
+                  <div class="intro-col intro-body">
+                    登录之后，你可游览江西各地景点，阅读风物故事，参与趣味互动，收藏心仪路线，也可在山水之间开启一段沉浸式的游览体验。
+                  </div>
+                  <div class="intro-col intro-title">登录后可体验</div>
+                  <div class="intro-col intro-tag">启</div>
                 </div>
                 <span class="page-num left">03</span>
               </div>
             </div>
 
-            <!-- 5. 注册页 -->
+            <!-- 5. 注册页（与第4页共用背景B-右半边） -->
             <div class="page">
-              <div class="page-content form-page">
-                <div class="page-title">注 册</div>
+              <div
+                class="page-content form-page spread-page spread-right"
+                :style="getSpreadStyle(bookBg2, 'right')"
+              >
+                <div class="page-title-wrap">
+                  <div class="page-title-seal">印</div>
+                  <div class="page-title">注册</div>
+                </div>
 
                 <div class="compact-form compact-form-reg">
                   <div class="input-group">
@@ -203,32 +216,33 @@
               </div>
             </div>
 
-            <!-- 6. 说明页 -->
+            <!-- 6. 说明页（与第7页共用背景C-左半边） -->
             <div class="page page-hard">
-              <div class="page-content intro-page intro-page-last">
-                <div class="intro-wrap">
-                  <div class="intro-tag">TRAVEL NOTE</div>
-                  <h2>出发前的约定</h2>
-                  <p>
-                    1. 用心看风景，也尊重风景<br />
-                    2. 与当地人和文化温柔相处<br />
-                    3. 让旅途不止是打卡，更是感受<br />
-                    4. 收藏一处山水，也记住一段故事<br />
-                    5. 愿你在江西遇见惊喜
-                  </p>
-                  <div class="small-text">带着期待出发 · 带着回忆归来</div>
+              <div
+                class="page-content intro-page intro-page-last spread-page spread-left"
+                :style="getSpreadStyle(bookBg3, 'left')"
+              >
+                <div class="intro-wrap intro-vertical">
+                  <div class="intro-col intro-side-note">带着期待出发・带着回忆归来</div>
+                  <div class="intro-col intro-body">
+                    愿你以从容之心看风景，以温柔之意待人文。让旅途不止于到此一游，也让每一次驻足，都成为与江西相遇的印记。
+                  </div>
+                  <div class="intro-col intro-title">出发前的约定</div>
+                  <div class="intro-col intro-tag">记</div>
                 </div>
                 <span class="page-num left">05</span>
               </div>
             </div>
 
-            <!-- 7. 封底 -->
+            <!-- 7. 封底（与第6页共用背景C-右半边） -->
             <div class="page page-end" data-density="hard">
-              <div class="page-content end-page">
-                <div class="end-inner">
-                  <div class="end-badge">Jiangxi Travel</div>
-                  <h2>山川秀丽 · 文脉悠长</h2>
-                  <p>愿你从登录开始，走入江西的风景与故事。</p>
+              <div
+                class="page-content end-page spread-page spread-right"
+                :style="getSpreadStyle(bookBg3, 'right')"
+              >
+                <div class="end-inner end-vertical">
+                  <div class="end-col end-desc">愿你从登录开始，走入江西的风景与故事。</div>
+                  <div class="end-col end-title">山川秀丽・文脉悠长</div>
                 </div>
               </div>
             </div>
@@ -241,7 +255,7 @@
       <div
         v-if="toastVisible"
         class="toast"
-        :style="{ background: toastIsError ? '#c24a2c' : '#2f6b47' }"
+        :style="{ background: toastIsError ? '#8f4f34' : '#5f6d4f' }"
       >
         {{ toastMessage }}
       </div>
@@ -291,6 +305,15 @@ let isOpeningCover = false
 
 const pageWidth = 420
 const pageHeight = 620
+
+function getSpreadStyle(bg, side) {
+  return {
+    backgroundImage: `url(${bg})`,
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: `${pageWidth * 2}px ${pageHeight}px`,
+    backgroundPosition: side === 'left' ? 'left center' : 'right center'
+  }
+}
 
 function showMessage(msg, isError = false) {
   toastMessage.value = msg
@@ -653,12 +676,12 @@ onBeforeUnmount(() => {
   height: 100vh;
   overflow: hidden;
   background:
-    linear-gradient(rgba(16, 12, 8, 0.28), rgba(16, 12, 8, 0.28)),
+    linear-gradient(rgba(16, 12, 8, 0.18), rgba(16, 12, 8, 0.18)),
     url("@/assets/imgs/login_bg.png") center / cover no-repeat;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  font-family: "STKaiti", "KaiTi", "FangSong", "Segoe UI", "Microsoft YaHei", sans-serif;
 }
 
 .book-stage {
@@ -689,7 +712,6 @@ onBeforeUnmount(() => {
   height: 620px;
   border-radius: 16px;
   overflow: visible;
-  /*box-shadow: 0 28px 70px rgba(0, 0, 0, 0.38);*/
 }
 
 .book {
@@ -699,22 +721,35 @@ onBeforeUnmount(() => {
 }
 
 .page {
-  background: #fffef7;
+  background: transparent;
   overflow: visible;
 }
 
 .page:nth-child(odd) {
-  border-left: 1px solid rgba(135, 103, 79, 0.14);
+  border-left: 1px solid rgba(120, 96, 76, 0.08);
 }
 
 .page:nth-child(even) {
-  border-right: 1px solid rgba(135, 103, 79, 0.14);
+  border-right: 1px solid rgba(120, 96, 76, 0.08);
 }
 
 .page-content {
   position: relative;
   width: 100%;
   height: 100%;
+}
+
+.spread-page {
+  background-repeat: no-repeat;
+  background-size: 840px 620px;
+}
+
+.spread-left {
+  background-position: left center;
+}
+
+.spread-right {
+  background-position: right center;
 }
 
 .page-cover {
@@ -730,142 +765,237 @@ onBeforeUnmount(() => {
 }
 
 .page-hard {
-  background:
-    linear-gradient(180deg, #f7efe3 0%, #f1e6d4 100%);
+  background: transparent;
 }
 
 .intro-page {
   display: flex;
   align-items: center;
   justify-content: center;
-  background:
-    radial-gradient(circle at top left, rgba(195, 152, 106, 0.1), transparent 36%),
-    linear-gradient(180deg, #f7f0e4 0%, #f3e7d6 100%);
 }
 
 .intro-page-mid {
-  background:
-    radial-gradient(circle at top left, rgba(179, 140, 98, 0.12), transparent 36%),
-    linear-gradient(180deg, #f8f1e6 0%, #f2e6d4 100%);
 }
 
 .intro-page-last {
-  background:
-    radial-gradient(circle at top left, rgba(198, 158, 119, 0.12), transparent 36%),
-    linear-gradient(180deg, #f8f0e2 0%, #f2e4d1 100%);
 }
 
 .intro-wrap {
-  width: 100%;
-  padding: 62px 38px;
-  text-align: center;
-  color: #6a4935;
+  position: absolute;
+  top: 54px;
+  right: 44px;
+  bottom: 48px;
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: flex-start;
+  gap: 22px;
+  color: #5f4633;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+}
+
+.intro-vertical {
+  writing-mode: vertical-rl;
+}
+
+.intro-col {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
 }
 
 .intro-tag {
-  color: #9b7c66;
-  font-size: 18px;
-  letter-spacing: 5px;
-  margin-bottom: 22px;
-  text-transform: uppercase;
+  color: #86654b;
+  font-size: 22px;
+  letter-spacing: 2px;
+  line-height: 1.2;
+  padding-top: 10px;
 }
 
-.intro-wrap h2 {
+.intro-title {
   font-size: 34px;
-  margin: 0 0 30px;
-  color: #7a4c2f;
+  color: #6e452d;
+  letter-spacing: 4px;
+  font-weight: 700;
+  line-height: 1.15;
 }
 
-.intro-wrap p {
-  line-height: 2;
+.intro-body {
   font-size: 18px;
+  color: #5d4634;
+  line-height: 1.95;
+  letter-spacing: 2px;
+  max-height: 470px;
 }
 
-.small-text {
-  margin-top: 28px;
-  color: #9e826f;
-  font-size: 16px;
+.intro-side-note {
+  font-size: 15px;
+  color: #967a66;
+  letter-spacing: 2px;
+  line-height: 1.6;
+  padding-top: 18px;
 }
 
 .form-page {
-  padding: 40px 30px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  background:
-    radial-gradient(circle at right top, rgba(206, 169, 130, 0.08), transparent 28%),
-    linear-gradient(180deg, #fffef7 0%, #f8f3e8 100%);
-}
-
-.page-title {
-  text-align: center;
-  font-size: 34px;
-  color: #7a4c2f;
-  letter-spacing: 14px;
-  margin: 12px 0 24px;
-  font-weight: 700;
-}
-
-.compact-form {
-  flex: 1;
+  position: relative;
+  padding: 88px 46px 42px 46px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 18px;
+}
+
+.page-title-wrap {
+  position: absolute;
+  top: 42px;
+  right: 26px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  z-index: 2;
+}
+
+.page-title {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-size: 34px;
+  line-height: 1.05;
+  letter-spacing: 6px;
+  margin: 0;
+  color: #5c3824;
+  font-weight: 700;
+  font-family: "STKaiti", "KaiTi", "FangSong", serif;
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.2),
+    0 2px 6px rgba(92, 56, 36, 0.08);
+}
+
+.page-title-seal {
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(137, 54, 38, 0.75);
+  color: rgba(137, 54, 38, 0.88);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  writing-mode: horizontal-tb;
+  font-family: "STKaiti", "KaiTi", serif;
+  transform: translateY(6px);
+  background: rgba(255, 250, 245, 0.12);
+}
+
+.compact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  background: transparent;
+  backdrop-filter: none;
+  border-radius: 0;
+  padding: 10px 8px 0 8px;
+  box-shadow: none;
 }
 
 .compact-form-reg {
-  gap: 15px;
+  gap: 18px;
 }
 
 .input-group {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  padding-bottom: 8px;
 }
 
 .input-group label {
-  color: #7b5a46;
-  font-size: 16px;
+  color: #6a4b37;
+  font-size: 15px;
   font-weight: 600;
+  letter-spacing: 3px;
+  font-family: "STKaiti", "KaiTi", "FangSong", serif;
 }
 
 .input-group input {
   width: 100%;
-  height: 50px;
-  border: 1px solid #d7c4a9;
-  border-radius: 12px;
+  height: 44px;
+  border: none;
+  border-bottom: 1px solid rgba(108, 78, 58, 0.34);
+  border-radius: 0;
   outline: none;
-  padding: 0 16px;
+  padding: 0 8px 0 2px;
   font-size: 16px;
-  background: rgba(230, 237, 248, 0.9);
+  background: transparent;
   color: #4e3728;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
+}
+
+.input-group input::placeholder {
+  color: rgba(110, 82, 61, 0.48);
+}
+
+.input-group::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 7px;
+  height: 1px;
+  background:
+    linear-gradient(
+      to right,
+      rgba(120, 88, 67, 0),
+      rgba(120, 88, 67, 0.3) 8%,
+      rgba(120, 88, 67, 0.42) 22%,
+      rgba(120, 88, 67, 0.42) 78%,
+      rgba(120, 88, 67, 0.3) 92%,
+      rgba(120, 88, 67, 0)
+    );
+  pointer-events: none;
+  transform: scaleY(0.9);
 }
 
 .input-group input:focus {
-  border-color: #b9855e;
-  box-shadow: 0 0 0 3px rgba(185, 133, 94, 0.15);
-  background: rgba(236, 242, 251, 0.96);
+  border-bottom-color: rgba(128, 79, 48, 0.6);
+  box-shadow: none;
+  background: transparent;
+}
+
+.input-group:has(input:focus)::after {
+  height: 2px;
+  background:
+    linear-gradient(
+      to right,
+      rgba(138, 88, 54, 0),
+      rgba(138, 88, 54, 0.35) 8%,
+      rgba(138, 88, 54, 0.65) 22%,
+      rgba(138, 88, 54, 0.65) 78%,
+      rgba(138, 88, 54, 0.35) 92%,
+      rgba(138, 88, 54, 0)
+    );
 }
 
 .btn {
-  width: 100%;
-  height: 50px;
-  border: none;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #b8774d, #9c5c37);
-  color: #fff7e6;
-  font-size: 18px;
+  width: 186px;
+  height: 44px;
+  border: 1px solid rgba(126, 82, 52, 0.58);
+  border-radius: 999px;
+  background: rgba(255, 248, 240, 0.04);
+  color: #633f2b;
+  font-size: 17px;
   font-weight: 700;
   cursor: pointer;
-  margin-top: 8px;
+  margin: 22px auto 0;
   transition: all 0.25s ease;
+  font-family: "STKaiti", "KaiTi", "FangSong", serif;
 }
 
 .btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 8px 18px rgba(156, 92, 55, 0.28);
+  box-shadow: 0 4px 12px rgba(108, 69, 45, 0.08);
+  background: rgba(255, 248, 240, 0.12);
 }
 
 .btn:disabled {
@@ -874,71 +1004,89 @@ onBeforeUnmount(() => {
 }
 
 .switch-hint {
-  margin-top: 8px;
+  margin-top: 14px;
   text-align: center;
-  color: #8b694f;
-  font-size: 16px;
+  color: #7d624f;
+  font-size: 15px;
   cursor: pointer;
   user-select: none;
+  font-family: "STKaiti", "KaiTi", "FangSong", serif;
 }
 
 .switch-hint span {
-  color: #9b5d38;
+  color: #8a5738;
   font-weight: 700;
 }
 
 .footer-note {
   text-align: center;
-  color: #a38872;
-  font-size: 15px;
-  margin-top: 8px;
+  color: #927764;
+  font-size: 14px;
+  margin-top: 6px;
+  font-family: "STKaiti", "KaiTi", "FangSong", serif;
 }
 
 .page-end {
-  background:
-    linear-gradient(135deg, #493528, #6b4a35 46%, #7d553d 100%);
+  background: transparent;
 }
 
 .end-page {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #f7e7c8;
+  color: #f5e7cb;
   text-align: center;
   padding: 36px;
 }
 
 .end-inner {
-  max-width: 300px;
+  max-width: 320px;
+  background: transparent;
+  backdrop-filter: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
 }
 
-.end-badge {
-  display: inline-block;
-  margin-bottom: 18px;
-  padding: 8px 16px;
-  border-radius: 999px;
-  background: rgba(255, 240, 214, 0.12);
-  border: 1px solid rgba(255, 240, 214, 0.18);
-  font-size: 14px;
-  letter-spacing: 1px;
+.end-vertical {
+  position: absolute;
+  top: 72px;
+  left: 72px;
+  bottom: 58px;
+  display: flex;
+  flex-direction: row-reverse;
+  gap: 22px;
+  writing-mode: vertical-rl;
+  color: #d8c0a2;
 }
 
-.end-inner h2 {
-  margin: 0 0 18px;
-  font-size: 32px;
-  line-height: 1.5;
+.end-col {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
 }
 
-.end-inner p {
-  font-size: 16px;
-  line-height: 1.8;
-  color: rgba(255, 240, 214, 0.88);
+.end-title {
+  font-size: 34px;
+  line-height: 1.2;
+  letter-spacing: 4px;
+  font-weight: 700;
+  color: rgba(234, 183, 107, 0.98);
+  text-shadow: 0 1px 4px rgba(36, 22, 14, 0.18);
+}
+
+.end-desc {
+  font-size: 17px;
+  line-height: 1.9;
+  letter-spacing: 2px;
+  color: rgba(234, 183, 107, 0.98);
+  max-height: 420px;
+  text-shadow: 0 1px 3px rgba(36, 22, 14, 0.14);
 }
 
 .page-num {
   position: absolute;
   bottom: 18px;
-  color: #bfa58b;
+  color: rgba(130, 103, 81, 0.72);
   font-size: 13px;
   letter-spacing: 1px;
 }
@@ -956,7 +1104,7 @@ onBeforeUnmount(() => {
   bottom: 28px;
   left: 50%;
   transform: translateX(-50%);
-  color: rgba(28, 28, 28, 0.7);
+  color: rgba(40, 33, 26, 0.68);
   font-size: 14px;
   letter-spacing: 2px;
   pointer-events: none;
@@ -973,7 +1121,7 @@ onBeforeUnmount(() => {
   border-radius: 12px;
   font-size: 14px;
   white-space: nowrap;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.16);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
   z-index: 99;
 }
 
@@ -1005,4 +1153,5 @@ onBeforeUnmount(() => {
     transform: scale(0.66);
   }
 }
+
 </style>
