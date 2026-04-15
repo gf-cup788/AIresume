@@ -14,6 +14,7 @@
         <span class="back-icon">‹</span>
         <span class="back-text">返回景点</span>
       </button>
+      
       <div class="progress-wrap">
         <div class="progress-track">
           <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
@@ -982,7 +983,7 @@ onBeforeUnmount(() => {
 .scene-back-btn::before {
   content: "";
   position: absolute;
-  inset: 2px 22px 2px 2px;
+  inset: 2px 2px 2px 2px;
   border: 1px solid rgba(255, 244, 228, 0.28);
   pointer-events: none;
 }

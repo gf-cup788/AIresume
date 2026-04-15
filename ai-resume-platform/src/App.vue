@@ -5,6 +5,7 @@
         <AI />
       </div>
     </transition>
+
     <!-- 古风落款头像 -->
     <div
       v-if="!hideFloatingAvatar"
@@ -13,18 +14,19 @@
     >
       <!-- 落款主体：闲章 + 头像 + 竖排字 -->
       <div class="signature-seal-wrapper">
-        <!-- 朱红闲章（斑驳毛边圆形，纯CSS实现） -->
+        <!-- 朱红闲章 -->
         <div class="seal-stamp">
           <img :src="avatarUrl" class="seal-avatar" />
         </div>
+
         <!-- 竖排落款容器（含上下印章） -->
         <div class="signature-container">
           <!-- 上方：江湖印章 -->
           <img :src="JiangHuImg" class="seal-mark top-seal" />
-          
+
           <!-- 竖排文字 -->
           <div class="signature-vertical-text">{{ usernameText }}</div>
-          
+
           <!-- 下方：游客印章 -->
           <img :src="YouKeImg" class="seal-mark bottom-seal" />
         </div>
@@ -38,48 +40,60 @@
             <span class="header-text">君 子</span>
             <span class="header-dot">●</span>
           </div>
+
           <div class="menu-body">
             <div class="menu-item" @click.stop="goUserCenter">
               <span class="item-icon">📜</span>
               <span>游历簿</span>
             </div>
+
             <div v-if="!isLogin" class="menu-item" @click.stop="goLogin">
               <span class="item-icon">🏮</span>
               <span>登楼</span>
             </div>
+
             <div v-else class="menu-item logout-item" @click.stop="logout">
               <span class="item-icon">🍃</span>
               <span>辞别</span>
             </div>
           </div>
+
           <div class="menu-footer"></div>
         </div>
       </transition>
     </div>
 
     <router-view />
+
+    <!-- 古风消息提示组件 -->
+    <AncientMessage ref="ancientMessageRef" />
   </div>
 </template>
 
 <script>
 import AI from './components/AI.vue'
+import AncientMessage from '@/components/AncientMessage.vue'
+import { ancientMessageRef } from '@/components/useAncientMessage'
+
 import avatarImg from "./assets/imgs/red-soldier.png";
 import JiangHuImg from "./assets/Seal/JiangHu.png";
 import YouKeImg from "./assets/Seal/YouKe.png";
-import { GetUserProfile } from '@/api/auth.js';  
+import { GetUserProfile } from '@/api/auth.js';
 
 export default {
+  name: 'App',
   components: {
-    AI
+    AI,
+    AncientMessage
   },
   data() {
     return {
       isLogin: false,
       avatarUrl: avatarImg,
       showMenu: false,
-      JiangHuImg: JiangHuImg,
-      YouKeImg: YouKeImg,
-      userProfile: null,  // 存储用户详细信息
+      JiangHuImg,
+      YouKeImg,
+      userProfile: null
     };
   },
   computed: {
@@ -90,31 +104,59 @@ export default {
       if (this.isLogin && this.userProfile) {
         return this.userProfile.username || "访客";
       }
+
       if (this.isLogin) {
         const user = localStorage.getItem("user");
         if (user) {
           try {
             const userData = JSON.parse(user);
             return userData.username || "访客";
-          } catch (e) {}
+          } catch (e) {
+            return "访客";
+          }
         }
       }
+
       return "访客";
     }
   },
   async created() {
+    ancientMessageRef.value = this.$refs.ancientMessageRef || null;
     await this.checkLogin();
     window.addEventListener("click", this.handleClickOutside);
   },
-  beforeDestroy() {
+  mounted() {
+    ancientMessageRef.value = this.$refs.ancientMessageRef || null;
+  },
+  beforeUnmount() {
     window.removeEventListener("click", this.handleClickOutside);
   },
   methods: {
+    showSuccess(message) {
+      if (this.$refs.ancientMessageRef) {
+        this.$refs.ancientMessageRef.success(message);
+      }
+    },
+    showError(message) {
+      if (this.$refs.ancientMessageRef) {
+        this.$refs.ancientMessageRef.error(message);
+      }
+    },
+    showWarning(message) {
+      if (this.$refs.ancientMessageRef) {
+        this.$refs.ancientMessageRef.warning(message);
+      }
+    },
+    showInfo(message) {
+      if (this.$refs.ancientMessageRef) {
+        this.$refs.ancientMessageRef.info(message);
+      }
+    },
+
     async checkLogin() {
       const user = localStorage.getItem("user");
       if (user) {
         this.isLogin = true;
-        // 调用接口获取用户详细信息
         await this.fetchUserProfile();
       } else {
         this.isLogin = false;
@@ -122,14 +164,13 @@ export default {
         this.userProfile = null;
       }
     },
-    
-    // 新增：获取用户详细信息
+
     async fetchUserProfile() {
       try {
         const res = await GetUserProfile();
         if (res.code === 200 && res.data) {
           this.userProfile = res.data;
-          // 优先使用接口返回的头像，没有则用本地存储的，都没有则用默认
+
           if (res.data.avatar) {
             this.avatarUrl = res.data.avatar;
           } else {
@@ -141,12 +182,14 @@ export default {
               } catch (e) {
                 this.avatarUrl = avatarImg;
               }
+            } else {
+              this.avatarUrl = avatarImg;
             }
           }
         }
       } catch (error) {
         console.error("获取用户信息失败:", error);
-        // 接口失败时降级使用本地存储
+
         const user = localStorage.getItem("user");
         if (user) {
           try {
@@ -155,32 +198,40 @@ export default {
           } catch (e) {
             this.avatarUrl = avatarImg;
           }
+        } else {
+          this.avatarUrl = avatarImg;
         }
       }
     },
-    
+
     toggleMenu(e) {
       e.stopPropagation();
       this.showMenu = !this.showMenu;
     },
+
     handleClickOutside() {
       this.showMenu = false;
     },
+
     goUserCenter() {
       this.showMenu = false;
       this.$router.push(this.isLogin ? "/user" : "/login");
     },
+
     goLogin() {
       this.showMenu = false;
       this.$router.push("/login");
     },
+
     async logout() {
       this.showMenu = false;
       localStorage.removeItem("user");
       this.isLogin = false;
       this.avatarUrl = avatarImg;
       this.userProfile = null;
-      // 可选：跳转到登录页或首页
+
+      this.showSuccess("已成功退出登录");
+
       if (this.$route.path !== "/") {
         this.$router.push("/");
       }
@@ -201,10 +252,12 @@ export default {
   padding: 0;
   box-sizing: border-box;
 }
+
 #app {
   min-height: 100vh;
   font-family: "STKaiti", "KaiTi", serif;
 }
+
 .fade-enter-active {
   transition: opacity 0.5s ease;
 }
@@ -230,7 +283,7 @@ export default {
   gap: 8px;
 }
 
-/* ============== 核心：纯CSS实现朱红闲章（稳定版） ============== */
+/* 朱红闲章 */
 .seal-stamp {
   width: 50px;
   height: 50px;
@@ -251,31 +304,28 @@ export default {
   right: -4px;
   bottom: -4px;
   border-radius: 50%;
-  
-  /* 断断续续的圆环 - 多段有墨/无墨交替 */
   background: conic-gradient(
-  from 0deg,
-  #a83b2a 0deg 23deg,      /* 有墨 */
-  transparent 23deg 25deg,  /* 断墨 */
-  #a83b2a 25deg 45deg,      /* 有墨 */
-  transparent 45deg 70deg,  /* 断墨*/
-  #a83b2a 70deg 93deg,      /* 有墨 */
-  transparent 93deg 98deg,  /* 断墨 */
-  #a83b2a 98deg 105deg,     /* 有墨 */
-  transparent 105deg 106deg, /* 断墨 */
-  #a83b2a 106deg 156deg,    /* 有墨 */
-  transparent 156deg 159deg, /* 断墨 */
-  #a83b2a 159deg 200deg,    /* 有墨 */
-  transparent 200deg 267deg, /* 断墨 */
-  #a83b2a 267deg 274deg,    /* 有墨 */
-  transparent 274deg 283deg, /* 断墨 */
-  #a83b2a 283deg 289deg,    /* 有墨 */
-  transparent 289deg 340deg, /* 断墨 */
-  #a83b2a 340deg 345deg,    /* 有墨 */
-  transparent 345deg 359deg, /* 断墨 */
-  #a83b2a 359deg 360deg     /* 有墨 */
-);
-  
+    from 0deg,
+    #a83b2a 0deg 23deg,
+    transparent 23deg 25deg,
+    #a83b2a 25deg 45deg,
+    transparent 45deg 70deg,
+    #a83b2a 70deg 93deg,
+    transparent 93deg 98deg,
+    #a83b2a 98deg 105deg,
+    transparent 105deg 106deg,
+    #a83b2a 106deg 156deg,
+    transparent 156deg 159deg,
+    #a83b2a 159deg 200deg,
+    transparent 200deg 267deg,
+    #a83b2a 267deg 274deg,
+    transparent 274deg 283deg,
+    #a83b2a 283deg 289deg,
+    transparent 289deg 340deg,
+    #a83b2a 340deg 345deg,
+    transparent 345deg 359deg,
+    #a83b2a 359deg 360deg
+  );
   mask: radial-gradient(circle at center, transparent 65%, black 70%);
   -webkit-mask: radial-gradient(circle at center, transparent 65%, black 70%);
   transform: rotate(-8deg);
@@ -292,6 +342,7 @@ export default {
   position: relative;
   z-index: 2;
 }
+
 /* 落款容器（包含上下印章 + 竖排文字） */
 .signature-container {
   display: flex;
@@ -338,17 +389,25 @@ export default {
   top: 90px;
   right: 0;
   width: 160px;
-  background: rgba(30,24,18,0.95);
+  background: rgba(30, 24, 18, 0.95);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(200,170,100,0.5);
+  border: 1px solid rgba(200, 170, 100, 0.5);
   border-radius: 12px;
   overflow: hidden;
   animation: menuSlideDown 0.25s ease;
 }
+
 @keyframes menuSlideDown {
-  from { opacity:0; transform: translateY(-8px); }
-  to { opacity:1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
+
 .menu-header {
   background: linear-gradient(135deg, #5d4a2e, #4a3824);
   padding: 10px 12px;
@@ -359,19 +418,23 @@ export default {
   gap: 8px;
   border-bottom: 1px solid #c9aa5f;
 }
+
 .header-dot {
   font-size: 8px;
   color: #ecdba8;
 }
+
 .header-text {
   font-size: 12px;
   color: #ecdba8;
   font-family: "STKaiti", serif;
   letter-spacing: 2px;
 }
+
 .menu-body {
   padding: 8px 0;
 }
+
 .menu-item {
   display: flex;
   align-items: center;
@@ -385,31 +448,38 @@ export default {
   font-family: "STKaiti", serif;
   letter-spacing: 1px;
 }
+
 .menu-item:hover {
-  background: rgba(200,170,100,0.15);
+  background: rgba(200, 170, 100, 0.15);
   border-left-color: #c9aa5f;
   padding-left: 20px;
 }
+
 .item-icon {
   font-size: 14px;
   width: 24px;
   text-align: center;
 }
+
 .logout-item:hover {
-  background: rgba(180,100,80,0.2);
+  background: rgba(180, 100, 80, 0.2);
   border-left-color: #c96a4a;
 }
+
 .logout-item:hover span:last-child {
   color: #e8b89a;
 }
+
 .menu-footer {
   height: 3px;
   background: linear-gradient(90deg, #c9aa5f, #ecdba8, #c9aa5f);
 }
+
 .menu-fade-enter-active,
 .menu-fade-leave-active {
   transition: all 0.2s ease;
 }
+
 .menu-fade-enter-from,
 .menu-fade-leave-to {
   opacity: 0;
@@ -422,17 +492,21 @@ export default {
     top: 15px;
     right: 15px;
   }
+
   .seal-stamp {
     width: 48px;
     height: 48px;
   }
+
   .seal-avatar {
     width: 38px;
     height: 38px;
   }
+
   .signature-vertical-text {
     font-size: 12px;
   }
+
   .menu-scroll {
     top: 80px;
     width: 140px;

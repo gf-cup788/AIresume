@@ -354,6 +354,7 @@
         </template>
       </div>
     </div>
+    <AncientMessage ref="ancientMessageLocalRef" />
   </div>
 </template>
 
@@ -361,6 +362,8 @@
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { request } from "@/utils/request";
+import AncientMessage from "@/components/AncientMessage.vue";
+import { ancientMessageRef } from "@/components/useAncientMessage";
 
 import lushan from "@/assets/imgs/lushan.jpg";
 import jinggangshan from "@/assets/imgs/jinggangshan.jpg";
@@ -372,6 +375,7 @@ import yun2 from "@/assets/imgs/yun.png";
 
 const router = useRouter();
 const route = useRoute();
+const ancientMessageLocalRef = ref(null);
 
 const isLogin = ref(false);
 const activeTab = ref("intro");
@@ -382,6 +386,26 @@ const pageLoadingText = ref("图片和景点数据正在准备中...");
 
 const content = ref("");
 const selectedTag = ref("");
+
+function getMessageInstance() {
+  return ancientMessageLocalRef.value || ancientMessageRef.value;
+}
+
+function showSuccess(text, duration = 2500) {
+  getMessageInstance()?.success(text, duration);
+}
+
+function showError(text, duration = 2500) {
+  getMessageInstance()?.error(text, duration);
+}
+
+function showWarning(text, duration = 2500) {
+  getMessageInstance()?.warning(text, duration);
+}
+
+function showInfo(text, duration = 2500) {
+  getMessageInstance()?.info(text, duration);
+}
 
 const tagList = ref([
   "风景很美",
@@ -984,7 +1008,7 @@ async function fetchComments(scenicId = currentScenic.value.apiId || activeId.va
 
 async function toggleLike(item) {
   if (!item?.id) {
-    alert("评论不存在");
+    showWarning("评论不存在");
     return;
   }
 
@@ -1002,25 +1026,25 @@ async function toggleLike(item) {
   } catch (error) {
     item.liked = oldLiked;
     item.likeCount = oldCount;
-    alert(error?.message || "点赞失败");
+    showError(error?.message || "点赞失败");
   }
 }
 
 async function deleteComment(item) {
   if (!item?.id) {
-    alert("评论不存在");
+    showWarning("评论不存在");
     return;
   }
 
   if (!canDeleteComment(item)) {
-    alert("只能删除自己发表的评论");
+    showWarning("只能删除自己发表的评论");
     return;
   }
 
   const list = commentsMap.value[activeId.value] || [];
   const idx = list.findIndex((comment) => String(comment.id) === String(item.id));
   if (idx === -1) {
-    alert("评论不存在");
+    showWarning("评论不存在");
     return;
   }
 
@@ -1034,7 +1058,7 @@ async function deleteComment(item) {
     saveComments();
   } catch (error) {
     list.splice(idx, 0, backup);
-    alert(error?.message || "删除评论失败");
+    showError(error?.message || "删除评论失败");
   }
 }
 
@@ -1102,12 +1126,12 @@ function loadComments() {
 
 async function submitComment() {
   if (!content.value.trim()) {
-    alert("请输入评论内容");
+    showWarning("请输入评论内容");
     return;
   }
 
   if (!selectedTag.value) {
-    alert("请选择一个标签");
+    showWarning("请先选择分类");
     return;
   }
 
@@ -1129,7 +1153,7 @@ async function submitComment() {
     content.value = "";
     selectedTag.value = "";
   } catch (error) {
-    alert(error?.message || "发布评论失败");
+    showError(error?.message || "发布评论失败");
   }
 }
 
@@ -1276,6 +1300,7 @@ async function preparePageEntrance() {
 }
 
 onMounted(() => {
+  ancientMessageRef.value = ancientMessageLocalRef.value;
   isLogin.value = !!localStorage.getItem("user");
   document.addEventListener("keydown", handleKeydown);
 
@@ -1283,6 +1308,9 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  if (ancientMessageRef.value === ancientMessageLocalRef.value) {
+    ancientMessageRef.value = null;
+  }
   stopGalleryAutoPlay();
   document.removeEventListener("keydown", handleKeydown);
 });

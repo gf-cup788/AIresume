@@ -482,14 +482,12 @@ onBeforeUnmount(() => {
   height: 540px;
   overflow: hidden;
   border-radius: 24px;
-  border: 2px solid rgba(108, 146, 78, 0.18);
+  border: none;
   background-color: #eef5ea;
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.55),
-    0 16px 36px rgba(104, 132, 84, 0.12);
+  box-shadow: 0 16px 36px rgba(104, 132, 84, 0.12);
 }
 
 .game-bg-mask {
@@ -608,6 +606,7 @@ onBeforeUnmount(() => {
   justify-content: center;
   padding: 20px;
   z-index: 4;
+  border-radius: 24px;
 }
 
 .game-mask-card {

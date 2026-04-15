@@ -251,15 +251,7 @@
       </div>
     </div>
 
-    <transition name="toast-fade">
-      <div
-        v-if="toastVisible"
-        class="toast"
-        :style="{ background: toastIsError ? '#8f4f34' : '#5f6d4f' }"
-      >
-        {{ toastMessage }}
-      </div>
-    </transition>
+    <AncientMessage ref="ancientMessageRef" />
   </div>
 </template>
 
@@ -269,6 +261,8 @@ import { useRouter, useRoute } from 'vue-router'
 import { PageFlip } from 'page-flip'
 import { loginApi, registerApi } from '@/api/auth'
 import { saveLoginInfo } from '@/utils/request'
+import AncientMessage from '@/components/AncientMessage.vue'
+import { ancientMessageRef } from '@/components/useAncientMessage'
 import coverBg from '../assets/imgs/tongguanwendie.jpg'
 import bookBg1 from '../assets/imgs/login_bg1.png'
 import bookBg2 from '../assets/imgs/login_bg2.png'
@@ -279,6 +273,7 @@ const route = useRoute()
 
 const bookRef = ref(null)
 const bookSection = ref(null)
+const ancientMessageLocalRef = ref(null)
 
 const currentPage = ref('cover')
 
@@ -292,11 +287,6 @@ const regConfirmPassword = ref('')
 const loginLoading = ref(false)
 const registerLoading = ref(false)
 
-const toastVisible = ref(false)
-const toastMessage = ref('')
-const toastIsError = ref(false)
-
-let toastTimer = null
 let pageFlip = null
 let resizeTimer = null
 let flipLock = false
@@ -316,14 +306,14 @@ function getSpreadStyle(bg, side) {
 }
 
 function showMessage(msg, isError = false) {
-  toastMessage.value = msg
-  toastIsError.value = isError
-  toastVisible.value = true
+  const instance = ancientMessageLocalRef.value || ancientMessageRef.value
+  if (!instance) return
 
-  if (toastTimer) clearTimeout(toastTimer)
-  toastTimer = setTimeout(() => {
-    toastVisible.value = false
-  }, 2200)
+  if (isError) {
+    instance.error(msg)
+  } else {
+    instance.success(msg)
+  }
 }
 
 function mapPageState(index) {
@@ -547,7 +537,7 @@ async function handleLogin() {
       router.push(redirect)
     }, 800)
   } catch (error) {
-    showMessage(error.message || '登录失败', true)
+    showMessage(error?.message || '登录失败', true)
   } finally {
     loginLoading.value = false
   }
@@ -603,7 +593,7 @@ async function handleRegister() {
       }
     }, 700)
   } catch (error) {
-    showMessage(error.message || '注册失败', true)
+    showMessage(error?.message || '注册失败', true)
   } finally {
     registerLoading.value = false
   }
@@ -637,6 +627,8 @@ function unlockBodyScroll() {
 onMounted(async () => {
   lockBodyScroll()
   await nextTick()
+
+  ancientMessageRef.value = ancientMessageLocalRef.value
   initPageFlip()
   window.addEventListener('resize', handleResize)
 })
@@ -645,13 +637,16 @@ onBeforeUnmount(() => {
   unlockBodyScroll()
   window.removeEventListener('resize', handleResize)
 
-  if (toastTimer) clearTimeout(toastTimer)
   if (resizeTimer) clearTimeout(resizeTimer)
   if (flipLockTimer) clearTimeout(flipLockTimer)
 
   if (pageFlip) {
     pageFlip.destroy()
     pageFlip = null
+  }
+
+  if (ancientMessageRef.value === ancientMessageLocalRef.value) {
+    ancientMessageRef.value = null
   }
 })
 </script>
@@ -899,142 +894,103 @@ onBeforeUnmount(() => {
 }
 
 .compact-form-reg {
-  gap: 18px;
+  gap: 20px;
 }
 
 .input-group {
-  position: relative;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding-bottom: 8px;
 }
 
 .input-group label {
-  color: #6a4b37;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 3px;
-  font-family: "STKaiti", "KaiTi", "FangSong", serif;
+  font-size: 16px;
+  color: #6a4b34;
+  letter-spacing: 2px;
+  font-family: "STKaiti", "KaiTi", serif;
 }
 
 .input-group input {
   width: 100%;
-  height: 44px;
+  height: 46px;
   border: none;
-  border-bottom: 1px solid rgba(108, 78, 58, 0.34);
-  border-radius: 0;
   outline: none;
-  padding: 0 8px 0 2px;
-  font-size: 16px;
-  background: transparent;
+  background: rgba(255, 250, 244, 0.14);
+  border-bottom: 1.5px solid rgba(113, 79, 54, 0.5);
+  padding: 0 4px;
   color: #4e3728;
+  font-size: 16px;
+  font-family: "STKaiti", "KaiTi", serif;
   transition: all 0.25s ease;
 }
 
 .input-group input::placeholder {
-  color: rgba(110, 82, 61, 0.48);
-}
-
-.input-group::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 7px;
-  height: 1px;
-  background:
-    linear-gradient(
-      to right,
-      rgba(120, 88, 67, 0),
-      rgba(120, 88, 67, 0.3) 8%,
-      rgba(120, 88, 67, 0.42) 22%,
-      rgba(120, 88, 67, 0.42) 78%,
-      rgba(120, 88, 67, 0.3) 92%,
-      rgba(120, 88, 67, 0)
-    );
-  pointer-events: none;
-  transform: scaleY(0.9);
+  color: rgba(102, 78, 57, 0.45);
 }
 
 .input-group input:focus {
-  border-bottom-color: rgba(128, 79, 48, 0.6);
-  box-shadow: none;
-  background: transparent;
-}
-
-.input-group:has(input:focus)::after {
-  height: 2px;
-  background:
-    linear-gradient(
-      to right,
-      rgba(138, 88, 54, 0),
-      rgba(138, 88, 54, 0.35) 8%,
-      rgba(138, 88, 54, 0.65) 22%,
-      rgba(138, 88, 54, 0.65) 78%,
-      rgba(138, 88, 54, 0.35) 92%,
-      rgba(138, 88, 54, 0)
-    );
+  border-bottom-color: #8f5f3c;
+  background: rgba(255, 250, 244, 0.2);
 }
 
 .btn {
-  width: 186px;
-  height: 44px;
-  border: 1px solid rgba(126, 82, 52, 0.58);
-  border-radius: 999px;
-  background: rgba(255, 248, 240, 0.04);
-  color: #633f2b;
-  font-size: 17px;
-  font-weight: 700;
+  width: 100%;
+  height: 46px;
+  border: none;
+  outline: none;
   cursor: pointer;
-  margin: 22px auto 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #7a4f34, #5d3a26);
+  color: #f8eedf;
+  font-size: 16px;
+  letter-spacing: 2px;
+  font-family: "STKaiti", "KaiTi", serif;
   transition: all 0.25s ease;
-  font-family: "STKaiti", "KaiTi", "FangSong", serif;
+  box-shadow: 0 6px 18px rgba(80, 52, 34, 0.16);
 }
 
-.btn:hover:not(:disabled) {
+.btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(108, 69, 45, 0.08);
-  background: rgba(255, 248, 240, 0.12);
+  box-shadow: 0 8px 20px rgba(80, 52, 34, 0.2);
 }
 
 .btn:disabled {
-  opacity: 0.7;
   cursor: not-allowed;
+  opacity: 0.72;
+  transform: none;
 }
 
 .switch-hint {
-  margin-top: 14px;
   text-align: center;
-  color: #7d624f;
-  font-size: 15px;
+  color: #7b5e46;
+  font-size: 14px;
+  letter-spacing: 1px;
   cursor: pointer;
   user-select: none;
-  font-family: "STKaiti", "KaiTi", "FangSong", serif;
+  transition: all 0.25s ease;
 }
 
 .switch-hint span {
-  color: #8a5738;
-  font-weight: 700;
+  color: #8f5f3c;
+}
+
+.switch-hint:hover {
+  color: #5f432f;
 }
 
 .footer-note {
   text-align: center;
-  color: #927764;
-  font-size: 14px;
-  margin-top: 6px;
-  font-family: "STKaiti", "KaiTi", "FangSong", serif;
-}
-
-.page-end {
-  background: transparent;
+  color: rgba(98, 74, 55, 0.68);
+  font-size: 13px;
+  letter-spacing: 3px;
+  margin-top: 2px;
 }
 
 .end-page {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #f5e7cb;
   text-align: center;
   padding: 36px;
 }
@@ -1111,31 +1067,6 @@ onBeforeUnmount(() => {
   z-index: 8;
 }
 
-.toast {
-  position: fixed;
-  left: 50%;
-  bottom: 82px;
-  transform: translateX(-50%);
-  color: #fff;
-  padding: 12px 18px;
-  border-radius: 12px;
-  font-size: 14px;
-  white-space: nowrap;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
-  z-index: 99;
-}
-
-.toast-fade-enter-active,
-.toast-fade-leave-active {
-  transition: all 0.25s ease;
-}
-
-.toast-fade-enter-from,
-.toast-fade-leave-to {
-  opacity: 0;
-  transform: translateX(-50%) translateY(8px);
-}
-
 @media (max-width: 1200px) {
   .book-stage {
     transform: scale(0.9);
@@ -1153,5 +1084,4 @@ onBeforeUnmount(() => {
     transform: scale(0.66);
   }
 }
-
 </style>

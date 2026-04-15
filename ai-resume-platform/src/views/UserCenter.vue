@@ -109,7 +109,12 @@
             <button class="modal-close" @click="showProfileImageModal = false">✕</button>
           </div>
           <div class="modal-body">
-            <div v-for="(profile, index) in profileImageList" :key="index" class="avatar-option" @click="selectProfileImage(profile)">
+            <div
+              v-for="(profile, index) in profileImageList"
+              :key="index"
+              class="avatar-option"
+              @click="selectProfileImage(profile)"
+            >
               <img :src="profile.url" :alt="profile.name" class="option-img" />
               <span>{{ profile.name }}</span>
               <span v-if="currentProfileImage === profile.url" class="check-mark">✓</span>
@@ -135,7 +140,13 @@
                 <div class="avatar-preview">
                   <img :src="editUser.avatar || defaultAvatar" alt="头像" class="avatar-preview-img" />
                 </div>
-                <input type="file" ref="avatarInput" @change="uploadAvatar" accept="image/*" style="display: none;" />
+                <input
+                  type="file"
+                  ref="avatarInput"
+                  @change="uploadAvatar"
+                  accept="image/*"
+                  style="display: none;"
+                />
                 <button class="upload-btn" @click="triggerAvatarUpload">上传头像</button>
                 <span class="upload-hint">建议上传1:1比例图片</span>
               </div>
@@ -188,9 +199,9 @@
           </div>
           <div class="modal-body-list">
             <div v-if="myComments.length" class="comments-list">
-              <div 
-                v-for="(item, index) in myComments" 
-                :key="index" 
+              <div
+                v-for="(item, index) in myComments"
+                :key="index"
                 class="comment-item"
                 @click="goToScenicDetail(item)"
               >
@@ -235,14 +246,26 @@
         <span class="benwo">游踪</span>
       </div>
     </div>
+
+    <AncientMessage ref="ancientMessageLocalRef" />
   </div>
 </template>
 
 <script setup>
-import { reactive, ref, onMounted, onBeforeMount } from 'vue'
+import { reactive, ref, onMounted, onBeforeMount, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
-import { GetUserProfile, UpdateUserProfile, GetCheckins, GetComments, UploadImage, GetScenics } from '@/api/auth.js'
+import { ElMessageBox, ElLoading } from 'element-plus'
+import AncientMessage from '@/components/AncientMessage.vue'
+import { ancientMessageRef } from '@/components/useAncientMessage'
+import {
+  GetUserProfile,
+  UpdateUserProfile,
+  GetCheckins,
+  GetComments,
+  UploadImage,
+  GetScenics
+} from '@/api/auth.js'
+
 import bgImage from '@/assets/imgs/grzx_bg.jpg'
 import Border from '@/assets/imgs/border.png'
 import Border2 from '@/assets/imgs/border2.png'
@@ -251,8 +274,30 @@ import Border4 from '@/assets/imgs/border4.png'
 
 const router = useRouter()
 
+const ancientMessageLocalRef = ref(null)
+
+const showSuccess = (text, duration = 2500) => {
+  const instance = ancientMessageLocalRef.value || ancientMessageRef.value
+  instance?.success(text, duration)
+}
+
+const showError = (text, duration = 2500) => {
+  const instance = ancientMessageLocalRef.value || ancientMessageRef.value
+  instance?.error(text, duration)
+}
+
+const showWarning = (text, duration = 2500) => {
+  const instance = ancientMessageLocalRef.value || ancientMessageRef.value
+  instance?.warning(text, duration)
+}
+
+const showInfo = (text, duration = 2500) => {
+  const instance = ancientMessageLocalRef.value || ancientMessageRef.value
+  instance?.info(text, duration)
+}
+
 // 弹窗显示控制
-const showProfileImageModal = ref(false)  // 切换用户形象弹窗
+const showProfileImageModal = ref(false)
 const showUserDetailModal = ref(false)
 const showCommentsModal = ref(false)
 
@@ -274,10 +319,10 @@ const currentProfileImage = ref(defaultProfileImage)
 
 const user = reactive({
   name: '',
-  avatar: '',      // 小头像（用户上传）
+  avatar: '',
   phone: '',
   email: '',
-  profileImage: '' // 用户形象（从6个预设中选择）
+  profileImage: ''
 })
 
 // 编辑用的用户数据副本
@@ -304,30 +349,25 @@ const loadUserComments = async () => {
     const res = await GetComments()
     if (res.code === 200 && res.data) {
       const comments = res.data
-      
-      // 缓存景点信息（避免重复请求）
+
       const scenicCache = new Map()
-      
       const enrichedComments = []
+
       for (const comment of comments) {
         let regionName = '未知城市'
         let scenicName = comment.scenicName || '未知景点'
-        
-        // 检查缓存
+
         if (comment.scenicId && scenicCache.has(comment.scenicId)) {
           regionName = scenicCache.get(comment.scenicId).regionName
           scenicName = scenicCache.get(comment.scenicId).name
-        } 
-        // 没有缓存则请求
-        else if (comment.scenicId) {
+        } else if (comment.scenicId) {
           try {
             const scenicRes = await GetScenics(comment.scenicId)
             if (scenicRes.code === 200 && scenicRes.data) {
               regionName = scenicRes.data.regionName || '未知城市'
               scenicName = scenicRes.data.name || scenicName
-              // 存入缓存
               scenicCache.set(comment.scenicId, {
-                regionName: regionName,
+                regionName,
                 name: scenicName
               })
             }
@@ -335,34 +375,30 @@ const loadUserComments = async () => {
             console.error(`获取景点 ${comment.scenicId} 详情失败:`, error)
           }
         }
-        
+
         enrichedComments.push({
           id: comment.id,
           content: comment.content,
           likeCount: comment.likeCount,
           createTime: formatDate(comment.createTime),
-          scenicName: scenicName,
-          regionName: regionName,  // ✅ 城市信息
+          scenicName,
+          regionName,
           displayName: regionName !== '未知城市' ? `${regionName}——${scenicName}` : scenicName,
           scenicId: comment.scenicId
         })
       }
-      
+
       myComments.value = enrichedComments
     }
   } catch (error) {
     console.error('获取评论失败:', error)
-    ElMessage.error('获取评论失败')
+    showError('获取评论失败')
   }
 }
 
-// 跳转到景点详情页
-// 跳转到景点详情页
 const goToScenicDetail = async (comment) => {
-  // 关闭弹窗
   showCommentsModal.value = false
-  
-  // 需要先获取景点详情，拿到 regionId
+
   try {
     const scenicRes = await GetScenics(comment.scenicId)
     if (scenicRes.code === 200 && scenicRes.data) {
@@ -370,12 +406,11 @@ const goToScenicDetail = async (comment) => {
       router.push({
         path: '/detail',
         query: {
-          id: comment.scenicId,      // 景点 API ID
-          regionId: scenic.regionId  // 城市 ID，用于加载同城市其他景点
+          id: comment.scenicId,
+          regionId: scenic.regionId
         }
       })
     } else {
-      // 降级：只传 id
       router.push({
         path: '/detail',
         query: { id: comment.scenicId }
@@ -383,7 +418,6 @@ const goToScenicDetail = async (comment) => {
     }
   } catch (error) {
     console.error('获取景点信息失败:', error)
-    // 降级跳转
     router.push({
       path: '/detail',
       query: { id: comment.scenicId }
@@ -403,7 +437,7 @@ const loadCheckins = async () => {
     }
   } catch (error) {
     console.error('获取打卡记录失败:', error)
-    ElMessage.error('获取打卡记录失败')
+    showError('获取打卡记录失败')
   }
 }
 
@@ -414,33 +448,30 @@ const initUser = async () => {
       router.replace('/login')
       return
     }
-    
+
     const res = await GetUserProfile()
     if (res.code === 200 && res.data) {
       const userData = res.data
       console.log('用户信息:', userData)
-      
+
       user.name = userData.username || '旅行者'
       user.phone = userData.phone || ''
       user.email = userData.email || ''
       user.avatar = userData.avatar || ''
       user.profileImage = userData.profileImage || ''
-      
-      // 更新本地存储
+
       const localUser = JSON.parse(userStr)
       localUser.name = user.name
       localUser.phone = user.phone
       localUser.email = user.email
       localStorage.setItem('user', JSON.stringify(localUser))
-      
-      // 初始化编辑数据
+
       editUser.name = user.name
       editUser.phone = user.phone
       editUser.email = user.email
       editUser.avatar = user.avatar
       console.log('编辑用户数据:', editUser)
-      
-      // 设置用户形象
+
       if (userData.profileImage) {
         currentProfileImage.value = userData.profileImage
       } else {
@@ -449,7 +480,7 @@ const initUser = async () => {
     }
   } catch (error) {
     console.error('获取用户信息失败:', error)
-    ElMessage.error('获取用户信息失败')
+    showError('获取用户信息失败')
   }
 }
 
@@ -459,80 +490,75 @@ const initPageData = () => {
   loadUserComments()
 }
 
-// 触发头像上传
 const triggerAvatarUpload = () => {
-  avatarInput.value.click()
+  avatarInput.value?.click()
 }
 
-// 上传头像（调用 UploadImage 接口）
 const uploadAvatar = async (event) => {
   const file = event.target.files[0]
   if (!file) return
-  
+
   if (!file.type.startsWith('image/')) {
-    ElMessage.warning('请上传图片文件')
+    showWarning('请上传图片文件')
+    event.target.value = ''
     return
   }
-  
+
   if (file.size > 2 * 1024 * 1024) {
-    ElMessage.warning('图片大小不能超过2MB')
+    showWarning('图片大小不能超过2MB')
+    event.target.value = ''
     return
   }
-  
+
   const loading = ElLoading.service({
     lock: true,
     text: '上传中...',
     background: 'rgba(0, 0, 0, 0.7)'
   })
-  
+
   try {
     const formData = new FormData()
     formData.append('file', file)
-    
+
     const res = await UploadImage(formData)
     if (res.code === 200 && res.data && res.data.url) {
       editUser.avatar = res.data.url
-      ElMessage.success('头像上传成功，点击保存即可更新')
+      showSuccess('头像上传成功，点击保存即可更新')
     } else {
-      ElMessage.error(res.message || '上传失败')
+      showError(res.message || '上传失败')
     }
   } catch (error) {
     console.error('上传失败:', error)
-    ElMessage.error('上传失败，请重试')
+    showError('上传失败，请重试')
   } finally {
     loading.close()
+    event.target.value = ''
   }
-  
-  event.target.value = ''
 }
 
-// 选择用户形象（先上传图片获取URL，再更新）
 const selectProfileImage = async (profile) => {
   showProfileImageModal.value = false
-  
+
   const loading = ElLoading.service({
     lock: true,
     text: '切换形象中...',
     background: 'rgba(0, 0, 0, 0.7)'
   })
-  
+
   try {
-    // 将预设图片转为 File 对象并上传
     const response = await fetch(profile.url)
     const blob = await response.blob()
     const file = new File([blob], `${profile.name}.png`, { type: 'image/png' })
-    
+
     const formData = new FormData()
     formData.append('file', file)
-    
+
     const uploadRes = await UploadImage(formData)
     if (uploadRes.code === 200 && uploadRes.data && uploadRes.data.url) {
       const uploadedUrl = uploadRes.data.url
-      
-      // 更新本地显示
+
       currentProfileImage.value = uploadedUrl
-      
-      // 调用更新用户信息接口
+
       const updateRes = await UpdateUserProfile({
         nickname: user.name,
         phone: user.phone,
@@ -540,35 +566,33 @@ const selectProfileImage = async (profile) => {
         avatar: user.avatar,
         profileImage: uploadedUrl
       })
-      
+
       if (updateRes.code === 200) {
         user.profileImage = uploadedUrl
         localStorage.setItem('userProfileImage', uploadedUrl)
-        ElMessage.success('切换形象成功！')
+        showSuccess('切换形象成功！')
       } else {
-        ElMessage.error(updateRes.message || '更新失败')
-        // 恢复原来的形象
+        showError(updateRes.message || '更新失败')
         currentProfileImage.value = user.profileImage || defaultProfileImage
       }
     } else {
-      ElMessage.error(uploadRes.message || '上传形象失败')
+      showError(uploadRes.message || '上传形象失败')
     }
   } catch (error) {
     console.error('切换形象失败:', error)
-    ElMessage.error('切换形象失败，请重试')
+    showError('切换形象失败，请重试')
   } finally {
     loading.close()
   }
 }
 
-// 保存用户信息（名号、手机、邮箱、头像）
 const saveUserInfo = async () => {
   const loading = ElLoading.service({
     lock: true,
     text: '保存中...',
     background: 'rgba(0, 0, 0, 0.7)'
   })
-  
+
   try {
     const res = await UpdateUserProfile({
       username: editUser.name,
@@ -577,9 +601,8 @@ const saveUserInfo = async () => {
       avatar: editUser.avatar,
       profileImage: currentProfileImage.value
     })
-    
+
     if (res.code === 200) {
-      // 更新本地存储
       const userStr = localStorage.getItem('user')
       if (userStr) {
         const userData = JSON.parse(userStr)
@@ -588,21 +611,20 @@ const saveUserInfo = async () => {
         userData.email = editUser.email
         localStorage.setItem('user', JSON.stringify(userData))
       }
-      
-      // 更新响应式数据
+
       user.name = editUser.name
       user.phone = editUser.phone
       user.email = editUser.email
       user.avatar = editUser.avatar
 
-      ElMessage.success('保存成功！')
+      showSuccess('保存成功！')
       showUserDetailModal.value = false
     } else {
-      ElMessage.error(res.message || '保存失败')
+      showError(res.message || '保存失败')
     }
   } catch (error) {
     console.error('保存失败:', error)
-    ElMessage.error('保存失败，请重试')
+    showError('保存失败，请重试')
   } finally {
     loading.close()
   }
@@ -621,7 +643,7 @@ const logout = () => {
     localStorage.removeItem('user')
     localStorage.removeItem('userProfileImage')
     router.push('/login')
-    ElMessage.success('已退出登录')
+    showSuccess('已退出登录')
   }).catch(() => {})
 }
 
@@ -633,11 +655,360 @@ onBeforeMount(() => {
 })
 
 onMounted(() => {
+  ancientMessageRef.value = ancientMessageLocalRef.value
   initPageData()
+})
+
+onBeforeUnmount(() => {
+  if (ancientMessageRef.value === ancientMessageLocalRef.value) {
+    ancientMessageRef.value = null
+  }
 })
 </script>
 
 <style scoped>
+.profile-page {
+  width: 100%;
+  min-height: 100vh;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  position: relative;
+  padding: 30px 80px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* 模块添加点击光标 */
+.module {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.module:hover {
+  transform: translateY(-5px);
+  backdrop-filter: blur(8px);
+}
+
+/* 页面标题 */
+.page-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.page-title {
+  font-size: 64px;
+  font-family: 'STKaiti', 'KaiTi', serif;
+  color: #000000;
+  text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3);
+  letter-spacing: 8px;
+  margin: 0;
+  display: inline-block;
+  padding: 0 30px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+/* 模块包裹器 */
+.module-wrapper {
+  position: absolute;
+  z-index: 2;
+}
+
+.module-wrapper-user {
+  height: 225px;
+  width: 250px;
+  top: 10%;
+  left: 10%;
+  padding: 10px 10px;
+}
+.module-wrapper-user .border-img{
+  top: -60px;
+  left: -100px;
+  width: calc(100% + 200px);
+  height: calc(100% + 120px);
+}
+
+.module-wrapper-comments {
+  height: 325px;
+  width: 420px;
+  top: 12%;
+  right: 4%;
+  padding: 15px 5px;
+}
+.module-wrapper-comments .border-img{
+  top: -85px;
+  left: -135px;
+  width: calc(100% + 275px);
+  height: calc(100% + 175px);
+}
+.module-wrapper-comments .scroll-area {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.module-wrapper-checkin {
+  height: auto;
+  min-height: 350px;
+  width: 300px;
+  padding: 10px 10px;
+  bottom: 6%;
+  left: 12%;
+}
+.module-wrapper-checkin .border-img{
+  top: -60px;
+  left: -100px;
+  width: calc(100% + 200px);
+  height: calc(100% + 120px);
+}
+.module-wrapper-checkin .module-content {
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 5px;
+  padding-bottom: 20px;
+}
+
+/* 滚动条美化（与现有样式保持一致） */
+.module-wrapper-checkin .module-content::-webkit-scrollbar,
+.module-wrapper-comments .scroll-area::-webkit-scrollbar {
+  width: 4px;
+}
+
+.module-wrapper-checkin .module-content::-webkit-scrollbar-track,
+.module-wrapper-comments .scroll-area::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+}
+
+.module-wrapper-checkin .module-content::-webkit-scrollbar-thumb,
+.module-wrapper-comments .scroll-area::-webkit-scrollbar-thumb {
+  background: #c9aa5f;
+  border-radius: 3px;
+}
+
+.module-wrapper-actions {
+  height: 225px;
+  width: 300px;
+  bottom: 7%;
+  right: 10%;
+  padding: 5px 5px;
+}
+.module-wrapper-actions .border-img{
+  top: -50px;
+  left: -100px;
+  width: calc(100% + 200px);
+  height: calc(100% + 100px);
+}
+
+/* 操作按钮（淡雅古风） */
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.action-btn {
+  padding: 10px 20px;
+  font-size: 16px;
+  font-family: 'STKaiti', 'KaiTi', '楷体', serif;
+  border: 1px solid #c9b896;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 2px;
+  background: transparent;
+  color: #5c4b32;
+}
+
+.action-btn:hover {
+  background: rgba(201, 170, 95, 0.15);
+  border-color: #b89850;
+  transform: translateY(-2px);
+}
+
+/* 返回首页按钮 */
+.home-btn {
+  border-color: #8b9c6e;
+  color: #6b7b4e;
+}
+
+.home-btn:hover {
+  background: rgba(107, 123, 78, 0.15);
+  border-color: #6b7b4e;
+}
+
+/* 退出登录按钮 */
+.logout-btn {
+  border-color: #c17a6e;
+  color: #a85a4e;
+}
+
+.logout-btn:hover {
+  background: rgba(168, 90, 78, 0.1);
+  border-color: #a85a4e;
+}
+
+/* 边框图片 */
+.border-img {
+  position: absolute;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* 模块内容 */
+.module {
+  position: relative;
+  padding: 20px 25px;
+  box-sizing: border-box;
+  z-index: 2;
+  transition: all 0.3s ease;
+}
+
+.module-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+}
+
+.module-icon {
+  font-size: 28px;
+}
+
+.module-title {
+  font-size: 30px;
+  font-family: "LiSu", "隶书", serif;
+  font-weight: 700;
+  margin: 0;
+  color: #515151;
+}
+
+.module-content {
+  font-size: 14px;
+  color: #333;
+}
+
+/* 信息列表 */
+.info-item {
+  margin-bottom: 12px;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.info-label {
+  font-weight: 700;
+  width: 45px;
+  color: #555;
+}
+
+.info-value {
+  flex: 1;
+  color: #222;
+  word-break: break-word;
+}
+
+/* 通用列表样式 */
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.08);
+}
+
+.list-item:last-child {
+  border-bottom: none;
+}
+
+.item-name {
+  font-weight: 600;
+  color: #2c2c2c;
+}
+
+.item-detail {
+  font-size: 12px;
+  color: #888;
+}
+
+.scroll-area {
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.empty-text {
+  text-align: center;
+  color: #999;
+  padding: 20px 0;
+  font-size: 13px;
+}
+
+/* 中间人物形象 */
+.avatar-wrapper {
+  position: absolute;
+  left: 50%;
+  top: 60%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+}
+
+.avatar-center {
+  position: relative;
+  text-align: center;
+  z-index: 2;
+}
+
+.avatar-frame {
+  width: 350px;
+  height: auto;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 10px;
+}
+
+.avatar-frame:hover {
+  transform: scale(1.02);
+}
+
+.avatar-img {
+  width: 80%;
+  height: auto;
+  object-fit: contain;
+}
+
+.avatar-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: rgba(58, 57, 57, 0.8);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* 弹窗通用样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-wrapper {
+  position: relative;
+  max-width: 90%;
+}
+
 .profile-page {
   width: 100%;
   min-height: 100vh;
