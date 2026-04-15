@@ -10,8 +10,10 @@
 
     <!-- 顶部 -->
     <div class="top-bar">
-      <div class="scene-chip">{{ scenicTitle }}</div>
-
+      <button class="scene-back-btn" @click="goBackToScenicDetail">
+        <span class="back-icon">‹</span>
+        <span class="back-text">返回景点</span>
+      </button>
       <div class="progress-wrap">
         <div class="progress-track">
           <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
@@ -272,6 +274,23 @@ const scenicDetail = ref({
 
 const bgLoaded = ref(false);
 const currentBg = ref(defaultDialoguePageBg);
+
+const goBackToScenicDetail = () => {
+  const query = {
+    id: scenicId,
+    apiId: scenicId
+  };
+
+  if (currentRegionId.value) {
+    query.regionId = currentRegionId.value;
+  }
+
+  router.push({
+    path: "/detail",
+    query
+  });
+};
+
 
 /** 新增：用户信息，用 profileImage 控制游客图片 */
 const userProfile = ref({
@@ -937,31 +956,74 @@ onBeforeUnmount(() => {
   gap: 18px;
 }
 
-.scene-chip {
+.scene-back-btn {
   justify-self: start;
   display: inline-flex;
   align-items: center;
-  min-height: 50px;
-  padding: 0 28px 0 20px;
-  border-radius: 2px;
-  background: linear-gradient(135deg, #bc864f, #a46d3a);
-  color: #fff6eb;
+  gap: 8px;
+  height: 54px;
+  padding: 0 30px 0 22px;
+  border: none;
+  outline: none;
+  background: linear-gradient(135deg, rgba(183, 126, 67, 0.96), rgba(160, 105, 50, 0.96));
+  color: #fff8ef;
   font-size: 16px;
   letter-spacing: 2px;
+  font-family: "STKaiti", "KaiTi", "FangSong", serif;
   position: relative;
-  box-shadow: 0 8px 18px rgba(98, 67, 36, 0.12);
+  cursor: pointer;
+  box-shadow:
+    0 8px 18px rgba(93, 58, 28, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, filter 0.22s ease;
+  overflow: visible;
 }
 
-.scene-chip::after {
+.scene-back-btn::before {
+  content: "";
+  position: absolute;
+  inset: 2px 22px 2px 2px;
+  border: 1px solid rgba(255, 244, 228, 0.28);
+  pointer-events: none;
+}
+
+.scene-back-btn::after {
   content: "";
   position: absolute;
   top: 0;
-  right: -18px;
+  right: -24px;
   width: 0;
   height: 0;
-  border-top: 25px solid transparent;
-  border-bottom: 25px solid transparent;
-  border-left: 18px solid #a46d3a;
+  border-top: 27px solid transparent;
+  border-bottom: 27px solid transparent;
+  border-left: 24px solid rgba(160, 105, 50, 0.96);
+  filter: drop-shadow(0 6px 10px rgba(93, 58, 28, 0.12));
+}
+
+.scene-back-btn:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 12px 24px rgba(93, 58, 28, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  filter: brightness(1.04);
+}
+
+.scene-back-btn:active {
+  transform: translateY(0);
+}
+
+.back-icon {
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 400;
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+
+.back-text {
+  position: relative;
+  z-index: 1;
+  white-space: nowrap;
 }
 
 .progress-wrap {

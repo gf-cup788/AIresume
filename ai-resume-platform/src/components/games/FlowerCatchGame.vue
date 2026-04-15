@@ -29,13 +29,9 @@
     >
       <div class="game-bg-mask"></div>
 
-      <!-- <div class="sky-decor sky-1"></div>
-      <div class="sky-decor sky-2"></div>
-      <div class="sky-decor sky-3"></div> -->
-
       <div v-if="loadingBg" class="bg-loading">
         <div class="loading-spinner"></div>
-        <div class="loading-text">正在加载游戏背景...</div>
+        <div class="loading-text">正在加载游戏资源...</div>
       </div>
 
       <transition-group name="flower-drop" tag="div">
@@ -49,22 +45,26 @@
             transform: `rotate(${flower.rotate}deg) scale(${flower.scale})`
           }"
         >
-          🌸
+          <img
+            v-if="dropImageUrl"
+            :src="dropImageUrl"
+            alt="掉落物"
+            class="flower-img"
+            draggable="false"
+          />
+          <span v-else class="flower-fallback">🌸</span>
         </div>
       </transition-group>
 
-      <div
-        class="basket"
-        :style="{ left: basketX + 'px' }"
-      >
+      <div class="basket" :style="{ left: basketX + 'px' }">
         <div class="basket-inner">花篮</div>
       </div>
 
       <div v-if="!started && !gameOver" class="game-mask">
         <div class="game-mask-card">
-          <div class="mask-title">{{ scenicName }} · 接花小游戏</div>
+          <div class="mask-title">{{ scenicName }} · 接物小游戏</div>
           <div class="mask-desc">
-            移动下方花篮，接住掉落的花朵。达到目标分数即可通关。
+            移动下方花篮，接住从空中掉落的景点物品。达到目标分数即可通关。
           </div>
           <div class="mask-tip">
             电脑端可用鼠标移动，手机端可直接手指滑动。
@@ -80,7 +80,7 @@
             这次获得 {{ score }} 分，距离目标还差 {{ Math.max(targetScore - score, 0) }} 分。
           </div>
           <div class="mask-tip">
-            漏掉太多花朵了，重新试试看吧。
+            漏掉太多了，重新试试看吧。
           </div>
           <button class="action-btn primary" @click="restartGame">重新开始</button>
         </div>
@@ -91,7 +91,7 @@
           <div class="success-icon">🎉</div>
           <div class="success-title">挑战成功</div>
           <div class="success-desc">
-            你成功接住了足够多的花朵，完成了 {{ scenicName }} 小游戏。
+            你成功接住了足够多的景点物品，完成了 {{ scenicName }} 小游戏。
           </div>
           <button class="action-btn primary" @click="emitSuccess">完成并继续</button>
         </div>
@@ -140,7 +140,7 @@ const gameHeight = ref(520)
 
 const basketWidth = 108
 const basketHeight = 60
-const flowerSize = 30
+const flowerSize = 44
 
 const basketX = ref(260)
 
@@ -154,6 +154,7 @@ const gameOver = ref(false)
 const success = ref(false)
 
 const bgImageUrl = ref('')
+const dropImageUrl = ref('')
 const loadingBg = ref(false)
 
 let animationTimer = null
@@ -198,9 +199,10 @@ const preloadImage = (url) => {
   })
 }
 
-const fetchGameBg = async () => {
+const fetchGameAssets = async () => {
   if (!props.scenicId) {
     bgImageUrl.value = ''
+    dropImageUrl.value = ''
     return
   }
 
@@ -212,16 +214,29 @@ const fetchGameBg = async () => {
 
     if (res?.code === 200 && res?.data) {
       const remoteBg = res.data.bgImageUrl || ''
-      const loadedUrl = await preloadImage(remoteBg)
-      bgImageUrl.value = loadedUrl
-      console.log('接花游戏背景加载成功:', loadedUrl)
+      const remoteDropImage = res.data.flowerImageUrl || ''
+
+      const [loadedBg, loadedDropImage] = await Promise.all([
+        preloadImage(remoteBg),
+        preloadImage(remoteDropImage)
+      ])
+
+      bgImageUrl.value = loadedBg
+      dropImageUrl.value = loadedDropImage
+
+      console.log('接物游戏资源加载成功:', {
+        bgImageUrl: loadedBg,
+        flowerImageUrl: loadedDropImage
+      })
     } else {
       bgImageUrl.value = ''
-      console.error('获取接花游戏背景失败:', res?.message)
+      dropImageUrl.value = ''
+      console.error('获取接物游戏资源失败:', res?.message)
     }
   } catch (error) {
     bgImageUrl.value = ''
-    console.error('获取接花游戏背景失败:', error)
+    dropImageUrl.value = ''
+    console.error('获取接物游戏资源失败:', error)
   } finally {
     loadingBg.value = false
   }
@@ -232,11 +247,11 @@ const createFlower = () => {
   return {
     id: flowerId++,
     x,
-    y: -30,
+    y: -flowerSize,
     speed: random(2.4, 4.8),
     rotate: random(-25, 25),
     drift: random(-0.7, 0.7),
-    scale: random(0.95, 1.22)
+    scale: random(0.92, 1.16)
   }
 }
 
@@ -403,7 +418,7 @@ watch(
     if (newVal && newVal !== oldVal) {
       clearTimers()
       resetState()
-      await fetchGameBg()
+      await fetchGameAssets()
       await updateGameSize()
     }
   },
@@ -412,7 +427,7 @@ watch(
 
 onMounted(async () => {
   await updateGameSize()
-  await fetchGameBg()
+  await fetchGameAssets()
   window.addEventListener('resize', updateGameSize)
   window.addEventListener('keydown', handleKeydown)
 })
@@ -521,46 +536,31 @@ onBeforeUnmount(() => {
   }
 }
 
-.sky-decor {
-  position: absolute;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
-  filter: blur(0.2px);
-  z-index: 1;
-}
-
-.sky-1 {
-  width: 92px;
-  height: 28px;
-  top: 34px;
-  left: 40px;
-}
-
-.sky-2 {
-  width: 120px;
-  height: 34px;
-  top: 74px;
-  right: 66px;
-}
-
-.sky-3 {
-  width: 80px;
-  height: 24px;
-  top: 126px;
-  left: 180px;
-}
-
 .flower-item {
   position: absolute;
-  width: 30px;
-  height: 30px;
-  font-size: 26px;
-  line-height: 30px;
-  text-align: center;
+  width: 44px;
+  height: 44px;
   user-select: none;
   pointer-events: none;
-  text-shadow: 0 6px 10px rgba(140, 90, 120, 0.16);
   z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flower-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.16));
+}
+
+.flower-fallback {
+  font-size: 30px;
+  line-height: 1;
+  text-shadow: 0 6px 10px rgba(140, 90, 120, 0.16);
 }
 
 .basket {
@@ -742,7 +742,8 @@ onBeforeUnmount(() => {
   }
 
   .flower-item {
-    font-size: 22px;
+    width: 38px;
+    height: 38px;
   }
 
   .game-mask-card {
