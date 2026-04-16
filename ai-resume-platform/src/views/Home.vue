@@ -7,8 +7,17 @@
     <div class="paper-texture"></div>
 
     <!-- 古画地图容器 -->
-    <div class="map-container">
+    <div ref="mapContainerRef" class="map-container">
       <img :src="bgImg" class="map-img" />
+
+      <!-- 白鹤 -->
+      <img
+        :src="baihe"
+        class="crane"
+        :class="{ flying: craneFlying, locked: navigating }"
+        :style="craneStyle"
+        alt="白鹤"
+      />
 
       <!-- 地图题跋 -->
       <div class="map-inscription">
@@ -36,7 +45,7 @@
         :key="spot.id"
         class="spot"
         :style="{ left: spot.x + '%', top: spot.y + '%' }"
-        @click="goRegion(spot)"
+        @click="goRegion(spot, $event)"
       >
         <img v-if="spot.MapImg" :src="spot.MapImg" :alt="spot.name" />
       </div>
@@ -50,16 +59,18 @@
         <img :src="Map5" class="static-map map5" />
       </div>
     </div>
+
     <!-- 古琴声波纹装饰 -->
     <div class="sound-wave"></div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
 import { request } from "@/utils/request";
 import bgImg from "../assets/imgs/JiangXiMap.png";
+
 // 导入各城市印章图片
 import Nanchang from "../assets/imgs/NanChang.png";
 import Jiujiang from "../assets/imgs/JiuJiang.png";
@@ -67,43 +78,92 @@ import Shangrao from "../assets/imgs/ShangRao.png";
 import Jingdezhen from "../assets/imgs/JingDeZhen.png";
 import Jian from "../assets/imgs/JiAn.png";
 import Ganzhou from "../assets/imgs/GanZhou.png";
+
 import Map1 from "../assets/imgs/Map1.png";
 import Map2 from "../assets/imgs/Map2.png";
 import Map3 from "../assets/imgs/Map3.png";
-import Map4  from "../assets/imgs/Map4.png";
-import Map5  from "../assets/imgs/Map5.png";
+import Map4 from "../assets/imgs/Map4.png";
+import Map5 from "../assets/imgs/Map5.png";
 
+// 白鹤GIF
+import baihe from "../assets/imgs/crane_blue.gif";
 
 const router = useRouter();
 
 const regionList = ref([]);
 const regionLoading = ref(false);
 const regionError = ref("");
+const mapContainerRef = ref(null);
+
+// =========================
+// 白鹤飞行状态
+// =========================
+const CRANE_WIDTH = 112;
+const CRANE_HEIGHT = 112;
+
+// 初始位置：左上角原地飞
+const craneX = ref(28);
+const craneY = ref(22);
+
+// 1 表示朝右，-1 表示朝左
+const craneDirection = ref(1);
+
+// 是否正在飞行
+const craneFlying = ref(false);
+
+// 是否正在准备跳转，防止重复点击
+const navigating = ref(false);
+
+// 当前动画时长
+const craneDuration = ref(0);
+
+// 记录当前的飞行定时器
+let flyTimer = null;
+
+// 白鹤样式
+const craneStyle = computed(() => {
+  return {
+    left: `${craneX.value}px`,
+    top: `${craneY.value}px`,
+    width: `${CRANE_WIDTH}px`,
+    height: `${CRANE_HEIGHT}px`,
+    transform: `translate(0, 0) scaleX(-1)`,
+    transition: craneFlying.value
+      ? `left ${craneDuration.value}ms cubic-bezier(0.22, 0.61, 0.36, 1), top ${craneDuration.value}ms cubic-bezier(0.22, 0.61, 0.36, 1), transform 0.2s ease`
+      : `transform 0.2s ease`
+  };
+});
 
 // 地区名称与地图坐标的对应关系
 const regionPositionMap = {
-  南昌: { 
-    x: 88.1, y: 62.9, 
+  南昌: {
+    x: 88.1,
+    y: 62.9,
     MapImg: Nanchang
-  }, 
-  九江: { 
-    x: 86.3, y: 58.4, 
+  },
+  九江: {
+    x: 86.3,
+    y: 58.4,
     MapImg: Jiujiang
-  }, 
-  上饶: { 
-    x: 92.15, y: 62, 
+  },
+  上饶: {
+    x: 92.15,
+    y: 62,
     MapImg: Shangrao
-  }, 
-  景德镇: { 
-    x: 91.925, y: 58.6, 
+  },
+  景德镇: {
+    x: 91.925,
+    y: 58.6,
     MapImg: Jingdezhen
-  }, 
-  吉安: { 
-    x: 84.8, y: 73.3, 
+  },
+  吉安: {
+    x: 84.8,
+    y: 73.3,
     MapImg: Jian
-  }, 
-  赣州: { 
-    x: 86.13, y: 80.4, 
+  },
+  赣州: {
+    x: 86.13,
+    y: 80.4,
     MapImg: Ganzhou
   }
 };
@@ -139,28 +199,110 @@ const fetchRegions = async () => {
   }
 };
 
-const goRegion = (item) => {
-  sessionStorage.setItem(
-    "jx_detail_transition",
-    JSON.stringify({
-      regionId: item.id,
-      regionName: item.name,
-      from: "home",
-      time: Date.now()
-    })
+// 根据点击的 spot 计算白鹤目标坐标
+const getTargetPointFromSpot = (event) => {
+  const mapEl = mapContainerRef.value;
+  const spotEl = event?.currentTarget;
+
+  if (!mapEl || !spotEl) {
+    return {
+      x: craneX.value,
+      y: craneY.value
+    };
+  }
+
+  const mapRect = mapEl.getBoundingClientRect();
+  const spotRect = spotEl.getBoundingClientRect();
+
+  // spot 的中心点
+  const spotCenterX = spotRect.left - mapRect.left + spotRect.width / 2;
+  const spotCenterY = spotRect.top - mapRect.top + spotRect.height / 2;
+
+  // 让白鹤中心更贴近印章中心，视觉上更自然
+  const targetX = spotCenterX - CRANE_WIDTH / 2;
+  const targetY = spotCenterY - CRANE_HEIGHT / 2 - 10;
+
+  return {
+    x: targetX,
+    y: targetY
+  };
+};
+
+// 计算飞行时长：距离越远，时间稍长，但限制范围
+const getFlyDuration = (fromX, fromY, toX, toY) => {
+  const dx = toX - fromX;
+  const dy = toY - fromY;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+
+  // 你可以自行调这个速度参数
+  const duration = distance * 2.2;
+
+  return Math.max(700, Math.min(1800, Math.round(duration)));
+};
+
+// 飞到印章后再跳转
+const flyToSpotThenNavigate = (item, event) => {
+  const target = getTargetPointFromSpot(event);
+
+  // 根据目标位置判断朝向
+  craneDirection.value = target.x >= craneX.value ? 1 : -1;
+
+  const duration = getFlyDuration(
+    craneX.value,
+    craneY.value,
+    target.x,
+    target.y
   );
 
-  router.push({
-    path: "/detail",
-    query: {
-      regionId: item.id,
-      regionName: item.name
-    }
-  });
+  craneDuration.value = duration;
+  craneFlying.value = true;
+
+  // 开始飞
+  craneX.value = target.x;
+  craneY.value = target.y;
+
+  // 飞行结束后停顿 0.3 秒再跳转
+  flyTimer = window.setTimeout(() => {
+    craneFlying.value = false;
+
+    window.setTimeout(() => {
+      sessionStorage.setItem(
+        "jx_detail_transition",
+        JSON.stringify({
+          regionId: item.id,
+          regionName: item.name,
+          from: "home",
+          time: Date.now()
+        })
+      );
+
+      router.push({
+        path: "/detail",
+        query: {
+          regionId: item.id,
+          regionName: item.name
+        }
+      });
+    }, 300);
+  }, duration);
+};
+
+const goRegion = (item, event) => {
+  if (navigating.value || craneFlying.value) return;
+
+  navigating.value = true;
+  flyToSpotThenNavigate(item, event);
 };
 
 onMounted(() => {
   fetchRegions();
+});
+
+onBeforeUnmount(() => {
+  if (flyTimer) {
+    clearTimeout(flyTimer);
+    flyTimer = null;
+  }
 });
 </script>
 
@@ -215,10 +357,31 @@ onMounted(() => {
 .map-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;   
-  object-position: 58% center; 
+  object-fit: cover;
+  object-position: 58% center;
   filter: sepia(0.15) contrast(1.05) brightness(1.02);
   transition: all 0.3s;
+}
+
+/* 白鹤 */
+.crane {
+  position: absolute;
+  z-index: 11;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+  transform-origin: center center;
+  filter: drop-shadow(0 8px 14px rgba(40, 60, 90, 0.16));
+  transform: scaleX(-1);
+  will-change: left, top, transform;
+}
+
+.crane.flying {
+  filter: drop-shadow(0 12px 18px rgba(40, 60, 90, 0.22));
+}
+
+.crane.locked {
+  pointer-events: none;
 }
 
 /* 地图题跋 */
@@ -306,8 +469,6 @@ onMounted(() => {
   z-index: 10;
 }
 
-
-
 .spot img {
   object-fit: contain;
   transition: all 0.3s ease;
@@ -316,9 +477,9 @@ onMounted(() => {
   height: auto;
 }
 
-/* 根据不同城市调整大小： 使用相对大小单位 */
+/* 根据不同城市调整大小 */
 .spot img[alt="南昌"] {
-  width: 3.4vw !important; /* 改为相对单位 */
+  width: 3.4vw !important;
 }
 
 .spot img[alt="九江"] {
@@ -341,7 +502,7 @@ onMounted(() => {
   width: 8.5vw !important;
 }
 
-/* 增加鼠标悬停效果 */
+/* 悬停效果 */
 .spot img:hover {
   transform: scale(1.1);
 }
@@ -372,7 +533,7 @@ onMounted(() => {
 .map1 {
   top: 65.4%;
   left: 91.4%;
-  width: 2.5vw; /* 使用 vw 单位，确保宽度与屏幕宽度相关 */
+  width: 2.5vw;
   height: auto;
 }
 
@@ -380,21 +541,23 @@ onMounted(() => {
 .map2 {
   top: 65.1%;
   left: 85.35%;
-  width: 6.8vw; /* 使用 vw 单位 */
+  width: 6.8vw;
   height: auto;
 }
+
 /* 右下 */
 .map3 {
   top: 70%;
   left: 89.5%;
-  width: 5.3vw; /* 使用 vw 单位 */
+  width: 5.3vw;
   height: auto;
 }
+
 /* 左下 */
 .map4 {
   top: 70.5%;
   left: 82%;
-  width: 2.3vw; /* 使用 vw 单位 */
+  width: 2.3vw;
   height: auto;
 }
 
@@ -402,7 +565,7 @@ onMounted(() => {
 .map5 {
   top: 68.2%;
   left: 84.95%;
-  width: 2.6vw; /* 使用 vw 单位 */
+  width: 2.6vw;
   height: auto;
 }
 
