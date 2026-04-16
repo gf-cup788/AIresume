@@ -50,12 +50,31 @@
               :class="msg.role"
             >
               <div class="message-avatar">
-                {{ msg.role === 'user' ? '👤' : '🌸' }}
+                <img 
+                  v-if="msg.role === 'user' && userAvatar" 
+                  :src="userAvatar" 
+                  class="avatar-image"
+                  alt="用户头像"
+                />
+                <span v-else-if="msg.role === 'user'">👤</span>
+                <img 
+                  v-else-if="msg.role === 'assistant'" 
+                  :src="xiaoyingAvatar" 
+                  class="avatar-image"
+                  alt="小映"
+                />
+                <span v-else>🌸</span>
               </div>
               <div class="message-content" v-html="marked.parse(msg.content)"></div>
             </div>
             <div v-if="isLoading" class="message-item assistant">
-              <div class="message-avatar">🌸</div>
+              <div class="message-avatar">
+                <img 
+                  :src="xiaoyingAvatar" 
+                  class="avatar-image"
+                  alt="小映"
+                />
+              </div>
               <div class="message-content typing">
                 <span></span><span></span><span></span>
               </div>
@@ -90,9 +109,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, nextTick,computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick, computed } from 'vue'
 import xiaoyingImg from '../assets/imgs/xiaoying.png'
+import xiaoyingAvatar from '../assets/imgs/xiaoying1.png'
 import { aiChat } from '../api/index'
+import { GetUserProfile } from '../api/auth.js'
 import { marked } from 'marked'
 import XiaoyingTips from './AITips.vue'
 
@@ -108,6 +129,10 @@ const inputMessage = ref('')
 const messages = ref([])
 const isLoading = ref(false)
 const sessionId = ref(null)
+
+// 用户信息
+const userProfile = ref(null)
+const userAvatar = ref('')
 
 // 对话框位置和大小
 const dialogLeft = ref(null)
@@ -264,6 +289,20 @@ const stopResize = () => {
   resizeDirection.value = null
 }
 
+// ========== 获取用户信息 ==========
+const fetchUserProfile = async () => {
+  try {
+    const result = await GetUserProfile()
+    if (result.code === 200 && result.data) {
+      userProfile.value = result.data
+      // 优先使用 profileImage，其次使用 avatar
+      userAvatar.value = result.data.profileImage || result.data.avatar || ''
+    }
+  } catch (error) {
+    console.error('获取用户信息失败:', error)
+  }
+}
+
 // ========== 小映交互 ==========
 const handleMouseEnter = () => {
   if (!isHidden.value) {
@@ -354,6 +393,7 @@ const sendMessage = async () => {
     isLoading.value = false
   }
 }
+
 const videoReallyEnded = ref(false)
 let videoEndedCleanup = null
 
@@ -376,6 +416,7 @@ const setupVideoEndedListener = () => {
   }
   return null
 }
+
 // 控制提示组件是否启用（对话框打开时禁用）
 const tipsDisabled = computed(() => {
   if (showDialog.value) return true
@@ -397,6 +438,9 @@ const handleTipShown = (tipInfo) => {
 
 // ========== 生命周期 ==========
 onMounted(() => {
+  // 获取用户信息
+  fetchUserProfile()
+  
   // 初始欢迎语
   messages.value.push({
     role: 'assistant',
@@ -428,7 +472,6 @@ onMounted(() => {
       video.addEventListener('ended', handleVideoEnded)
     }
   }, 1000)
-
 })
 
 onBeforeUnmount(() => {
@@ -622,6 +665,14 @@ onBeforeUnmount(() => {
   justify-content: center;
   font-size: 18px;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
 .message-item.user .message-avatar {
