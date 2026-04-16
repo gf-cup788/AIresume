@@ -8,6 +8,8 @@
       :style="{ backgroundImage: `url(${currentBg})` }"
     ></div>
 
+    <audio ref="voiceAudioRef" preload="auto" class="voice-audio"></audio>
+
     <!-- 顶部 -->
     <div class="top-bar">
       <button class="scene-back-btn" @click="goBackToScenicDetail">
@@ -264,6 +266,104 @@ const router = useRouter();
 const isDemo = route.query.demo === "true";
 const scenicId = Number(route.query.apiId || route.query.id) || 1;
 const showDemoTip = ref(true);
+const voiceAudioRef = ref(null);
+
+const voiceList = ref([]);
+const loadingVoice = ref(false);
+
+const normalizeText = (text = "") => {
+  return String(text)
+    .replace(/\s+/g, "")
+    .trim();
+};
+
+const normalizeVoiceDetails = (list) => {
+  if (!Array.isArray(list)) return [];
+  return list.map((item, idx) => ({
+    id: Number(item?.id) || idx + 1,
+    speaker: item?.speaker || "",
+    content: item?.content || "",
+    audioUrl: item?.audioUrl || "",
+    audioPath: item?.audioPath || "",
+    success: item?.success === true,
+    error: item?.error || ""
+  }));
+};
+
+const stopVoice = () => {
+  const audio = voiceAudioRef.value;
+  if (!audio) return;
+
+  try {
+    audio.pause();
+    audio.currentTime = 0;
+  } catch (error) {
+    console.warn("停止语音失败:", error);
+  }
+};
+
+const getVoiceUrlByItem = (item, idx) => {
+  if (!item) return "";
+
+  const byId = voiceList.value.find((voice) => voice.id === idx + 1 && voice.success && voice.audioUrl);
+  if (byId?.audioUrl) return byId.audioUrl;
+
+  const currentSpeaker = (item.speaker || "").trim();
+  const currentTextValue = normalizeText(item.text || item.content || "");
+
+  const byContent = voiceList.value.find((voice) => {
+    return voice.success && voice.audioUrl &&
+      (voice.speaker || "").trim() === currentSpeaker &&
+      normalizeText(voice.content) === currentTextValue;
+  });
+
+  return byContent?.audioUrl || "";
+};
+
+const currentVoiceUrl = computed(() => {
+  return getVoiceUrlByItem(currentItem.value, index.value);
+});
+
+const playCurrentVoice = async () => {
+  const audio = voiceAudioRef.value;
+  const voiceUrl = currentVoiceUrl.value;
+
+  if (!audio) return;
+
+  stopVoice();
+
+  if (!voiceUrl || showSummaryModal.value || showFinishModal.value) return;
+
+  try {
+    audio.src = voiceUrl;
+    await audio.play();
+  } catch (error) {
+    console.warn("播放语音失败:", error);
+  }
+};
+
+const fetchVoiceList = async () => {
+  try {
+    loadingVoice.value = true;
+    const res = await request(`/api/scenic/voice/generate?scenicId=${scenicId}`, {
+      method: "POST"
+    });
+
+    if (res?.code === 200) {
+      voiceList.value = normalizeVoiceDetails(res.details);
+      console.log("景区对话语音获取成功:", voiceList.value);
+      playCurrentVoice();
+    } else {
+      voiceList.value = [];
+      console.error("景区对话语音获取失败:", res?.message);
+    }
+  } catch (error) {
+    voiceList.value = [];
+    console.error("景区对话语音获取失败：", error);
+  } finally {
+    loadingVoice.value = false;
+  }
+};
 
 const scenicDetail = ref({
   name: "",
@@ -712,6 +812,8 @@ const startTyping = () => {
   isTyping.value = true;
   let i = 0;
 
+  playCurrentVoice();
+
   typingTimer = setInterval(() => {
     displayedText.value = text.slice(0, i + 1);
     i++;
@@ -734,6 +836,7 @@ const completeTyping = () => {
 const showSummary = () => {
   clearTyping();
   clearAuto();
+  stopVoice();
   autoPlay.value = false;
   showSummaryModal.value = true;
 };
@@ -772,6 +875,7 @@ const toggleAutoOrComplete = () => {
 const skipToStory = () => {
   clearTyping();
   clearAuto();
+  stopVoice();
   autoPlay.value = false;
   displayedText.value = currentText.value || "";
   isTyping.value = false;
@@ -877,6 +981,7 @@ watch(showSummaryModal, (val) => {
   if (val) {
     clearTyping();
     clearAuto();
+    stopVoice();
     autoPlay.value = false;
   }
 });
@@ -885,6 +990,7 @@ watch(showFinishModal, (val) => {
   if (val) {
     clearTyping();
     clearAuto();
+    stopVoice();
     autoPlay.value = false;
   }
 });
@@ -902,16 +1008,22 @@ onMounted(async () => {
 
   await fetchUserProfile();
   await fetchDialogueDetail();
+  await fetchVoiceList();
   await fetchGameData();
 });
 
 onBeforeUnmount(() => {
   clearTyping();
   clearAuto();
+  stopVoice();
 });
 </script>
 
 <style scoped>
+.voice-audio {
+  display: none;
+}
+
 .dialogue-page {
   position: relative;
   width: 100%;
