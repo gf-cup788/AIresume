@@ -15,6 +15,12 @@
       </div>
     </div>
 
+    <!-- 游戏描述区域（新增） -->
+    <!-- <div v-if="gameDescription" class="game-description">
+      <div class="description-icon">📖</div>
+      <div class="description-text">{{ gameDescription }}</div>
+    </div> -->
+
     <div class="game-actions">
       <button class="game-btn primary" @click="restartGame">重新开始</button>
       <button class="game-btn" @click="shuffleGame">重新洗牌</button>
@@ -134,6 +140,7 @@ const imageUrls = ref([])
 const orderArray = ref([])
 const isLoading = ref(false)
 const hasLoaded = ref(false)
+const gameDescription = ref('') // 新增：存储游戏描述
 
 const totalPairs = computed(() => {
   if (imageUrls.value.length > 0 && orderArray.value.length > 0) {
@@ -172,6 +179,13 @@ const fetchGameData = async () => {
 
     if (res?.code === 200 && res?.data) {
       const data = res.data
+
+      // 新增：获取描述信息
+      if (data.description) {
+        gameDescription.value = data.description
+      } else {
+        gameDescription.value = ''
+      }
 
       if (data.images && Array.isArray(data.images) && data.images.length > 0) {
         imageUrls.value = data.images
@@ -365,6 +379,7 @@ const initGame = async () => {
   hasLoaded.value = false
   imageUrls.value = []
   orderArray.value = []
+  gameDescription.value = '' // 重置描述
 
   await fetchGameData()
   createCards()
@@ -419,7 +434,7 @@ onMounted(() => {
   display: block;
   font-size: 13px;
   color: #7b8a74;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .game-stat .value {
@@ -429,11 +444,36 @@ onMounted(() => {
   color: #5a6f49;
 }
 
+/* 游戏描述样式（新增） */
+.game-description {
+  /* background: linear-gradient(135deg, rgba(136, 181, 106, 0.12), rgba(114, 153, 86, 0.08)); */
+  border-radius: 20px;
+  padding: 2px 18px;
+  /* margin-bottom: 18px; */
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  /* border: 1px solid rgba(136, 181, 106, 0.2); */
+  /* backdrop-filter: blur(4px); */
+}
+
+.description-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.description-text {
+  font-size: 14px;
+  color: #5a6f49;
+  line-height: 1.6;
+  flex: 1;
+}
+
 .game-actions {
   display: flex;
   justify-content: center;
   gap: 14px;
-  margin-bottom: 20px;
+  margin-bottom: 2px;
   flex-wrap: wrap;
 }
 
@@ -465,13 +505,13 @@ onMounted(() => {
   min-height: 420px;
   border-radius: 26px;
   padding: 2px 2px;
-  background:
+  /* background:
     radial-gradient(circle at top, rgba(245, 249, 240, 0.95), rgba(239, 244, 236, 0.94)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(241, 246, 236, 0.8));
-  border: 1px solid rgba(121, 151, 97, 0.12);
-  box-shadow:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(241, 246, 236, 0.8)); */
+  /* border: 1px solid rgba(121, 151, 97, 0.12); */
+  /* box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.85),
-    0 10px 30px rgba(102, 126, 83, 0.08);
+    0 10px 30px rgba(102, 126, 83, 0.08); */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -508,7 +548,7 @@ onMounted(() => {
   width: min(100%, 760px);
   display: grid;
   grid-template-columns: repeat(4, minmax(120px, 1fr));
-  gap: 20px;
+  gap: 14px;
   justify-content: center;
   align-content: center;
 }
@@ -791,6 +831,18 @@ onMounted(() => {
 
   .game-stat {
     padding: 14px 10px;
+  }
+
+  .game-description {
+    padding: 10px 14px;
+  }
+  
+  .description-icon {
+    font-size: 20px;
+  }
+  
+  .description-text {
+    font-size: 13px;
   }
 
   .game-actions {

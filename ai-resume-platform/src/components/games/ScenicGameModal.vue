@@ -170,7 +170,7 @@ const close = () => {
 
 .story-title {
   margin-top: 10px;
-  font-size: 26px;
+  font-size: 32px;
   line-height: 1.25;
   font-weight: 800;
   color: #4f3a26;
@@ -179,7 +179,7 @@ const close = () => {
 
 .story-subtitle {
   margin-top: 8px;
-  font-size: 13px;
+  font-size: 18px;
   line-height: 1.8;
   color: #7a6a58;
   max-width: 760px;

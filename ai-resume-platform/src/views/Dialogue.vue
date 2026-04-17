@@ -13,7 +13,7 @@
     <!-- 顶部 -->
     <div class="top-bar">
       <button class="scene-back-btn" @click="goBackToScenicDetail">
-        <!-- <span class="back-icon">‹</span> -->
+        
         <span class="back-text">返回景点</span>
       </button>
       
@@ -1000,7 +1000,7 @@ onBeforeUnmount(() => {
 
 .top-bar {
   position: absolute;
-  top: 14px;
+  top: 24px;
   left: 72px;
   right: 22px;
   z-index: 20;
@@ -1016,7 +1016,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   height: 54px;
-  padding: 0 12px 0 12px;
+  padding: 0 10px 0 10px;
   border: none;
   outline: none;
   background: linear-gradient(135deg, rgba(183, 126, 67, 0.96), rgba(160, 105, 50, 0.96));
