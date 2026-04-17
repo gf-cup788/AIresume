@@ -501,7 +501,7 @@ onBeforeUnmount(() => {
 .bg-mask {
   position: absolute;
   inset: 0;
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .bg-light {
@@ -835,7 +835,7 @@ onBeforeUnmount(() => {
 .mountain.front {
   width: 32vw;
   height: 50vh;
-  opacity: 0.9;
+  opacity: 1;
   z-index: 12;
 }
 
@@ -847,7 +847,7 @@ onBeforeUnmount(() => {
 .mountain.back {
   width: 26vw;
   height: 38vh;
-  opacity: 0.8;
+  opacity: 1;
   z-index: 11;
 }
 
