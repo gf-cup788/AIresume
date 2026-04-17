@@ -13,7 +13,7 @@
     <!-- 顶部 -->
     <div class="top-bar">
       <button class="scene-back-btn" @click="goBackToScenicDetail">
-        <span class="back-icon">‹</span>
+        <!-- <span class="back-icon">‹</span> -->
         <span class="back-text">返回景点</span>
       </button>
       
@@ -271,25 +271,6 @@ const voiceAudioRef = ref(null);
 const voiceList = ref([]);
 const loadingVoice = ref(false);
 
-const normalizeText = (text = "") => {
-  return String(text)
-    .replace(/\s+/g, "")
-    .trim();
-};
-
-const normalizeVoiceDetails = (list) => {
-  if (!Array.isArray(list)) return [];
-  return list.map((item, idx) => ({
-    id: Number(item?.id) || idx + 1,
-    speaker: item?.speaker || "",
-    content: item?.content || "",
-    audioUrl: item?.audioUrl || "",
-    audioPath: item?.audioPath || "",
-    success: item?.success === true,
-    error: item?.error || ""
-  }));
-};
-
 const stopVoice = () => {
   const audio = voiceAudioRef.value;
   if (!audio) return;
@@ -302,26 +283,10 @@ const stopVoice = () => {
   }
 };
 
-const getVoiceUrlByItem = (item, idx) => {
-  if (!item) return "";
-
-  const byId = voiceList.value.find((voice) => voice.id === idx + 1 && voice.success && voice.audioUrl);
-  if (byId?.audioUrl) return byId.audioUrl;
-
-  const currentSpeaker = (item.speaker || "").trim();
-  const currentTextValue = normalizeText(item.text || item.content || "");
-
-  const byContent = voiceList.value.find((voice) => {
-    return voice.success && voice.audioUrl &&
-      (voice.speaker || "").trim() === currentSpeaker &&
-      normalizeText(voice.content) === currentTextValue;
-  });
-
-  return byContent?.audioUrl || "";
-};
-
 const currentVoiceUrl = computed(() => {
-  return getVoiceUrlByItem(currentItem.value, index.value);
+  const item = currentItem.value;
+  if (!item) return "";
+  return item.guideAudioUrl || "";
 });
 
 const playCurrentVoice = async () => {
@@ -339,29 +304,6 @@ const playCurrentVoice = async () => {
     await audio.play();
   } catch (error) {
     console.warn("播放语音失败:", error);
-  }
-};
-
-const fetchVoiceList = async () => {
-  try {
-    loadingVoice.value = true;
-    const res = await request(`/api/scenic/voice/generate?scenicId=${scenicId}`, {
-      method: "POST"
-    });
-
-    if (res?.code === 200) {
-      voiceList.value = normalizeVoiceDetails(res.details);
-      console.log("景区对话语音获取成功:", voiceList.value);
-      playCurrentVoice();
-    } else {
-      voiceList.value = [];
-      console.error("景区对话语音获取失败:", res?.message);
-    }
-  } catch (error) {
-    voiceList.value = [];
-    console.error("景区对话语音获取失败：", error);
-  } finally {
-    loadingVoice.value = false;
   }
 };
 
@@ -391,7 +333,6 @@ const goBackToScenicDetail = () => {
     query
   });
 };
-
 
 /** 新增：用户信息，用 profileImage 控制游客图片 */
 const userProfile = ref({
@@ -532,7 +473,8 @@ const normalizeDialogues = (list) => {
     return {
       role: /游客|旅人/.test(speaker) ? "traveler" : "npc",
       speaker: speaker || npcName,
-      text: content
+      text: content,
+      guideAudioUrl: item?.guideAudioUrl || ""
     };
   });
 };
@@ -1008,7 +950,6 @@ onMounted(async () => {
 
   await fetchUserProfile();
   await fetchDialogueDetail();
-  await fetchVoiceList();
   await fetchGameData();
 });
 
@@ -1059,8 +1000,8 @@ onBeforeUnmount(() => {
 
 .top-bar {
   position: absolute;
-  top: 24px;
-  left: 22px;
+  top: 14px;
+  left: 72px;
   right: 22px;
   z-index: 20;
   display: grid;
@@ -1075,7 +1016,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   height: 54px;
-  padding: 0 30px 0 22px;
+  padding: 0 12px 0 12px;
   border: none;
   outline: none;
   background: linear-gradient(135deg, rgba(183, 126, 67, 0.96), rgba(160, 105, 50, 0.96));

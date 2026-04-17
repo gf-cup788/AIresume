@@ -6,6 +6,16 @@
       </div>
     </transition>
 
+    <!-- 全局静音控制按钮 - 始终显示在所有页面 -->
+    <div
+      class="global-mute-btn"
+      :class="{ muted: isGlobalMuted }"
+      @click="toggleGlobalMute"
+    >
+      <span class="mute-icon">{{ isGlobalMuted ? '🔇' : '🔊' }}</span>
+      <span class="mute-text">{{ isGlobalMuted ? '静音' : '放音' }}</span>
+    </div>
+
     <!-- 古风落款头像 -->
     <div
       v-if="!hideFloatingAvatar"
@@ -80,6 +90,40 @@ import JiangHuImg from "./assets/Seal/JiangHu.png";
 import YouKeImg from "./assets/Seal/YouKe.png";
 import { GetUserProfile } from '@/api/auth.js';
 
+// 全局静音状态管理
+export const globalMuteState = {
+  isMuted: false,
+  audioElements: new Set(),
+  
+  setMuted(muted) {
+    this.isMuted = muted;
+    this.audioElements.forEach(audio => {
+      audio.muted = muted;
+    });
+  },
+  
+  registerAudio(audio) {
+    this.audioElements.add(audio);
+    audio.muted = this.isMuted;
+  },
+  
+  unregisterAudio(audio) {
+    this.audioElements.delete(audio);
+  }
+};
+
+// 全局 Audio 原型拦截，自动注册所有音频元素
+const originalPlay = HTMLAudioElement.prototype.play;
+HTMLAudioElement.prototype.play = function() {
+  globalMuteState.registerAudio(this);
+  return originalPlay.call(this);
+};
+
+const originalPause = HTMLAudioElement.prototype.pause;
+HTMLAudioElement.prototype.pause = function() {
+  return originalPause.call(this);
+};
+
 export default {
   name: 'App',
   components: {
@@ -93,7 +137,8 @@ export default {
       showMenu: false,
       JiangHuImg,
       YouKeImg,
-      userProfile: null
+      userProfile: null,
+      isGlobalMuted: false
     };
   },
   computed: {
@@ -124,6 +169,13 @@ export default {
     ancientMessageRef.value = this.$refs.ancientMessageRef || null;
     await this.checkLogin();
     window.addEventListener("click", this.handleClickOutside);
+    
+    // 从 localStorage 恢复静音状态
+    const savedMuteState = localStorage.getItem("globalMuteState");
+    if (savedMuteState !== null) {
+      this.isGlobalMuted = savedMuteState === "true";
+      globalMuteState.setMuted(this.isGlobalMuted);
+    }
   },
   mounted() {
     ancientMessageRef.value = this.$refs.ancientMessageRef || null;
@@ -132,6 +184,21 @@ export default {
     window.removeEventListener("click", this.handleClickOutside);
   },
   methods: {
+    toggleGlobalMute() {
+      this.isGlobalMuted = !this.isGlobalMuted;
+      globalMuteState.setMuted(this.isGlobalMuted);
+      
+      // 保存静音状态到 localStorage
+      localStorage.setItem("globalMuteState", this.isGlobalMuted);
+      
+      // 显示提示
+      if (this.isGlobalMuted) {
+        this.showInfo("已开启全局静音");
+      } else {
+        this.showSuccess("已关闭全局静音");
+      }
+    },
+    
     showSuccess(message) {
       if (this.$refs.ancientMessageRef) {
         this.$refs.ancientMessageRef.success(message);
@@ -264,6 +331,53 @@ export default {
 
 .fade-enter-from {
   opacity: 0;
+}
+
+/* 全局静音按钮 - 始终显示 */
+.global-mute-btn {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 1001;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 10px;
+  background: rgba(30, 24, 18, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(200, 170, 100, 0.5);
+  border-radius: 40px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.global-mute-btn:hover {
+  background: rgba(40, 32, 24, 0.9);
+  border-color: rgba(200, 170, 100, 0.8);
+  transform: scale(1.05);
+}
+
+.global-mute-btn.muted {
+  border-color: rgba(150, 120, 80, 0.6);
+  opacity: 0.8;
+}
+
+.mute-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.mute-text {
+  font-size: 11px;
+  color: #ecdba8;
+  font-family: "STKaiti", "KaiTi", serif;
+  letter-spacing: 1px;
+}
+
+.global-mute-btn.muted .mute-text {
+  color: #a89a7a;
 }
 
 /* 右上角漂浮 */
@@ -488,6 +602,20 @@ export default {
 
 /* 移动端适配 */
 @media (max-width: 600px) {
+  .global-mute-btn {
+    top: 15px;
+    left: 15px;
+    padding: 6px 8px;
+  }
+  
+  .mute-icon {
+    font-size: 18px;
+  }
+  
+  .mute-text {
+    font-size: 9px;
+  }
+
   .floating-avatar {
     top: 15px;
     right: 15px;
