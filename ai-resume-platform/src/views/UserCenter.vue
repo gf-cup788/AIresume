@@ -311,7 +311,7 @@ const profileImageList = ref([
   { name: '千金', url: new URL('@/assets/Characters/image6.png', import.meta.url).href },
 ])
 
-const defaultAvatar = new URL('@/assets/imgs/red-soldier.png', import.meta.url).href
+const defaultAvatar = new URL('@/assets/Characters/image1.png', import.meta.url).href
 const defaultProfileImage = profileImageList.value[0].url
 
 // 当前选中的用户形象（中间大图）

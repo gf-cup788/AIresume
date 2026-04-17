@@ -85,7 +85,7 @@ import AI from './components/AI.vue'
 import AncientMessage from '@/components/AncientMessage.vue'
 import { ancientMessageRef } from '@/components/useAncientMessage'
 
-import avatarImg from "./assets/imgs/red-soldier.png";
+import avatarImg from "./assets/Characters/image1.png";
 import JiangHuImg from "./assets/Seal/JiangHu.png";
 import YouKeImg from "./assets/Seal/YouKe.png";
 import { GetUserProfile } from '@/api/auth.js';
