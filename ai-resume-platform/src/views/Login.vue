@@ -264,9 +264,9 @@ import { saveLoginInfo } from '@/utils/request'
 import AncientMessage from '@/components/AncientMessage.vue'
 import { ancientMessageRef } from '@/components/useAncientMessage'
 import coverBg from '../assets/imgs/tongguanwendie.jpg'
-import bookBg1 from '../assets/imgs/login_bg1.png'
-import bookBg2 from '../assets/imgs/login_bg2.png'
-import bookBg3 from '../assets/imgs/login_bg3.png'
+import bookBg1 from '../assets/imgs/login_bg1.jpg'
+import bookBg2 from '../assets/imgs/login_bg2.jpg'
+import bookBg3 from '../assets/imgs/login_bg3.jpg'
 
 const router = useRouter()
 const route = useRoute()
@@ -672,7 +672,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   background:
     linear-gradient(rgba(16, 12, 8, 0.18), rgba(16, 12, 8, 0.18)),
-    url("@/assets/imgs/login_bg.png") center / cover no-repeat;
+    url("@/assets/imgs/login_bg.jpg") center / cover no-repeat;
   display: flex;
   align-items: center;
   justify-content: center;

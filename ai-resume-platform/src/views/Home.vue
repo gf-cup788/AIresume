@@ -69,7 +69,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
 import { request } from "@/utils/request";
-import bgImg from "../assets/imgs/JiangXiMap.png";
+import bgImg from "../assets/imgs/JiangXiMap.jpg";
 
 // 导入各城市印章图片
 import Nanchang from "../assets/imgs/NanChang.png";

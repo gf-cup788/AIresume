@@ -269,7 +269,6 @@ import {
 import bgImage from '@/assets/imgs/grzx_bg.jpg'
 import Border from '@/assets/imgs/border.png'
 import Border2 from '@/assets/imgs/border2.png'
-import Border3 from '@/assets/imgs/border3.png'
 import Border4 from '@/assets/imgs/border4.png'
 
 const router = useRouter()
