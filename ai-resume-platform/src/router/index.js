@@ -27,12 +27,7 @@ const routes = [
     component: () => import('../views/Dialogue.vue'),
     meta: { title: '情景对话' }
   },
-  {
-    path: '/story',
-    name: 'Story',
-    component: () => import('../views/Story.vue'),
-    meta: { title: '故事与打卡' }
-  },
+
   {
     path: '/login',
     name: 'Login',
