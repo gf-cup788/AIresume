@@ -7,7 +7,7 @@ const routes = [
     path: '/',
     name: 'IntroHome',
     component: IntroHome,
-    meta: { title: '云游江西' }
+    meta: { title: '云游赣鄱' }
   },
   {
     path: '/home',
