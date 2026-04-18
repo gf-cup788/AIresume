@@ -1,5 +1,7 @@
 <template>
   <div class="home">
+    <AncientMessage ref="ancientMessageRef" />
+
     <!-- 水墨晕染背景 -->
     <div class="ink-wash"></div>
 
@@ -21,7 +23,7 @@
 
       <!-- 地图题跋 -->
       <div class="map-inscription">
-        <span class="inscription-text">江右九域图</span>
+        <span class="inscription-text">小图暗藏通途，轻点可入新章</span>
         <span class="inscription-seal">● 遊</span>
       </div>
 
@@ -66,9 +68,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
 import { request } from "@/utils/request";
+import AncientMessage from "@/components/AncientMessage.vue";
+import { ancientMessageRef, useAncientMessage } from "@/components/useAncientMessage";
 import bgImg from "../assets/imgs/JiangXiMap.jpg";
 
 // 导入各城市印章图片
@@ -90,14 +94,24 @@ import baihe from "../assets/imgs/crane_blue.gif";
 
 const router = useRouter();
 
+const props = defineProps({
+  introGuideSignal: {
+    type: Number,
+    default: 0
+  }
+});
+
 const regionList = ref([]);
 const regionLoading = ref(false);
 const regionError = ref("");
 const mapContainerRef = ref(null);
 
-// =========================
-// 白鹤飞行状态
-// =========================
+
+const openEntryTip = () => {
+  const { info } = useAncientMessage();
+  info("点击小地图上的城市，即可进入对应景点页面", 10200);
+};
+
 const CRANE_WIDTH = 112;
 const CRANE_HEIGHT = 112;
 
@@ -294,6 +308,15 @@ const goRegion = (item, event) => {
   flyToSpotThenNavigate(item, event);
 };
 
+watch(
+  () => props.introGuideSignal,
+  (value) => {
+    if (value) {
+      openEntryTip();
+    }
+  }
+);
+
 onMounted(() => {
   fetchRegions();
 });
@@ -303,7 +326,8 @@ onBeforeUnmount(() => {
     clearTimeout(flyTimer);
     flyTimer = null;
   }
-});
+}
+);
 </script>
 
 <style scoped>

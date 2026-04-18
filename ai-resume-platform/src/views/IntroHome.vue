@@ -101,7 +101,7 @@
 
         <!-- 第二屏 - Home 组件 -->
         <section class="home-section">
-          <Home />
+          <Home :intro-guide-signal="introGuideSignal" />
         </section>
       </div>
     </div>
@@ -120,11 +120,31 @@ const route = useRoute()
 const pageRef = ref(null)
 const scrollTop = ref(0)
 
+const HOME_INTRO_GUIDE_KEY = 'jx_home_intro_guide_shown'
+const introGuideSignal = ref(0)
+const hasTriggeredIntroGuide = ref(false)
+
+const triggerIntroGuideOnce = () => {
+  if (isTargetHome.value) return
+  if (hasTriggeredIntroGuide.value) return
+  if (sessionStorage.getItem(HOME_INTRO_GUIDE_KEY) === '1') return
+
+  hasTriggeredIntroGuide.value = true
+  introGuideSignal.value = Date.now()
+  sessionStorage.setItem(HOME_INTRO_GUIDE_KEY, '1')
+}
+
 const isTargetHome = computed(() => route.query.target === 'home')
 
 const handleScroll = () => {
   if (!pageRef.value) return
+
   scrollTop.value = pageRef.value.scrollTop
+
+  const triggerLine = (window.innerHeight || 900) * 0.55
+  if (scrollTop.value >= triggerLine) {
+    triggerIntroGuideOnce()
+  }
 }
 
 const progress = computed(() => {
@@ -493,7 +513,6 @@ onBeforeUnmount(() => {
 .bg-image {
   position: absolute;
   inset: 0;
-  background: url('@/assets/imgs/people.jpg') center/cover no-repeat;
   filter: blur(10px) brightness(1.1);
   opacity: 0.35;
 }
@@ -728,7 +747,7 @@ onBeforeUnmount(() => {
   gap: 8px;
   cursor: pointer;
   user-select: none;
-  animation: tipBreath 3.2s ease-in-out infinite;
+  animation: tipBreath 10.2s ease-in-out infinite;
 }
 
 @keyframes tipBreath {
