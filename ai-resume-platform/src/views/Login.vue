@@ -927,7 +927,18 @@ onBeforeUnmount(() => {
 .input-group input::placeholder {
   color: rgba(102, 78, 57, 0.45);
 }
-
+.input-group input:-webkit-autofill,
+.input-group input:-webkit-autofill:hover,
+.input-group input:-webkit-autofill:focus,
+.input-group input:-webkit-autofill:active {
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: #4e3728;
+  background-clip: text;
+  background-color: transparent !important;
+  background-image: none !important;
+  transition: background-color 5000s ease-in-out 0s;
+  box-shadow: 0 0 0px 1000px transparent inset !important;
+}
 .input-group input:focus {
   border-bottom-color: #8f5f3c;
   background: rgba(255, 250, 244, 0.2);
